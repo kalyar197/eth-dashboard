@@ -83,7 +83,7 @@
             border-radius: 12px; 
             border: 1px solid #2a2a2a;
             width: 100%; 
-            max-width: 1200px; 
+            max-width: 1400px; 
             min-height: 600px; 
             position: relative; 
             padding: 20px;
@@ -174,14 +174,12 @@
             opacity: 0;
             transition: opacity 0.2s;
             z-index: 1000;
-    	    pointer-events: none;
             border: 1px solid #333;
             backdrop-filter: blur(10px);
         }
         
         .tooltip.show {
-    		opacity: 1;
-    		pointer-events: auto; /* And this line */
+            opacity: 1;
         }
         
         .tooltip-header {
@@ -309,14 +307,14 @@
         // State Management
         let chartState = {
             days: '365',
-            activePlugins: [],  // Start with empty array, will be populated on init
+            activePlugins: [],
             datasets: {},
             metadata: {},
             currentZoom: null
         };
 
-        // Chart dimensions
-        const margin = {top: 30, right: 80, bottom: 50, left: 80};
+        // Chart dimensions - increased right margin for multiple axes
+        const margin = {top: 30, right: 200, bottom: 50, left: 80};
         const container = document.getElementById('chart-container');
         let width = container.clientWidth - margin.left - margin.right;
         let height = 550 - margin.top - margin.bottom;
@@ -369,13 +367,6 @@
         // Scales
         let xScale = d3.scaleTime().range([0, width]);
         const yScales = {};
-
-        // Zoom behavior
-        const zoom = d3.zoom()
-            .scaleExtent([1, 20])
-            .translateExtent([[0, 0], [width, height]])
-            .extent([[0, 0], [width, height]])
-            .on("zoom", zoomed);
 
         // Brush for zoom selection
         const brush = d3.brushX()
@@ -496,7 +487,8 @@
                         const data = await response.json();
                         
                         // Check if data is empty
-                        if (!data.data || data.data.length === 0) {
+                        if (!data.data || (Array.isArray(data.data) && data.data.length === 0) || 
+                            (typeof data.data === 'object' && data.data.middle && data.data.middle.length === 0)) {
                             errors.push(`${data.metadata?.label || plugin}: No data available`);
                         }
                         
@@ -536,7 +528,6 @@
                 });
                 
                 if (!hasData) {
-                    // Show error AFTER clearing loading state
                     showError('No data available. This could be due to API rate limits or invalid API key. Check server console for details.');
                 } else {
                     renderChart();
@@ -549,51 +540,9 @@
                 
             } catch (error) {
                 console.error('Error updating chart:', error);
-                setLoading(false);  // Clear loading first
+                setLoading(false);
                 showError('Failed to connect to server. Please ensure the Flask server is running on port 5000.');
             }
-        }
-
-        function showError(message) {
-            d3.select("#chart-container").selectAll(".loading, .error, .message").remove();
-            d3.select("#chart-container")
-                .append("div")
-                .attr("class", "error")
-                .html(`
-                    <div style="text-align: center;">
-                        <div style="font-size: 24px; margin-bottom: 10px;">⚠</div>
-                        <div>${message}</div>
-                    </div>
-                `);
-        }
-
-        function showMessage(message, type = 'info') {
-            // Show temporary message at the top of the chart
-            d3.select("#chart-container").selectAll(".message").remove();
-            
-            const messageDiv = d3.select("#chart-container")
-                .append("div")
-                .attr("class", `message message-${type}`)
-                .style("position", "absolute")
-                .style("top", "60px")
-                .style("left", "50%")
-                .style("transform", "translateX(-50%)")
-                .style("padding", "8px 16px")
-                .style("background", type === 'warning' ? 'rgba(255, 149, 0, 0.2)' : 'rgba(98, 126, 234, 0.2)')
-                .style("border", `1px solid ${type === 'warning' ? '#FF9500' : '#627EEA'}`)
-                .style("border-radius", "6px")
-                .style("color", type === 'warning' ? '#FF9500' : '#627EEA')
-                .style("font-size", "12px")
-                .style("z-index", "100")
-                .text(message);
-            
-            // Auto-remove after 5 seconds
-            setTimeout(() => {
-                messageDiv.transition()
-                    .duration(500)
-                    .style("opacity", 0)
-                    .remove();
-            }, 5000);
         }
 
         function renderChart() {
@@ -615,8 +564,10 @@
             const xDomain = d3.extent(allData, d => new Date(d[0]));
             xScale.domain(chartState.currentZoom || xDomain);
 
-            // Group datasets by Y axis
+            // Group datasets by Y axis ID with proper ordering
             const axisSets = {};
+            const axisOrder = [];
+            
             chartState.activePlugins.forEach(key => {
                 const meta = chartState.metadata[key];
                 if (!meta) return;
@@ -629,12 +580,14 @@
                 if (!hasValidData) return;
                 
                 const axisId = meta.yAxisId || 'default';
+                
                 if (!axisSets[axisId]) {
                     axisSets[axisId] = {
                         datasets: [],
                         metadata: meta,
                         color: meta.color
                     };
+                    axisOrder.push(axisId);
                 }
                 axisSets[axisId].datasets.push(key);
             });
@@ -642,14 +595,19 @@
             // Clear and recreate axes
             Object.values(yAxisGroups).forEach(group => group.remove());
 
-            // Create Y scales and axes
-            let axisOffset = 0;
-            Object.entries(axisSets).forEach(([axisId, axisInfo], index) => {
+            // Create Y scales and axes with proper positioning
+            let rightAxisOffset = 0;
+            
+            axisOrder.forEach((axisId, index) => {
+                const axisInfo = axisSets[axisId];
+                
                 // Create scale
                 let yDomain;
                 if (axisInfo.metadata.yDomain) {
+                    // Use fixed domain if specified (e.g., RSI [0, 100])
                     yDomain = axisInfo.metadata.yDomain;
                 } else {
+                    // Calculate dynamic domain
                     const axisData = [];
                     axisInfo.datasets.forEach(key => {
                         if (key === 'bollinger_bands' && chartState.datasets[key].middle) {
@@ -671,25 +629,49 @@
                     .domain(yDomain)
                     .range([height, 0]);
 
-                // Create axis
-                const isRight = index % 2 === 1;
-                const axisGroup = g.append("g")
-                    .attr("class", `y-axis y-axis-${axisId}`)
-                    .attr("transform", isRight ? `translate(${width + axisOffset}, 0)` : `translate(${-axisOffset}, 0)`);
+                // Position axes properly
+                let axisGroup;
+                let axis;
+                
+                if (index === 0 || axisId === 'price_usd') {
+                    // First axis or price axis goes on the left
+                    axisGroup = g.append("g")
+                        .attr("class", `y-axis y-axis-${axisId}`)
+                        .attr("transform", `translate(0, 0)`);
+                    
+                    axis = d3.axisLeft(yScales[axisId]);
+                    
+                    // Add label on left
+                    axisGroup.append("text")
+                        .attr("class", "axis-label")
+                        .attr("transform", "rotate(-90)")
+                        .attr("y", -50)
+                        .attr("x", -height / 2)
+                        .attr("text-anchor", "middle")
+                        .text(axisInfo.metadata.yAxisLabel);
+                } else {
+                    // Subsequent axes go on the right with offset
+                    axisGroup = g.append("g")
+                        .attr("class", `y-axis y-axis-${axisId}`)
+                        .attr("transform", `translate(${width + rightAxisOffset}, 0)`);
+                    
+                    axis = d3.axisRight(yScales[axisId]);
+                    
+                    // Add label on right
+                    axisGroup.append("text")
+                        .attr("class", "axis-label")
+                        .attr("transform", "rotate(-90)")
+                        .attr("y", 40 + rightAxisOffset)
+                        .attr("x", -height / 2)
+                        .attr("text-anchor", "middle")
+                        .text(axisInfo.metadata.yAxisLabel);
+                    
+                    // Increment offset for next right axis
+                    rightAxisOffset += 60;
+                }
 
                 yAxisGroups[axisId] = axisGroup;
-
-                const axis = isRight ? d3.axisRight(yScales[axisId]) : d3.axisLeft(yScales[axisId]);
                 axisGroup.call(axis.ticks(6));
-
-                // Add label
-                axisGroup.append("text")
-                    .attr("class", "axis-label")
-                    .attr("transform", "rotate(-90)")
-                    .attr("y", isRight ? 40 : -50)
-                    .attr("x", -height / 2)
-                    .attr("text-anchor", "middle")
-                    .text(axisInfo.metadata.yAxisLabel);
 
                 // Add reference lines if specified
                 if (axisInfo.metadata.referenceLines) {
@@ -711,10 +693,6 @@
                             .text(ref.label);
                     });
                 }
-
-                if (index < Object.keys(axisSets).length - 1) {
-                    axisOffset += 60;
-                }
             });
 
             // Draw X axis
@@ -725,102 +703,92 @@
             // Draw grid
             gridGroup.selectAll("*").remove();
             if (Object.keys(yScales).length > 0) {
-                gridGroup.call(d3.axisLeft(yScales[Object.keys(yScales)[0]])
-                    .tickSize(-width)
-                    .tickFormat("")
-                    .ticks(8));
+                const firstAxisId = axisOrder[0];
+                if (yScales[firstAxisId]) {
+                    gridGroup.call(d3.axisLeft(yScales[firstAxisId])
+                        .tickSize(-width)
+                        .tickFormat("")
+                        .ticks(8));
+                }
             }
 
-            // Draw lines
-            const lines = linesGroup.selectAll(".line")
-                .data(chartState.activePlugins.filter(p => {
-                    // Filter out bollinger_bands for regular line drawing
-                    if (p === 'bollinger_bands') return false;
-                    return chartState.datasets[p] && chartState.datasets[p].length > 0;
-                }));
+            // Clear old lines
+            linesGroup.selectAll(".line").remove();
+            linesGroup.selectAll(".bb-band").remove();
+            linesGroup.selectAll(".bb-area").remove();
 
-            lines.exit().remove();
-
-            lines.enter()
-                .append("path")
-                .attr("class", d => `line line-${d}`)
-                .merge(lines)
-                .attr("d", d => {
-                    const meta = chartState.metadata[d];
-                    const yScale = yScales[meta.yAxisId || 'default'];
-                    return d3.line()
-                        .x(p => xScale(new Date(p[0])))
-                        .y(p => yScale(p[1]))
-                        (chartState.datasets[d]);
-                })
-                .style("stroke", d => chartState.metadata[d].color)
-                .style("stroke-width", d => chartState.metadata[d].strokeWidth || 2);
-            
-            // Handle Bollinger Bands separately
-            if (chartState.activePlugins.includes('bollinger_bands') && 
-                chartState.datasets['bollinger_bands'] &&
-                chartState.datasets['bollinger_bands'].middle) {
+            // Draw lines for each dataset
+            chartState.activePlugins.forEach(plugin => {
+                if (!chartState.datasets[plugin]) return;
                 
-                const bbData = chartState.datasets['bollinger_bands'];
-                const bbMeta = chartState.metadata['bollinger_bands'];
-                const yScale = yScales[bbMeta.yAxisId || 'default'];
+                const meta = chartState.metadata[plugin];
+                const yScale = yScales[meta.yAxisId || 'default'];
                 
-                // Remove old bands
-                linesGroup.selectAll(".bb-band").remove();
-                linesGroup.selectAll(".bb-area").remove();
+                if (!yScale) return;
                 
-                if (bbData.middle && bbData.middle.length > 0) {
-                    // Draw area between upper and lower bands
-                    const area = d3.area()
-                        .x(d => xScale(new Date(d[0])))
-                        .y0(d => yScale(d[1]))
-                        .y1((d, i) => yScale(bbData.upper[i][1]));
-                    
-                    linesGroup.append("path")
-                        .datum(bbData.lower)
-                        .attr("class", "bb-area")
-                        .attr("d", area)
-                        .style("fill", bbMeta.upperBandColor || '#4CAF50')
-                        .style("opacity", 0.1);
-                    
-                    // Draw the three lines
-                    const lineGenerator = d3.line()
+                if (plugin === 'bollinger_bands') {
+                    // Handle Bollinger Bands specially
+                    const bbData = chartState.datasets[plugin];
+                    if (bbData.middle && bbData.middle.length > 0) {
+                        // Draw area between upper and lower bands
+                        const area = d3.area()
+                            .x(d => xScale(new Date(d[0])))
+                            .y0(d => yScale(d[1]))
+                            .y1((d, i) => yScale(bbData.upper[i][1]));
+                        
+                        linesGroup.append("path")
+                            .datum(bbData.lower)
+                            .attr("class", "bb-area")
+                            .attr("d", area)
+                            .style("fill", meta.upperBandColor || '#4CAF50')
+                            .style("opacity", 0.1);
+                        
+                        // Draw the three lines
+                        const lineGenerator = d3.line()
+                            .x(d => xScale(new Date(d[0])))
+                            .y(d => yScale(d[1]));
+                        
+                        // Upper band
+                        linesGroup.append("path")
+                            .attr("class", "bb-band bb-upper")
+                            .attr("d", lineGenerator(bbData.upper))
+                            .style("stroke", meta.upperBandColor || '#4CAF50')
+                            .style("stroke-width", 1)
+                            .style("fill", "none")
+                            .style("stroke-dasharray", "2,2");
+                        
+                        // Middle band
+                        linesGroup.append("path")
+                            .attr("class", "bb-band bb-middle")
+                            .attr("d", lineGenerator(bbData.middle))
+                            .style("stroke", meta.color)
+                            .style("stroke-width", 1.5)
+                            .style("fill", "none");
+                        
+                        // Lower band
+                        linesGroup.append("path")
+                            .attr("class", "bb-band bb-lower")
+                            .attr("d", lineGenerator(bbData.lower))
+                            .style("stroke", meta.lowerBandColor || '#F44336')
+                            .style("stroke-width", 1)
+                            .style("fill", "none")
+                            .style("stroke-dasharray", "2,2");
+                    }
+                } else if (chartState.datasets[plugin].length > 0) {
+                    // Draw regular line
+                    const line = d3.line()
                         .x(d => xScale(new Date(d[0])))
                         .y(d => yScale(d[1]));
                     
-                    // Upper band
                     linesGroup.append("path")
-                        .attr("class", "bb-band bb-upper")
-                        .attr("d", lineGenerator(bbData.upper))
-                        .style("stroke", bbMeta.upperBandColor || '#4CAF50')
-                        .style("stroke-width", 1)
-                        .style("fill", "none")
-                        .style("stroke-dasharray", "2,2");
-                    
-                    // Middle band
-                    linesGroup.append("path")
-                        .attr("class", "bb-band bb-middle")
-                        .attr("d", lineGenerator(bbData.middle))
-                        .style("stroke", bbMeta.color)
-                        .style("stroke-width", 1.5)
+                        .datum(chartState.datasets[plugin])
+                        .attr("class", `line line-${plugin}`)
+                        .attr("d", line)
+                        .style("stroke", meta.color)
+                        .style("stroke-width", meta.strokeWidth || 2)
                         .style("fill", "none");
-                    
-                    // Lower band
-                    linesGroup.append("path")
-                        .attr("class", "bb-band bb-lower")
-                        .attr("d", lineGenerator(bbData.lower))
-                        .style("stroke", bbMeta.lowerBandColor || '#F44336')
-                        .style("stroke-width", 1)
-                        .style("fill", "none")
-                        .style("stroke-dasharray", "2,2");
                 }
-            }
-        }
-
-        function zoomed(event) {
-            const newXScale = event.transform.rescaleX(xScale);
-            chartState.currentZoom = newXScale.domain();
-            renderChart();
+            });
         }
 
         function brushended(event) {
@@ -888,25 +856,63 @@
             
             chartState.activePlugins.forEach(key => {
                 const data = chartState.datasets[key];
-                if (!data || data.length === 0) return;
+                if (!data) return;
                 
-                const bisect = d3.bisector(d => new Date(d[0])).left;
-                const i = bisect(data, date, 1);
-                const d0 = data[i - 1];
-                const d1 = data[i];
-                
-                if (!d0 || !d1) return;
-                
-                const closest = date - new Date(d0[0]) > new Date(d1[0]) - date ? d1 : d0;
-                const meta = chartState.metadata[key];
-                
-                tooltipData.push({
-                    label: meta.label,
-                    value: closest[1],
-                    unit: meta.unit || '',
-                    color: meta.color,
-                    date: new Date(closest[0])
-                });
+                // Handle Bollinger Bands
+                if (key === 'bollinger_bands' && data.middle) {
+                    const bisect = d3.bisector(d => new Date(d[0])).left;
+                    const i = bisect(data.middle, date, 1);
+                    const d0 = data.middle[i - 1];
+                    const d1 = data.middle[i];
+                    
+                    if (d0 && d1) {
+                        const closest = date - new Date(d0[0]) > new Date(d1[0]) - date ? d1 : d0;
+                        const closestIndex = data.middle.indexOf(closest);
+                        const meta = chartState.metadata[key];
+                        
+                        tooltipData.push({
+                            label: meta.label + ' (Upper)',
+                            value: data.upper[closestIndex][1],
+                            unit: meta.unit || '',
+                            color: meta.upperBandColor || '#4CAF50',
+                            date: new Date(closest[0])
+                        });
+                        
+                        tooltipData.push({
+                            label: meta.label + ' (Middle)',
+                            value: data.middle[closestIndex][1],
+                            unit: meta.unit || '',
+                            color: meta.color,
+                            date: new Date(closest[0])
+                        });
+                        
+                        tooltipData.push({
+                            label: meta.label + ' (Lower)',
+                            value: data.lower[closestIndex][1],
+                            unit: meta.unit || '',
+                            color: meta.lowerBandColor || '#F44336',
+                            date: new Date(closest[0])
+                        });
+                    }
+                } else if (data.length > 0) {
+                    const bisect = d3.bisector(d => new Date(d[0])).left;
+                    const i = bisect(data, date, 1);
+                    const d0 = data[i - 1];
+                    const d1 = data[i];
+                    
+                    if (d0 && d1) {
+                        const closest = date - new Date(d0[0]) > new Date(d1[0]) - date ? d1 : d0;
+                        const meta = chartState.metadata[key];
+                        
+                        tooltipData.push({
+                            label: meta.label,
+                            value: closest[1],
+                            unit: meta.unit || '',
+                            color: meta.color,
+                            date: new Date(closest[0])
+                        });
+                    }
+                }
             });
 
             if (tooltipData.length > 0) {
@@ -928,6 +934,8 @@
             data.forEach(d => {
                 const formattedValue = d.unit === '$' ? 
                     `$${d.value.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}` :
+                    d.unit === '%' ? 
+                    `${d.value.toFixed(2)}%` :
                     d.value.toFixed(2);
                     
                 html += `
@@ -968,6 +976,48 @@
                     .attr("class", "loading")
                     .text("Loading data...");
             }
+        }
+
+        function showError(message) {
+            d3.select("#chart-container").selectAll(".loading, .error, .message").remove();
+            d3.select("#chart-container")
+                .append("div")
+                .attr("class", "error")
+                .html(`
+                    <div style="text-align: center;">
+                        <div style="font-size: 24px; margin-bottom: 10px;">⚠</div>
+                        <div>${message}</div>
+                    </div>
+                `);
+        }
+
+        function showMessage(message, type = 'info') {
+            // Show temporary message at the top of the chart
+            d3.select("#chart-container").selectAll(".message").remove();
+            
+            const messageDiv = d3.select("#chart-container")
+                .append("div")
+                .attr("class", `message message-${type}`)
+                .style("position", "absolute")
+                .style("top", "60px")
+                .style("left", "50%")
+                .style("transform", "translateX(-50%)")
+                .style("padding", "8px 16px")
+                .style("background", type === 'warning' ? 'rgba(255, 149, 0, 0.2)' : 'rgba(98, 126, 234, 0.2)')
+                .style("border", `1px solid ${type === 'warning' ? '#FF9500' : '#627EEA'}`)
+                .style("border-radius", "6px")
+                .style("color", type === 'warning' ? '#FF9500' : '#627EEA')
+                .style("font-size", "12px")
+                .style("z-index", "100")
+                .text(message);
+            
+            // Auto-remove after 5 seconds
+            setTimeout(() => {
+                messageDiv.transition()
+                    .duration(500)
+                    .style("opacity", 0)
+                    .remove();
+            }, 5000);
         }
 
         // Event handlers for time range buttons

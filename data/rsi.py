@@ -1,15 +1,15 @@
-# data/rsi.py
-
+"""
 from datetime import datetime, timedelta
 import sys
 import os
+from .cache_manager import load_from_cache, save_to_cache
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config import RSI_PERIOD
 from . import eth_price
 
 def get_metadata():
-    """Returns metadata describing how RSI should be displayed"""
+    # Returns metadata describing how RSI should be displayed
     return {
         'label': f'RSI ({RSI_PERIOD})',
         'yAxisId': 'indicator',
@@ -27,7 +27,7 @@ def get_metadata():
     }
 
 def calculate_rsi(prices, period=RSI_PERIOD):
-    """Calculates the Relative Strength Index (RSI)"""
+    # Calculates the Relative Strength Index (RSI)
     if len(prices) < period:
         return []
 
@@ -73,8 +73,9 @@ def calculate_rsi(prices, period=RSI_PERIOD):
     return rsi_values
 
 def get_data(days='365'):
-    """Fetches ETH price data and calculates RSI"""
+    # Fetches ETH price data and calculates RSI
     metadata = get_metadata()
+    dataset_name = 'rsi'
     
     try:
         # Request extra days for RSI calculation
@@ -88,6 +89,15 @@ def get_data(days='365'):
         
         if not eth_data or not eth_data.get('data') or len(eth_data['data']) == 0:
             print("No ETH data available for RSI calculation")
+            # Try loading from cache
+            cached_data = load_from_cache(dataset_name)
+            if cached_data:
+                # Filter cached data to requested days
+                if days != 'max':
+                    cutoff_date = datetime.now() - timedelta(days=int(days))
+                    cutoff_ms = int(cutoff_date.timestamp() * 1000)
+                    cached_data = [d for d in cached_data if d[0] >= cutoff_ms]
+                return {'metadata': metadata, 'data': cached_data}
             return {'metadata': metadata, 'data': []}
         
         standardized_price_data = eth_data['data']
@@ -107,6 +117,10 @@ def get_data(days='365'):
         for i in range(len(rsi_values)):
             rsi_data.append([timestamps[i + RSI_PERIOD], rsi_values[i]])
         
+        # Save complete RSI data to cache
+        save_to_cache(dataset_name, rsi_data)
+        print(f"Successfully calculated and cached {dataset_name}")
+        
         # Trim to requested days if not 'max'
         if days != 'max':
             final_cutoff = datetime.now() - timedelta(days=int(days))
@@ -119,5 +133,14 @@ def get_data(days='365'):
         }
         
     except Exception as e:
-        print(f"Error calculating RSI: {e}")
+        print(f"Error calculating RSI: {e}. Loading from cache.")
+        cached_data = load_from_cache(dataset_name)
+        if cached_data:
+            # Filter cached data to requested days
+            if days != 'max':
+                cutoff_date = datetime.now() - timedelta(days=int(days))
+                cutoff_ms = int(cutoff_date.timestamp() * 1000)
+                cached_data = [d for d in cached_data if d[0] >= cutoff_ms]
+            return {'metadata': metadata, 'data': cached_data}
         return {'metadata': metadata, 'data': []}
+"""

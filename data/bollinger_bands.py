@@ -1,16 +1,18 @@
 # data/bollinger_bands.py
-
+# ============================================
+"""
 import numpy as np
 from datetime import datetime, timedelta
 import sys
 import os
+from .cache_manager import load_from_cache, save_to_cache
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config import FMP_API_KEY
 from . import eth_price
 
 def get_metadata():
-    """Returns metadata describing how Bollinger Bands should be displayed"""
+    # Returns metadata describing how Bollinger Bands should be displayed
     return {
         'label': 'Bollinger Bands',
         'yAxisId': 'price_usd',
@@ -26,10 +28,8 @@ def get_metadata():
     }
 
 def calculate_bollinger_bands(prices, period=20, num_std=2):
-    """
-    Calculate Bollinger Bands
-    Returns: (middle_band, upper_band, lower_band)
-    """
+    # Calculate Bollinger Bands
+    # Returns: (middle_band, upper_band, lower_band)
     if len(prices) < period:
         return [], [], []
     
@@ -53,8 +53,9 @@ def calculate_bollinger_bands(prices, period=20, num_std=2):
     return middle_band, upper_band, lower_band
 
 def get_data(days='365'):
-    """Fetches ETH price data and calculates Bollinger Bands"""
+    # Fetches ETH price data and calculates Bollinger Bands
     metadata = get_metadata()
+    dataset_name = 'bollinger_bands'
     
     try:
         # Get ETH price data
@@ -67,6 +68,19 @@ def get_data(days='365'):
         
         if not eth_data or not eth_data.get('data') or len(eth_data['data']) == 0:
             print("No ETH data available for Bollinger Bands calculation")
+            # Try loading from cache
+            cached_data = load_from_cache(dataset_name)
+            if cached_data:
+                # Filter cached data to requested days
+                if days != 'max':
+                    cutoff_date = datetime.now() - timedelta(days=int(days))
+                    cutoff_ms = int(cutoff_date.timestamp() * 1000)
+                    # Filter all three bands
+                    if 'middle' in cached_data:
+                        cached_data['middle'] = [d for d in cached_data['middle'] if d[0] >= cutoff_ms]
+                        cached_data['upper'] = [d for d in cached_data['upper'] if d[0] >= cutoff_ms]
+                        cached_data['lower'] = [d for d in cached_data['lower'] if d[0] >= cutoff_ms]
+                return {'metadata': metadata, 'data': cached_data}
             return {'metadata': metadata, 'data': {'middle': [], 'upper': [], 'lower': []}}
         
         price_data = eth_data['data']
@@ -86,6 +100,15 @@ def get_data(days='365'):
         middle_data = [[band_timestamps[i], middle[i]] for i in range(len(middle))]
         upper_data = [[band_timestamps[i], upper[i]] for i in range(len(upper))]
         lower_data = [[band_timestamps[i], lower[i]] for i in range(len(lower))]
+        
+        # Save complete bands data to cache
+        bands_data = {
+            'middle': middle_data,
+            'upper': upper_data,
+            'lower': lower_data
+        }
+        save_to_cache(dataset_name, bands_data)
+        print(f"Successfully calculated and cached {dataset_name}")
         
         # Trim to requested days if not 'max'
         if days != 'max':
@@ -107,5 +130,18 @@ def get_data(days='365'):
         }
         
     except Exception as e:
-        print(f"Error calculating Bollinger Bands: {e}")
+        print(f"Error calculating Bollinger Bands: {e}. Loading from cache.")
+        cached_data = load_from_cache(dataset_name)
+        if cached_data:
+            # Filter cached data to requested days
+            if days != 'max':
+                cutoff_date = datetime.now() - timedelta(days=int(days))
+                cutoff_ms = int(cutoff_date.timestamp() * 1000)
+                # Filter all three bands
+                if 'middle' in cached_data:
+                    cached_data['middle'] = [d for d in cached_data['middle'] if d[0] >= cutoff_ms]
+                    cached_data['upper'] = [d for d in cached_data['upper'] if d[0] >= cutoff_ms]
+                    cached_data['lower'] = [d for d in cached_data['lower'] if d[0] >= cutoff_ms]
+            return {'metadata': metadata, 'data': cached_data}
         return {'metadata': metadata, 'data': {'middle': [], 'upper': [], 'lower': []}}
+"""
