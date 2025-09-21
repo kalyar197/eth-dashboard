@@ -287,9 +287,9 @@
 
     <div id="chart-container">
         <div class="zoom-controls">
-            <button class="zoom-btn" onclick="resetZoom()" title="Reset Zoom">↺</button>
-            <button class="zoom-btn" onclick="zoomIn()" title="Zoom In">+</button>
-            <button class="zoom-btn" onclick="zoomOut()" title="Zoom Out">−</button>
+            <button class="zoom-btn" id="reset-zoom" title="Reset Zoom">↺</button>
+            <button class="zoom-btn" id="zoom-in" title="Zoom In">+</button>
+            <button class="zoom-btn" id="zoom-out" title="Zoom Out">−</button>
         </div>
         <div class="info-text">Click and drag to zoom • Hover for details</div>
     </div>
@@ -885,5 +885,13 @@
             renderChart();
         });
 
+        // Attach event listeners to zoom buttons
+        document.getElementById('reset-zoom').addEventListener('click', resetZoom);
+        document.getElementById('zoom-in').addEventListener('click', zoomIn);
+        document.getElementById('zoom-out').addEventListener('click', zoomOut);
+
         // Initialize
         initializeControls();
+    </script>
+</body>
+</html>
