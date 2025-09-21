@@ -30,19 +30,10 @@ def get_data(days='365'):
     metadata = get_metadata()
     
     try:
-        url = 'https://financialmodelingprep.com/api/v3/historical-price-full/commodity/GCUSD'
+        # Construct URL with API key as query parameter
+        url = f'https://financialmodelingprep.com/api/v3/historical-price-full/commodity/GCUSD?apikey={FMP_API_KEY}'
         
-        # Calculate limit
-        if days == 'max':
-            limit = 3650
-        else:
-            limit = int(days)
-        
-        params = {
-            'apikey': FMP_API_KEY
-        }
-        
-        response = requests.get(url, params=params)
+        response = requests.get(url)
         response.raise_for_status()
         data = response.json()
         
@@ -59,6 +50,12 @@ def get_data(days='365'):
         # Parse the historical data
         historical_data = data['historical']
         raw_data = []
+        
+        # Calculate limit
+        if days == 'max':
+            limit = 3650
+        else:
+            limit = int(days)
         
         # Limit the data to requested days
         for i, item in enumerate(historical_data):
