@@ -1,13 +1,12 @@
 # data/rsi.py
 
-import requests
-from .time_transformer import standardize_to_daily_utc
 from datetime import datetime, timedelta
 import sys
 import os
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from config import ALPHA_VANTAGE_API_KEY, RSI_PERIOD
+from config import RSI_PERIOD
+from . import eth_price
 
 def get_metadata():
     """Returns metadata describing how RSI should be displayed"""
@@ -74,86 +73,51 @@ def calculate_rsi(prices, period=RSI_PERIOD):
     return rsi_values
 
 def get_data(days='365'):
-    """Fetches ETH price, calculates RSI, and returns with metadata"""
+    """Fetches ETH price data and calculates RSI"""
     metadata = get_metadata()
     
     try:
-        url = 'https://www.alphavantage.co/query'
-        params = {
-            'function': 'DIGITAL_CURRENCY_DAILY',
-            'symbol': 'ETH',
-            'market': 'USD',
-            'apikey': ALPHA_VANTAGE_API_KEY
-        }
-        
-        response = requests.get(url, params=params)
-        response.raise_for_status()
-        data = response.json()
-        
-        if 'Error Message' in data:
-            print(f"Alpha Vantage API error for RSI: {data['Error Message']}")
-            return {'metadata': metadata, 'data': []}
-        
-        if 'Note' in data:
-            print(f"Alpha Vantage API limit reached for RSI: {data['Note']}")
-            return {'metadata': metadata, 'data': []}
-        
-        if 'Time Series (Digital Currency Daily)' not in data:
-            print("Unexpected response format from Alpha Vantage for RSI")
-            return {'metadata': metadata, 'data': []}
-        
-        time_series = data['Time Series (Digital Currency Daily)']
-        raw_data = []
-        
+        # Request extra days for RSI calculation
         if days == 'max':
-            days_limit = 3650
+            request_days = 'max'
         else:
-            days_limit = int(days) + 50
+            request_days = str(int(days) + RSI_PERIOD + 10)  # Extra buffer for RSI calculation
         
-        cutoff_date = datetime.now() - timedelta(days=days_limit)
+        # Get ETH price data from the eth_price module
+        eth_data = eth_price.get_data(request_days)
         
-        for date_str, values in time_series.items():
-            date = datetime.strptime(date_str, '%Y-%m-%d')
-            
-            if date < cutoff_date:
-                continue
-                
-            timestamp_ms = int(date.timestamp() * 1000)
-            
-            if '4a. close (USD)' in values:
-                price = float(values['4a. close (USD)'])
-            elif '4. close' in values:
-                price = float(values['4. close'])
-            else:
-                continue
-                
-            raw_data.append([timestamp_ms, price])
-        
-        raw_data.sort(key=lambda x: x[0])
-        standardized_price_data = standardize_to_daily_utc(raw_data)
-        
-        if not standardized_price_data:
+        if not eth_data or not eth_data.get('data') or len(eth_data['data']) == 0:
+            print("No ETH data available for RSI calculation")
             return {'metadata': metadata, 'data': []}
-            
+        
+        standardized_price_data = eth_data['data']
+        
+        if len(standardized_price_data) < RSI_PERIOD:
+            print(f"Insufficient data for RSI calculation (need at least {RSI_PERIOD} data points)")
+            return {'metadata': metadata, 'data': []}
+        
         timestamps = [item[0] for item in standardized_price_data]
         closing_prices = [item[1] for item in standardized_price_data]
 
+        # Calculate RSI
         rsi_values = calculate_rsi(closing_prices, RSI_PERIOD)
         
+        # Combine timestamps with RSI values
         rsi_data = []
         for i in range(len(rsi_values)):
             rsi_data.append([timestamps[i + RSI_PERIOD], rsi_values[i]])
         
+        # Trim to requested days if not 'max'
         if days != 'max':
             final_cutoff = datetime.now() - timedelta(days=int(days))
             final_cutoff_ms = int(final_cutoff.timestamp() * 1000)
             rsi_data = [d for d in rsi_data if d[0] >= final_cutoff_ms]
-            
+        
         return {
             'metadata': metadata,
             'data': rsi_data
         }
         
     except Exception as e:
-        print(f"Error getting RSI data: {e}")
+        print(f"Error calculating RSI: {e}")
         return {'metadata': metadata, 'data': []}
