@@ -25,65 +25,76 @@ def get_metadata():
 def get_data(days='365'):
     """
     Fetches gold price data from FMP API
-    Uses the commodity endpoint for GCUSD (Gold futures)
+    Tries XAUUSD first, then PAXGUSD as fallback
     """
     metadata = get_metadata()
     
-    try:
-        # Construct URL with API key as query parameter
-        url = f'https://financialmodelingprep.com/api/v3/historical-price-full/commodity/GCUSD?apikey={FMP_API_KEY}'
-        
-        response = requests.get(url)
-        response.raise_for_status()
-        data = response.json()
-        
-        # Check for API errors
-        if 'Error Message' in data:
-            print(f"FMP API error for gold: {data['Error Message']}")
-            return {'metadata': metadata, 'data': []}
-        
-        if 'historical' not in data:
-            print("Gold data not available from FMP API")
-            print(f"Response keys: {list(data.keys())}")
-            return {'metadata': metadata, 'data': []}
-        
-        # Parse the historical data
-        historical_data = data['historical']
-        raw_data = []
-        
-        # Calculate limit
-        if days == 'max':
-            limit = 3650
-        else:
-            limit = int(days)
-        
-        # Limit the data to requested days
-        for i, item in enumerate(historical_data):
-            if i >= limit:
-                break
+    # Try different gold tickers
+    tickers_to_try = [
+        ('XAUUSD', 'forex'),  # Spot gold
+        ('PAXGUSD', 'crypto'),  # PAX Gold as fallback
+    ]
+    
+    for ticker, market_type in tickers_to_try:
+        try:
+            # Construct URL based on market type
+            if market_type == 'forex':
+                url = f'https://financialmodelingprep.com/api/v3/historical-price-full/{ticker}?apikey={FMP_API_KEY}'
+            else:
+                url = f'https://financialmodelingprep.com/api/v3/historical-price-full/{ticker}?apikey={FMP_API_KEY}'
             
-            date_str = item['date']
-            date = datetime.strptime(date_str, '%Y-%m-%d')
-            timestamp_ms = int(date.timestamp() * 1000)
+            print(f"Trying to fetch gold data from: {ticker}")
+            response = requests.get(url)
             
-            price = float(item['close'])
-            raw_data.append([timestamp_ms, price])
+            if response.status_code == 200:
+                data = response.json()
+                
+                if 'historical' in data and len(data['historical']) > 0:
+                    print(f"Successfully fetched gold data using {ticker}")
+                    
+                    # Update label if using PAXG
+                    if ticker == 'PAXGUSD':
+                        metadata['label'] = 'Gold (PAXG/USD)'
+                    
+                    historical_data = data['historical']
+                    raw_data = []
+                    
+                    # Calculate limit
+                    if days == 'max':
+                        limit = 3650
+                    else:
+                        limit = int(days)
+                    
+                    # Process the data
+                    for i, item in enumerate(historical_data):
+                        if i >= limit:
+                            break
+                        
+                        date_str = item['date']
+                        date = datetime.strptime(date_str, '%Y-%m-%d')
+                        timestamp_ms = int(date.timestamp() * 1000)
+                        
+                        price = float(item['close'])
+                        raw_data.append([timestamp_ms, price])
+                    
+                    # Sort by timestamp
+                    raw_data.sort(key=lambda x: x[0])
+                    standardized_data = standardize_to_daily_utc(raw_data)
+                    
+                    # Trim to exact requested days if not 'max'
+                    if days != 'max':
+                        cutoff_date = datetime.now() - timedelta(days=int(days))
+                        cutoff_ms = int(cutoff_date.timestamp() * 1000)
+                        standardized_data = [d for d in standardized_data if d[0] >= cutoff_ms]
+                    
+                    return {
+                        'metadata': metadata,
+                        'data': standardized_data
+                    }
         
-        # Sort by timestamp (FMP returns newest first, we need oldest first)
-        raw_data.sort(key=lambda x: x[0])
-        standardized_data = standardize_to_daily_utc(raw_data)
-        
-        # Trim to exact requested days if not 'max'
-        if days != 'max':
-            cutoff_date = datetime.now() - timedelta(days=int(days))
-            cutoff_ms = int(cutoff_date.timestamp() * 1000)
-            standardized_data = [d for d in standardized_data if d[0] >= cutoff_ms]
-        
-        return {
-            'metadata': metadata,
-            'data': standardized_data
-        }
-        
-    except Exception as e:
-        print(f"Error fetching gold price data from FMP: {e}")
-        return {'metadata': metadata, 'data': []}
+        except Exception as e:
+            print(f"Error fetching {ticker}: {e}")
+            continue
+    
+    print("Could not fetch gold data from any source")
+    return {'metadata': metadata, 'data': []}

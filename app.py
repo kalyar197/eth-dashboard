@@ -2,7 +2,7 @@
 
 from flask import Flask, jsonify, request
 from flask_cors import CORS
-from data import eth_price, gold_price, rsi
+from data import eth_price, gold_price, rsi, btc_dominance, usdt_dominance, eth_dominance, bollinger_bands
 import time
 from config import CACHE_DURATION, RATE_LIMIT_DELAY
 
@@ -19,7 +19,11 @@ last_api_call = {}
 DATA_PLUGINS = {
     'eth': eth_price,
     'gold': gold_price,
-    'rsi': rsi
+    'rsi': rsi,
+    'btc_dominance': btc_dominance,
+    'usdt_dominance': usdt_dominance,
+    'eth_dominance': eth_dominance,
+    'bollinger_bands': bollinger_bands
 }
 
 def get_cache_key(dataset_name, days):
@@ -130,9 +134,9 @@ def home():
     """
     Root endpoint to verify server is running
     """
-    from config import ALPHA_VANTAGE_API_KEY
+    from config import FMP_API_KEY
     
-    api_key_status = "✅ Configured" if (ALPHA_VANTAGE_API_KEY and ALPHA_VANTAGE_API_KEY != 'YOUR_ALPHA_VANTAGE_API_KEY') else "❌ Not configured"
+    api_key_status = "✅ Configured" if (FMP_API_KEY and FMP_API_KEY != 'YOUR_FMP_API_KEY') else "❌ Not configured"
     
     return jsonify({
         'status': 'running',
@@ -147,7 +151,7 @@ def home():
     })
 
 if __name__ == '__main__':
-    from config import ALPHA_VANTAGE_API_KEY
+    from config import FMP_API_KEY
     
     print("="*60)
     print("Starting Advanced Financial Charting Server")
@@ -157,13 +161,13 @@ if __name__ == '__main__':
     print(f"Cache duration: {CACHE_DURATION} seconds")
     print(f"Rate limit: {RATE_LIMIT_DELAY} seconds between API calls")
     
-    if ALPHA_VANTAGE_API_KEY and ALPHA_VANTAGE_API_KEY != 'YOUR_ALPHA_VANTAGE_API_KEY':
+    if FMP_API_KEY and FMP_API_KEY != 'YOUR_FMP_API_KEY':
         print(f"API Key Status: ✅ Configured")
     else:
         print(f"API Key Status: ❌ Not configured - Please add your key to config.py")
     
     print("="*60)
-    print("Make sure to install: pip install Flask requests Flask-Cors")
+    print("Make sure to install: pip install Flask requests Flask-Cors numpy")
     print("="*60)
     
     app.run(debug=True, port=5000)

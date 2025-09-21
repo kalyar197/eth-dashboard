@@ -268,6 +268,15 @@
         .eth-label { --plugin-color: #627EEA; --plugin-color-dark: rgba(98, 126, 234, 0.2); }
         .gold-label { --plugin-color: #FFD700; --plugin-color-dark: rgba(255, 215, 0, 0.2); }
         .rsi-label { --plugin-color: #FF9500; --plugin-color-dark: rgba(255, 149, 0, 0.2); }
+        .btc_dominance-label { --plugin-color: #F7931A; --plugin-color-dark: rgba(247, 147, 26, 0.2); }
+        .usdt_dominance-label { --plugin-color: #26A17B; --plugin-color-dark: rgba(38, 161, 123, 0.2); }
+        .eth_dominance-label { --plugin-color: #627EEA; --plugin-color-dark: rgba(98, 126, 234, 0.2); }
+        .bollinger_bands-label { --plugin-color: #9C27B0; --plugin-color-dark: rgba(156, 39, 176, 0.2); }
+        
+        /* Bollinger Band styles */
+        .band-area {
+            fill-opacity: 0.1;
+        }
     </style>
 </head>
 <body>
@@ -503,15 +512,28 @@
                 
                 // Store data and metadata
                 chartState.activePlugins.forEach((plugin, i) => {
-                    chartState.datasets[plugin] = results[i].data || [];
-                    chartState.metadata[plugin] = results[i].metadata || {};
+                    const result = results[i];
+                    
+                    // Handle special case for Bollinger Bands
+                    if (plugin === 'bollinger_bands' && result.data && typeof result.data === 'object' && 'middle' in result.data) {
+                        chartState.datasets[plugin] = result.data;
+                    } else {
+                        chartState.datasets[plugin] = result.data || [];
+                    }
+                    
+                    chartState.metadata[plugin] = result.metadata || {};
                 });
 
                 // Clear loading state BEFORE showing error/success
                 setLoading(false);
                 
                 // Check if we have any valid data
-                const hasData = Object.values(chartState.datasets).some(d => d.length > 0);
+                const hasData = Object.entries(chartState.datasets).some(([key, d]) => {
+                    if (key === 'bollinger_bands') {
+                        return d.middle && d.middle.length > 0;
+                    }
+                    return d.length > 0;
+                });
                 
                 if (!hasData) {
                     // Show error AFTER clearing loading state
@@ -578,7 +600,13 @@
             // Get all data points for x domain
             const allData = Object.entries(chartState.datasets)
                 .filter(([key, data]) => chartState.activePlugins.includes(key))
-                .map(([_, data]) => data)
+                .map(([key, data]) => {
+                    // Handle Bollinger Bands special case
+                    if (key === 'bollinger_bands' && data.middle) {
+                        return data.middle;
+                    }
+                    return data;
+                })
                 .flat();
                 
             if (allData.length === 0) return;
@@ -591,7 +619,14 @@
             const axisSets = {};
             chartState.activePlugins.forEach(key => {
                 const meta = chartState.metadata[key];
-                if (!meta || !chartState.datasets[key] || chartState.datasets[key].length === 0) return;
+                if (!meta) return;
+                
+                // Check if dataset has valid data
+                const hasValidData = key === 'bollinger_bands' 
+                    ? (chartState.datasets[key] && chartState.datasets[key].middle && chartState.datasets[key].middle.length > 0)
+                    : (chartState.datasets[key] && chartState.datasets[key].length > 0);
+                    
+                if (!hasValidData) return;
                 
                 const axisId = meta.yAxisId || 'default';
                 if (!axisSets[axisId]) {
@@ -615,9 +650,18 @@
                 if (axisInfo.metadata.yDomain) {
                     yDomain = axisInfo.metadata.yDomain;
                 } else {
-                    const axisData = axisInfo.datasets
-                        .map(key => chartState.datasets[key])
-                        .flat();
+                    const axisData = [];
+                    axisInfo.datasets.forEach(key => {
+                        if (key === 'bollinger_bands' && chartState.datasets[key].middle) {
+                            // For Bollinger Bands, include all three lines
+                            axisData.push(...chartState.datasets[key].middle);
+                            axisData.push(...chartState.datasets[key].upper);
+                            axisData.push(...chartState.datasets[key].lower);
+                        } else if (chartState.datasets[key]) {
+                            axisData.push(...chartState.datasets[key]);
+                        }
+                    });
+                    
                     yDomain = d3.extent(axisData, d => d[1]);
                     const padding = (yDomain[1] - yDomain[0]) * 0.05;
                     yDomain = [yDomain[0] - padding, yDomain[1] + padding];
@@ -689,7 +733,11 @@
 
             // Draw lines
             const lines = linesGroup.selectAll(".line")
-                .data(chartState.activePlugins.filter(p => chartState.datasets[p] && chartState.datasets[p].length > 0));
+                .data(chartState.activePlugins.filter(p => {
+                    // Filter out bollinger_bands for regular line drawing
+                    if (p === 'bollinger_bands') return false;
+                    return chartState.datasets[p] && chartState.datasets[p].length > 0;
+                }));
 
             lines.exit().remove();
 
@@ -707,6 +755,66 @@
                 })
                 .style("stroke", d => chartState.metadata[d].color)
                 .style("stroke-width", d => chartState.metadata[d].strokeWidth || 2);
+            
+            // Handle Bollinger Bands separately
+            if (chartState.activePlugins.includes('bollinger_bands') && 
+                chartState.datasets['bollinger_bands'] &&
+                chartState.datasets['bollinger_bands'].middle) {
+                
+                const bbData = chartState.datasets['bollinger_bands'];
+                const bbMeta = chartState.metadata['bollinger_bands'];
+                const yScale = yScales[bbMeta.yAxisId || 'default'];
+                
+                // Remove old bands
+                linesGroup.selectAll(".bb-band").remove();
+                linesGroup.selectAll(".bb-area").remove();
+                
+                if (bbData.middle && bbData.middle.length > 0) {
+                    // Draw area between upper and lower bands
+                    const area = d3.area()
+                        .x(d => xScale(new Date(d[0])))
+                        .y0(d => yScale(d[1]))
+                        .y1((d, i) => yScale(bbData.upper[i][1]));
+                    
+                    linesGroup.append("path")
+                        .datum(bbData.lower)
+                        .attr("class", "bb-area")
+                        .attr("d", area)
+                        .style("fill", bbMeta.upperBandColor || '#4CAF50')
+                        .style("opacity", 0.1);
+                    
+                    // Draw the three lines
+                    const lineGenerator = d3.line()
+                        .x(d => xScale(new Date(d[0])))
+                        .y(d => yScale(d[1]));
+                    
+                    // Upper band
+                    linesGroup.append("path")
+                        .attr("class", "bb-band bb-upper")
+                        .attr("d", lineGenerator(bbData.upper))
+                        .style("stroke", bbMeta.upperBandColor || '#4CAF50')
+                        .style("stroke-width", 1)
+                        .style("fill", "none")
+                        .style("stroke-dasharray", "2,2");
+                    
+                    // Middle band
+                    linesGroup.append("path")
+                        .attr("class", "bb-band bb-middle")
+                        .attr("d", lineGenerator(bbData.middle))
+                        .style("stroke", bbMeta.color)
+                        .style("stroke-width", 1.5)
+                        .style("fill", "none");
+                    
+                    // Lower band
+                    linesGroup.append("path")
+                        .attr("class", "bb-band bb-lower")
+                        .attr("d", lineGenerator(bbData.lower))
+                        .style("stroke", bbMeta.lowerBandColor || '#F44336')
+                        .style("stroke-width", 1)
+                        .style("fill", "none")
+                        .style("stroke-dasharray", "2,2");
+                }
+            }
         }
 
         function zoomed(event) {
