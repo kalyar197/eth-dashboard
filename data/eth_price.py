@@ -7,7 +7,7 @@ import sys
 import os
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from config import ALPHA_VANTAGE_API_KEY
+from config import FMP_API_KEY
 
 def get_metadata():
     """Returns metadata describing how this data should be displayed"""
@@ -23,16 +23,20 @@ def get_metadata():
     }
 
 def get_data(days='365'):
-    """Fetches Ethereum price data and returns it with metadata"""
+    """Fetches Ethereum price data from FMP API and returns it with metadata"""
     metadata = get_metadata()
     
     try:
-        url = 'https://www.alphavantage.co/query'
+        url = 'https://financialmodelingprep.com/api/v3/historical-price-full/ETHUSD'
+        
+        # Calculate limit with extra days for RSI calculation
+        if days == 'max':
+            limit = 3650
+        else:
+            limit = int(days) + 50  # Add extra days for RSI calculation
+        
         params = {
-            'function': 'DIGITAL_CURRENCY_DAILY',
-            'symbol': 'ETH',
-            'market': 'USD',
-            'apikey': ALPHA_VANTAGE_API_KEY
+            'apikey': FMP_API_KEY
         }
         
         response = requests.get(url, params=params)
@@ -40,48 +44,38 @@ def get_data(days='365'):
         data = response.json()
         
         if 'Error Message' in data:
-            print(f"Alpha Vantage API error: {data['Error Message']}")
+            print(f"FMP API error: {data['Error Message']}")
             return {'metadata': metadata, 'data': []}
         
-        if 'Note' in data:
-            print(f"Alpha Vantage API limit reached: {data['Note']}")
+        if 'historical' not in data:
+            print("Unexpected response format from FMP API")
+            print(f"Response keys: {list(data.keys())}")
             return {'metadata': metadata, 'data': []}
         
-        if 'Time Series (Digital Currency Daily)' not in data:
-            print("Unexpected response format from Alpha Vantage")
-            return {'metadata': metadata, 'data': []}
-        
-        time_series = data['Time Series (Digital Currency Daily)']
+        historical_data = data['historical']
         raw_data = []
         
-        if days == 'max':
-            days_limit = 3650
-        else:
-            days_limit = int(days)
-        
-        cutoff_date = datetime.now() - timedelta(days=days_limit)
-        
-        for date_str, values in time_series.items():
+        # Limit the data to requested days
+        for i, item in enumerate(historical_data):
+            if i >= limit:
+                break
+            
+            date_str = item['date']
             date = datetime.strptime(date_str, '%Y-%m-%d')
-            
-            if date < cutoff_date:
-                continue
-            
             timestamp_ms = int(date.timestamp() * 1000)
             
-            # Handle different field names
-            if '4a. close (USD)' in values:
-                price = float(values['4a. close (USD)'])
-            elif '4. close' in values:
-                price = float(values['4. close'])
-            else:
-                print(f"Available keys: {list(values.keys())}")
-                continue
-            
+            price = float(item['close'])
             raw_data.append([timestamp_ms, price])
         
+        # Sort by timestamp (FMP returns newest first, we need oldest first)
         raw_data.sort(key=lambda x: x[0])
         standardized_data = standardize_to_daily_utc(raw_data)
+        
+        # Trim to exact requested days if not 'max'
+        if days != 'max':
+            cutoff_date = datetime.now() - timedelta(days=int(days))
+            cutoff_ms = int(cutoff_date.timestamp() * 1000)
+            standardized_data = [d for d in standardized_data if d[0] >= cutoff_ms]
         
         return {
             'metadata': metadata,
@@ -89,5 +83,5 @@ def get_data(days='365'):
         }
         
     except Exception as e:
-        print(f"Error fetching ETH data: {e}")
+        print(f"Error fetching ETH data from FMP: {e}")
         return {'metadata': metadata, 'data': []}

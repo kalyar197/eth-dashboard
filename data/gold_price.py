@@ -7,7 +7,7 @@ import sys
 import os
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from config import ALPHA_VANTAGE_API_KEY
+from config import FMP_API_KEY
 
 def get_metadata():
     """Returns metadata describing how gold data should be displayed"""
@@ -24,21 +24,22 @@ def get_metadata():
 
 def get_data(days='365'):
     """
-    Fetches gold price data using Alpha Vantage's FX_DAILY
-    XAU (Gold Ounce) to USD gives the actual gold spot price
-    No fallbacks - returns empty if not available
+    Fetches gold price data from FMP API
+    Uses the commodity endpoint for GCUSD (Gold futures)
     """
     metadata = get_metadata()
     
     try:
-        url = 'https://www.alphavantage.co/query'
+        url = 'https://financialmodelingprep.com/api/v3/historical-price-full/commodity/GCUSD'
         
-        # Get daily forex data for XAU/USD (Gold to USD)
+        # Calculate limit
+        if days == 'max':
+            limit = 3650
+        else:
+            limit = int(days)
+        
         params = {
-            'function': 'FX_DAILY',
-            'from_symbol': 'XAU',  # Gold (troy ounce)
-            'to_symbol': 'USD',
-            'apikey': ALPHA_VANTAGE_API_KEY
+            'apikey': FMP_API_KEY
         }
         
         response = requests.get(url, params=params)
@@ -47,42 +48,39 @@ def get_data(days='365'):
         
         # Check for API errors
         if 'Error Message' in data:
-            print(f"Gold price not available: {data['Error Message']}")
+            print(f"FMP API error for gold: {data['Error Message']}")
             return {'metadata': metadata, 'data': []}
         
-        if 'Note' in data:
-            print(f"Alpha Vantage API limit reached: {data['Note']}")
+        if 'historical' not in data:
+            print("Gold data not available from FMP API")
+            print(f"Response keys: {list(data.keys())}")
             return {'metadata': metadata, 'data': []}
         
-        if 'Time Series FX (Daily)' not in data:
-            print("Gold (XAU/USD) data not available from Alpha Vantage")
-            return {'metadata': metadata, 'data': []}
-        
-        # Parse the time series data
-        time_series = data['Time Series FX (Daily)']
+        # Parse the historical data
+        historical_data = data['historical']
         raw_data = []
         
-        if days == 'max':
-            days_limit = 3650
-        else:
-            days_limit = int(days)
-        
-        cutoff_date = datetime.now() - timedelta(days=days_limit)
-        
-        for date_str, values in time_series.items():
+        # Limit the data to requested days
+        for i, item in enumerate(historical_data):
+            if i >= limit:
+                break
+            
+            date_str = item['date']
             date = datetime.strptime(date_str, '%Y-%m-%d')
-            
-            if date < cutoff_date:
-                continue
-            
             timestamp_ms = int(date.timestamp() * 1000)
             
-            # XAU/USD gives direct gold price per troy ounce
-            price = float(values['4. close'])
+            price = float(item['close'])
             raw_data.append([timestamp_ms, price])
         
+        # Sort by timestamp (FMP returns newest first, we need oldest first)
         raw_data.sort(key=lambda x: x[0])
         standardized_data = standardize_to_daily_utc(raw_data)
+        
+        # Trim to exact requested days if not 'max'
+        if days != 'max':
+            cutoff_date = datetime.now() - timedelta(days=int(days))
+            cutoff_ms = int(cutoff_date.timestamp() * 1000)
+            standardized_data = [d for d in standardized_data if d[0] >= cutoff_ms]
         
         return {
             'metadata': metadata,
@@ -90,5 +88,5 @@ def get_data(days='365'):
         }
         
     except Exception as e:
-        print(f"Error fetching gold price data: {e}")
+        print(f"Error fetching gold price data from FMP: {e}")
         return {'metadata': metadata, 'data': []}
