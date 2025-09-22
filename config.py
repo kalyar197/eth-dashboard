@@ -6,6 +6,7 @@ Centralized configuration file for all API keys and settings
 # API Keys
 ALPHA_VANTAGE_API_KEY = '5EK27ZM3JQC594PO'  # Legacy - kept for reference
 FMP_API_KEY = '74mkQbAh1DPHnRf1VoepvTTrLsvyvUf5'  # Add your FMP API key here
+COINSTATS_API_KEY = 'hn8xFxvTblGTj6wEq35nxyijBlQNyBrdJUWqPIeHZCU='  # Add your CoinStats API key here
 
 # Optional: Add other API keys if you want to switch between providers
 CRYPTOCOMPARE_API_KEY = ''  # Optional - CryptoCompare works without key

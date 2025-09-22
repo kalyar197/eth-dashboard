@@ -1,13 +1,15 @@
+# data/eth_dominance.py
+# REAL DATA from CoinStats API - NO ESTIMATES
+
 import requests
 from .time_transformer import standardize_to_daily_utc
 from datetime import datetime, timedelta
 import sys
 import os
-import math
 from .cache_manager import load_from_cache, save_to_cache
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from config import FMP_API_KEY
+from config import COINSTATS_API_KEY
 
 def get_metadata():
     """Returns metadata describing how ETH dominance should be displayed"""
@@ -19,71 +21,132 @@ def get_metadata():
         'chartType': 'line',
         'color': '#627EEA',  # Ethereum blue
         'strokeWidth': 2,
-        'description': 'Ethereum market cap dominance percentage'
+        'description': 'Ethereum market cap dominance - REAL DATA from CoinStats'
     }
 
 def get_data(days='365'):
-    """Fetches Ethereum dominance data"""
+    """Fetches REAL Ethereum dominance data from CoinStats API."""
     metadata = get_metadata()
-    dataset_name = 'eth_dominance'
+    dataset_name = 'eth_dominance_coinstats'
     
     try:
-        # Get ETH price history to simulate dominance
-        eth_url = f'https://financialmodelingprep.com/api/v3/historical-price-full/ETHUSD?apikey={FMP_API_KEY}'
+        print("Fetching REAL ETH dominance from CoinStats API...")
         
-        response = requests.get(eth_url)
+        headers = {
+            'X-API-KEY': COINSTATS_API_KEY,
+            'Accept': 'application/json'
+        }
+        
+        # Calculate period parameter based on days
+        if days == 'max':
+            period = 'all'
+        elif int(days) <= 1:
+            period = '24h'
+        elif int(days) <= 7:
+            period = '7d'
+        elif int(days) <= 30:
+            period = '1m'
+        elif int(days) <= 90:
+            period = '3m'
+        elif int(days) <= 365:
+            period = '1y'
+        else:
+            period = 'all'
+        
+        # CoinStats dominance endpoint for Ethereum
+        url = f'https://api.coinstats.app/public/v1/charts/dominance'
+        
+        params = {
+            'coin': 'ethereum',  # or 'eth' depending on API
+            'period': period
+        }
+        
+        response = requests.get(url, headers=headers, params=params, timeout=30)
+        
+        if response.status_code != 200:
+            # Try alternative endpoint structure
+            url = f'https://openapiv1.coinstats.app/coins/ethereum/charts'
+            params = {
+                'period': period,
+                'type': 'dominance'
+            }
+            response = requests.get(url, headers=headers, params=params, timeout=30)
+        
         response.raise_for_status()
-        eth_data = response.json()
+        data = response.json()
         
-        if 'historical' not in eth_data:
-            print("No ETH data available for dominance calculation")
-            raise ValueError("No ETH data")
+        # Parse the response
+        dominance_data = []
         
-        historical_data = eth_data['historical']
-        raw_data = []
+        if 'chart' in data:
+            chart_data = data['chart']
+        elif 'dominance' in data:
+            chart_data = data['dominance']
+        elif 'data' in data and isinstance(data['data'], list):
+            chart_data = data['data']
+        else:
+            raise ValueError(f"Unexpected CoinStats API response format: {data.keys()}")
         
-        for i, item in enumerate(historical_data):
-            date = datetime.strptime(item['date'], '%Y-%m-%d')
-            timestamp_ms = int(date.timestamp() * 1000)
-            
-            # ETH dominance typically ranges 15-22%
-            price = float(item['close'])
-            base_dominance = 18
-            
-            # Price-based component (normalized around 2000 as baseline)
-            price_factor = (price / 2000) * 2
-            
-            # Add some variation based on time
-            days_ago = (datetime.now() - date).days
-            cycle_factor = math.sin(days_ago * 0.007) * 2  # Different frequency than BTC
-            micro_cycle = math.sin(days_ago * 0.025) * 1
-            
-            dominance = base_dominance + price_factor + cycle_factor + micro_cycle
-            dominance = max(14, min(24, dominance))  # Keep between 14-24%
-            
-            raw_data.append([timestamp_ms, dominance])
+        # Process the data points
+        for point in chart_data:
+            if isinstance(point, list) and len(point) >= 2:
+                timestamp = point[0]
+                dominance_value = point[1]
+                
+                # Convert to milliseconds if needed
+                if timestamp < 1000000000000:  # If in seconds
+                    timestamp = timestamp * 1000
+                
+                dominance_data.append([timestamp, dominance_value])
+            elif isinstance(point, dict):
+                # Alternative format
+                timestamp = point.get('timestamp', point.get('time', point.get('date')))
+                dominance_value = point.get('dominance', point.get('value', point.get('percentage')))
+                
+                if timestamp and dominance_value is not None:
+                    if timestamp < 1000000000000:  # If in seconds
+                        timestamp = timestamp * 1000
+                    dominance_data.append([timestamp, dominance_value])
+        
+        if not dominance_data:
+            raise ValueError("No dominance data returned from CoinStats API")
+        
+        # Sort by timestamp
+        dominance_data.sort(key=lambda x: x[0])
         
         # Save to cache
-        save_to_cache(dataset_name, raw_data)
-        print(f"Successfully fetched and cached {dataset_name}")
+        save_to_cache(dataset_name, dominance_data)
+        print(f"Successfully fetched {len(dominance_data)} REAL ETH dominance data points")
+        print(f"Dominance range: {min(d[1] for d in dominance_data):.2f}% - {max(d[1] for d in dominance_data):.2f}%")
+        
+        raw_data = dominance_data
         
     except Exception as e:
-        print(f"Error fetching ETH dominance: {e}. Loading from cache.")
+        print(f"Error fetching ETH dominance from CoinStats: {e}")
+        print("Attempting to load from cache...")
+        
         raw_data = load_from_cache(dataset_name)
         if not raw_data:
-            return {'metadata': metadata, 'data': []}
+            print("No cached REAL data available")
+            return {
+                'metadata': metadata,
+                'data': [],
+                'error': f'Failed to fetch real data from CoinStats: {str(e)}'
+            }
     
-    # Sort and process
-    raw_data.sort(key=lambda x: x[0])
-    standardized_data = standardize_to_daily_utc(raw_data)
+    # Process and standardize data
+    if raw_data:
+        standardized_data = standardize_to_daily_utc(raw_data)
+        
+        # Trim to requested days
+        if days != 'max':
+            cutoff_date = datetime.now() - timedelta(days=int(days))
+            cutoff_ms = int(cutoff_date.timestamp() * 1000)
+            standardized_data = [d for d in standardized_data if d[0] >= cutoff_ms]
+        
+        return {
+            'metadata': metadata,
+            'data': standardized_data
+        }
     
-    # Trim to requested days
-    if days != 'max':
-        cutoff_date = datetime.now() - timedelta(days=int(days))
-        cutoff_ms = int(cutoff_date.timestamp() * 1000)
-        standardized_data = [d for d in standardized_data if d[0] >= cutoff_ms]
-    
-    return {
-        'metadata': metadata,
-        'data': standardized_data
-    }
+    return {'metadata': metadata, 'data': []}
