@@ -1,18 +1,16 @@
-# data/eth_dominance.py
-# ============================================
-"""
 import requests
 from .time_transformer import standardize_to_daily_utc
 from datetime import datetime, timedelta
 import sys
 import os
+import math
 from .cache_manager import load_from_cache, save_to_cache
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config import FMP_API_KEY
 
 def get_metadata():
-    # Returns metadata describing how ETH dominance should be displayed
+    """Returns metadata describing how ETH dominance should be displayed"""
     return {
         'label': 'ETH.D',
         'yAxisId': 'percentage',
@@ -25,7 +23,7 @@ def get_metadata():
     }
 
 def get_data(days='365'):
-    # Fetches Ethereum dominance data
+    """Fetches Ethereum dominance data"""
     metadata = get_metadata()
     dataset_name = 'eth_dominance'
     
@@ -44,17 +42,24 @@ def get_data(days='365'):
         historical_data = eth_data['historical']
         raw_data = []
         
-        base_dominance = 18  # Base ETH dominance around 18%
-        
-        for item in historical_data:
+        for i, item in enumerate(historical_data):
             date = datetime.strptime(item['date'], '%Y-%m-%d')
             timestamp_ms = int(date.timestamp() * 1000)
             
-            # Simulate dominance based on ETH price relative to its historical average
+            # ETH dominance typically ranges 15-22%
             price = float(item['close'])
-            price_ratio = (price / 3000) * 3  # Normalize around 3000 ETH
-            dominance = base_dominance + price_ratio
-            dominance = max(12, min(25, dominance))  # Keep between 12-25%
+            base_dominance = 18
+            
+            # Price-based component (normalized around 2000 as baseline)
+            price_factor = (price / 2000) * 2
+            
+            # Add some variation based on time
+            days_ago = (datetime.now() - date).days
+            cycle_factor = math.sin(days_ago * 0.007) * 2  # Different frequency than BTC
+            micro_cycle = math.sin(days_ago * 0.025) * 1
+            
+            dominance = base_dominance + price_factor + cycle_factor + micro_cycle
+            dominance = max(14, min(24, dominance))  # Keep between 14-24%
             
             raw_data.append([timestamp_ms, dominance])
         
@@ -82,4 +87,3 @@ def get_data(days='365'):
         'metadata': metadata,
         'data': standardized_data
     }
-"""

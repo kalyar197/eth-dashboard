@@ -1,6 +1,6 @@
 # data/bollinger_bands.py
 # ============================================
-"""
+
 import numpy as np
 from datetime import datetime, timedelta
 import sys
@@ -12,7 +12,7 @@ from config import FMP_API_KEY
 from . import eth_price
 
 def get_metadata():
-    # Returns metadata describing how Bollinger Bands should be displayed
+    """Returns metadata describing how Bollinger Bands should be displayed"""
     return {
         'label': 'Bollinger Bands',
         'yAxisId': 'price_usd',
@@ -28,8 +28,9 @@ def get_metadata():
     }
 
 def calculate_bollinger_bands(prices, period=20, num_std=2):
-    # Calculate Bollinger Bands
-    # Returns: (middle_band, upper_band, lower_band)
+    """Calculate Bollinger Bands
+    Returns: (middle_band, upper_band, lower_band)
+    """
     if len(prices) < period:
         return [], [], []
     
@@ -53,7 +54,7 @@ def calculate_bollinger_bands(prices, period=20, num_std=2):
     return middle_band, upper_band, lower_band
 
 def get_data(days='365'):
-    # Fetches ETH price data and calculates Bollinger Bands
+    """Fetches ETH price data and calculates Bollinger Bands"""
     metadata = get_metadata()
     dataset_name = 'bollinger_bands'
     
@@ -144,4 +145,3 @@ def get_data(days='365'):
                     cached_data['lower'] = [d for d in cached_data['lower'] if d[0] >= cutoff_ms]
             return {'metadata': metadata, 'data': cached_data}
         return {'metadata': metadata, 'data': {'middle': [], 'upper': [], 'lower': []}}
-"""

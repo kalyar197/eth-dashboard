@@ -1,6 +1,3 @@
-# data/usdt_dominance.py
-# ============================================
-"""
 import requests
 from .time_transformer import standardize_to_daily_utc
 from datetime import datetime, timedelta
@@ -13,7 +10,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config import FMP_API_KEY
 
 def get_metadata():
-    # Returns metadata describing how USDT dominance should be displayed
+    """Returns metadata describing how USDT dominance should be displayed"""
     return {
         'label': 'USDT.D',
         'yAxisId': 'percentage',
@@ -26,7 +23,7 @@ def get_metadata():
     }
 
 def get_data(days='365'):
-    # Fetches USDT dominance data
+    """Fetches USDT dominance data"""
     metadata = get_metadata()
     dataset_name = 'usdt_dominance'
     
@@ -37,7 +34,7 @@ def get_data(days='365'):
     if not cached_data:
         try:
             # For demonstration, we'll create realistic USDT dominance data
-            # USDT dominance typically ranges from 4-8% and increases during bear markets
+            # USDT dominance typically ranges from 4-9% and increases during bear markets
             
             raw_data = []
             
@@ -50,13 +47,20 @@ def get_data(days='365'):
                 timestamp_ms = int(date.timestamp() * 1000)
                 
                 # Create realistic USDT dominance pattern
-                # USDT dominance increases during market downturns
-                cycle = math.sin(i * 0.02) * -1.5  # Inverse correlation with market
-                trend = (i / num_days) * 0.5  # Slight upward trend over time
-                volatility = math.sin(i * 0.1) * 0.3
+                # USDT dominance increases during market downturns (inverse correlation)
+                days_ago = num_days - i - 1
                 
-                dominance = base_dominance + cycle + trend + volatility
-                dominance = max(4, min(9, dominance))  # Keep between 4-9%
+                # Long-term upward trend (stablecoins gaining adoption)
+                trend = (i / num_days) * 1.5
+                
+                # Inverse correlation with market (higher during bear markets)
+                market_cycle = math.sin(days_ago * 0.005) * -1.2  
+                
+                # Short-term volatility
+                volatility = math.sin(days_ago * 0.03) * 0.5
+                
+                dominance = base_dominance + trend + market_cycle + volatility
+                dominance = max(3.5, min(9.5, dominance))  # Keep between 3.5-9.5%
                 
                 raw_data.append([timestamp_ms, dominance])
             
@@ -86,4 +90,3 @@ def get_data(days='365'):
         'metadata': metadata,
         'data': standardized_data
     }
-"""

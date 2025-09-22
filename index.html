@@ -83,10 +83,11 @@
             border-radius: 12px; 
             border: 1px solid #2a2a2a;
             width: 100%; 
-            max-width: 1400px; 
+            max-width: 1600px; /* Increased for more axes */
             min-height: 600px; 
             position: relative; 
             padding: 20px;
+            overflow-x: auto; /* Allow horizontal scroll if needed */
         }
         
         .loading, .error { 
@@ -176,6 +177,8 @@
             z-index: 1000;
             border: 1px solid #333;
             backdrop-filter: blur(10px);
+            max-height: 400px;
+            overflow-y: auto;
         }
         
         .tooltip.show {
@@ -275,6 +278,19 @@
         .band-area {
             fill-opacity: 0.1;
         }
+        
+        /* Y-axis colors for better visibility */
+        .y-axis-percentage text {
+            fill: #888;
+        }
+        
+        .y-axis-indicator text {
+            fill: #FF9500;
+        }
+        
+        .y-axis-price_usd text {
+            fill: #627EEA;
+        }
     </style>
 </head>
 <body>
@@ -313,17 +329,17 @@
             currentZoom: null
         };
 
-        // Chart dimensions - increased right margin for multiple axes
-        const margin = {top: 30, right: 200, bottom: 50, left: 80};
+        // Chart dimensions - significantly increased right margin for multiple axes
+        const margin = {top: 30, right: 320, bottom: 50, left: 80};
         const container = document.getElementById('chart-container');
-        let width = container.clientWidth - margin.left - margin.right;
+        let width = Math.min(container.clientWidth - margin.left - margin.right, 1200);
         let height = 550 - margin.top - margin.bottom;
 
         // Create SVG
         d3.select("#chart-container").selectAll("svg").remove();
         const svg = d3.select("#chart-container")
             .append("svg")
-            .attr("width", "100%")
+            .attr("width", width + margin.left + margin.right)
             .attr("height", 580);
 
         const g = svg.append("g")
@@ -405,8 +421,8 @@
                 const container = document.getElementById('plugin-controls');
                 container.innerHTML = '';
                 
-                // Build controls from API response
-                let hasDefaultSelection = false;
+                // Build controls from API response with default selections
+                const defaultPlugins = ['eth', 'btc_dominance'];
                 
                 Object.entries(datasets).forEach(([key, metadata]) => {
                     const wrapper = document.createElement('span');
@@ -417,11 +433,10 @@
                     input.id = key;
                     input.dataset.plugin = key;
                     
-                    // Check first available plugin by default
-                    if (!hasDefaultSelection) {
+                    // Check default plugins
+                    if (defaultPlugins.includes(key)) {
                         input.checked = true;
                         chartState.activePlugins.push(key);
-                        hasDefaultSelection = true;
                     }
                     
                     const label = document.createElement('label');
@@ -568,6 +583,13 @@
             const axisSets = {};
             const axisOrder = [];
             
+            // Define priority order for axes
+            const axisPriority = {
+                'price_usd': 0,
+                'percentage': 1,
+                'indicator': 2
+            };
+            
             chartState.activePlugins.forEach(key => {
                 const meta = chartState.metadata[key];
                 if (!meta) return;
@@ -585,15 +607,22 @@
                     axisSets[axisId] = {
                         datasets: [],
                         metadata: meta,
-                        color: meta.color
+                        color: meta.color,
+                        priority: axisPriority[axisId] !== undefined ? axisPriority[axisId] : 999
                     };
                     axisOrder.push(axisId);
                 }
                 axisSets[axisId].datasets.push(key);
             });
+            
+            // Sort axes by priority
+            axisOrder.sort((a, b) => axisSets[a].priority - axisSets[b].priority);
 
             // Clear and recreate axes
             Object.values(yAxisGroups).forEach(group => group.remove());
+            
+            // Clear reference lines
+            linesGroup.selectAll(".reference-line, .reference-label").remove();
 
             // Create Y scales and axes with proper positioning
             let rightAxisOffset = 0;
@@ -620,9 +649,13 @@
                         }
                     });
                     
-                    yDomain = d3.extent(axisData, d => d[1]);
-                    const padding = (yDomain[1] - yDomain[0]) * 0.05;
-                    yDomain = [yDomain[0] - padding, yDomain[1] + padding];
+                    if (axisData.length > 0) {
+                        yDomain = d3.extent(axisData, d => d[1]);
+                        const padding = (yDomain[1] - yDomain[0]) * 0.05;
+                        yDomain = [yDomain[0] - padding, yDomain[1] + padding];
+                    } else {
+                        yDomain = [0, 100];
+                    }
                 }
 
                 yScales[axisId] = d3.scaleLinear()
@@ -633,8 +666,8 @@
                 let axisGroup;
                 let axis;
                 
-                if (index === 0 || axisId === 'price_usd') {
-                    // First axis or price axis goes on the left
+                if (index === 0) {
+                    // First axis goes on the left
                     axisGroup = g.append("g")
                         .attr("class", `y-axis y-axis-${axisId}`)
                         .attr("transform", `translate(0, 0)`);
@@ -648,7 +681,8 @@
                         .attr("y", -50)
                         .attr("x", -height / 2)
                         .attr("text-anchor", "middle")
-                        .text(axisInfo.metadata.yAxisLabel);
+                        .text(axisInfo.metadata.yAxisLabel)
+                        .style("fill", axisInfo.color);
                 } else {
                     // Subsequent axes go on the right with offset
                     axisGroup = g.append("g")
@@ -660,21 +694,30 @@
                     // Add label on right
                     axisGroup.append("text")
                         .attr("class", "axis-label")
-                        .attr("transform", "rotate(-90)")
-                        .attr("y", 40 + rightAxisOffset)
-                        .attr("x", -height / 2)
+                        .attr("transform", "rotate(90)")
+                        .attr("y", -40 - rightAxisOffset)
+                        .attr("x", height / 2)
                         .attr("text-anchor", "middle")
-                        .text(axisInfo.metadata.yAxisLabel);
+                        .text(axisInfo.metadata.yAxisLabel)
+                        .style("fill", axisInfo.color);
                     
                     // Increment offset for next right axis
-                    rightAxisOffset += 60;
+                    rightAxisOffset += 80; // Increased spacing between axes
                 }
 
                 yAxisGroups[axisId] = axisGroup;
+                
+                // Format axis based on type
+                if (axisId === 'percentage') {
+                    axis.tickFormat(d => d + '%');
+                } else if (axisId === 'price_usd') {
+                    axis.tickFormat(d => '$' + d3.format(',.0f')(d));
+                }
+                
                 axisGroup.call(axis.ticks(6));
 
-                // Add reference lines if specified
-                if (axisInfo.metadata.referenceLines) {
+                // Add reference lines if specified (only once per axis type)
+                if (axisInfo.metadata.referenceLines && index === axisOrder.indexOf(axisId)) {
                     axisInfo.metadata.referenceLines.forEach(ref => {
                         linesGroup.append("line")
                             .attr("class", "reference-line")
@@ -690,7 +733,8 @@
                             .attr("x", width - 5)
                             .attr("y", yScales[axisId](ref.value) - 3)
                             .attr("text-anchor", "end")
-                            .text(ref.label);
+                            .text(ref.label)
+                            .style("fill", ref.color);
                     });
                 }
             });
@@ -871,7 +915,7 @@
                         const meta = chartState.metadata[key];
                         
                         tooltipData.push({
-                            label: meta.label + ' (Upper)',
+                            label: 'BB Upper',
                             value: data.upper[closestIndex][1],
                             unit: meta.unit || '',
                             color: meta.upperBandColor || '#4CAF50',
@@ -879,7 +923,7 @@
                         });
                         
                         tooltipData.push({
-                            label: meta.label + ' (Middle)',
+                            label: 'BB Middle',
                             value: data.middle[closestIndex][1],
                             unit: meta.unit || '',
                             color: meta.color,
@@ -887,7 +931,7 @@
                         });
                         
                         tooltipData.push({
-                            label: meta.label + ' (Lower)',
+                            label: 'BB Lower',
                             value: data.lower[closestIndex][1],
                             unit: meta.unit || '',
                             color: meta.lowerBandColor || '#F44336',
@@ -1031,7 +1075,8 @@
 
         // Handle window resize
         window.addEventListener('resize', () => {
-            width = container.clientWidth - margin.left - margin.right;
+            width = Math.min(container.clientWidth - margin.left - margin.right, 1200);
+            svg.attr("width", width + margin.left + margin.right);
             clip.attr("width", width);
             xScale.range([0, width]);
             
