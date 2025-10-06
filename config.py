@@ -4,13 +4,14 @@ Centralized configuration file for all API keys and settings
 """
 
 # API Keys
-ALPHA_VANTAGE_API_KEY = '5EK27ZM3JQC594PO'  # Legacy - kept for reference
-FMP_API_KEY = '74mkQbAh1DPHnRf1VoepvTTrLsvyvUf5'  # Add your FMP API key here
-COINSTATS_API_KEY = 'hn8xFxvTblGTj6wEq35nxyijBlQNyBrdJUWqPIeHZCU='  # Add your CoinStats API key here
+COINAPI_KEY = 'YOUR_COINAPI_KEY_HERE'  # Add your CoinAPI key here
+FMP_API_KEY = '74mkQbAh1DPHnRf1VoepvTTrLsvyvUf5'  # DEPRECATED - will be removed
+COINSTATS_API_KEY = 'hn8xFxvTblGTj6wEq35nxyijBlQNyBrdJUWqPIeHZCU='  # DEPRECATED - will be removed
 
-# Optional: Add other API keys if you want to switch between providers
-CRYPTOCOMPARE_API_KEY = ''  # Optional - CryptoCompare works without key
-COINGECKO_API_KEY = ''  # Optional - CoinGecko works without key
+# Legacy API Keys (kept for reference only)
+ALPHA_VANTAGE_API_KEY = '5EK27ZM3JQC594PO'  # Legacy - not used
+CRYPTOCOMPARE_API_KEY = ''  # Optional - not used
+COINGECKO_API_KEY = ''  # Optional - not used
 
 # Cache Settings
 CACHE_DURATION = 300  # 5 minutes in seconds
@@ -21,5 +22,4 @@ DEFAULT_DAYS = '365'
 RSI_PERIOD = 14  # Period for RSI calculation
 
 # API Provider Selection
-# Options: 'alpha_vantage', 'cryptocompare', 'coingecko', 'fmp'
-API_PROVIDER = 'fmp'
+API_PROVIDER = 'coinapi'  # Changed from 'fmp' to 'coinapi'
