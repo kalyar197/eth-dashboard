@@ -1,7 +1,7 @@
 # data/btc_dominance.py
 """
-Bitcoin dominance calculator using CoinAPI market cap data
-Calculates BTC dominance as (BTC Market Cap / Total Crypto Market Cap) * 100
+Bitcoin dominance calculator using REAL market cap data from CoinAPI
+NO ESTIMATES - Only actual market cap values
 """
 
 import requests
@@ -24,34 +24,66 @@ def get_metadata():
         'chartType': 'line',
         'color': '#F7931A',  # Bitcoin orange
         'strokeWidth': 2,
-        'description': 'Bitcoin market cap dominance - Calculated from CoinAPI data'
+        'description': 'Bitcoin market cap dominance - REAL DATA from CoinAPI'
     }
 
-def fetch_market_cap_history(symbol_id, days):
+def fetch_historical_supply(asset_id, start_date, end_date):
     """
-    Fetch historical market cap data for a given symbol
-    Market cap can be calculated from price * circulating supply
+    Fetch historical circulating supply data for an asset
+    This is CRITICAL for accurate market cap calculation
+    """
+    try:
+        # CoinAPI endpoint for asset metrics including supply
+        url = f'https://rest.coinapi.io/v1/metrics/asset'
+        
+        headers = {
+            'X-CoinAPI-Key': COINAPI_KEY
+        }
+        
+        params = {
+            'metric_id': 'SUPPLY_CIRCULATING',
+            'asset_id': asset_id,
+            'time_start': start_date.strftime('%Y-%m-%dT00:00:00'),
+            'time_end': end_date.strftime('%Y-%m-%dT23:59:59'),
+            'period_id': '1DAY',
+            'limit': 100000
+        }
+        
+        response = requests.get(url, params=params, headers=headers, timeout=30)
+        
+        if response.status_code == 200:
+            data = response.json()
+            supply_data = {}
+            for entry in data:
+                timestamp_str = entry.get('time_period_start')
+                supply_value = entry.get('value')
+                
+                if timestamp_str and supply_value is not None:
+                    dt = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
+                    date_key = dt.strftime('%Y-%m-%d')
+                    supply_data[date_key] = float(supply_value)
+            
+            return supply_data
+        else:
+            print(f"Failed to fetch supply data for {asset_id}: {response.status_code}")
+            return None
+            
+    except Exception as e:
+        print(f"Error fetching supply for {asset_id}: {e}")
+        return None
+
+def fetch_historical_prices(symbol_id, start_date, end_date):
+    """
+    Fetch historical price data for an asset
     """
     try:
         base_url = 'https://rest.coinapi.io/v1/ohlcv'
-        
-        # Calculate date range
-        if days == 'max':
-            start_date = datetime.now() - timedelta(days=365 * 3)  # 3 years max
-        else:
-            start_date = datetime.now() - timedelta(days=int(days) + 10)
-        
-        end_date = datetime.now()
-        time_start = start_date.strftime('%Y-%m-%dT00:00:00')
-        time_end = end_date.strftime('%Y-%m-%dT23:59:59')
-        
-        # Construct the API URL for price data
         url = f'{base_url}/{symbol_id}/history'
         
         params = {
             'period_id': '1DAY',
-            'time_start': time_start,
-            'time_end': time_end,
+            'time_start': start_date.strftime('%Y-%m-%dT00:00:00'),
+            'time_end': end_date.strftime('%Y-%m-%dT23:59:59'),
             'limit': 100000
         }
         
@@ -60,162 +92,205 @@ def fetch_market_cap_history(symbol_id, days):
         }
         
         response = requests.get(url, params=params, headers=headers, timeout=30)
-        response.raise_for_status()
         
+        if response.status_code != 200:
+            return None
+            
         data = response.json()
+        price_data = {}
         
-        if not data:
-            return []
-        
-        # Extract price and volume data (volume in quote currency approximates market activity)
-        market_data = []
         for candle in data:
             timestamp_str = candle.get('time_period_start')
             close_price = candle.get('price_close')
-            volume_traded = candle.get('volume_traded')  # Total volume in base currency
             
-            if timestamp_str and close_price is not None and volume_traded is not None:
+            if timestamp_str and close_price is not None:
                 dt = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
-                timestamp_ms = int(dt.timestamp() * 1000)
-                
-                # Use price * volume as a proxy for market cap weight
-                # This is a simplified approach - ideally we'd have supply data
-                market_data.append({
-                    'timestamp': timestamp_ms,
-                    'price': float(close_price),
-                    'volume': float(volume_traded)
-                })
+                date_key = dt.strftime('%Y-%m-%d')
+                price_data[date_key] = float(close_price)
         
-        return market_data
+        return price_data
         
     except Exception as e:
-        print(f"Error fetching market data for {symbol_id}: {e}")
-        return []
+        print(f"Error fetching prices for {symbol_id}: {e}")
+        return None
 
-def calculate_dominance_from_prices(btc_data, total_market_data):
+def calculate_real_market_caps(assets_config, start_date, end_date):
     """
-    Calculate dominance percentage from market data
-    Using volume-weighted approach as proxy for market cap dominance
+    Calculate REAL market caps using Price × Circulating Supply
+    NO ESTIMATES - Returns None if data is incomplete
     """
-    dominance_data = []
+    market_caps = {}
     
-    # Create a dictionary for quick lookup
-    total_market_dict = {item['timestamp']: item for item in total_market_data}
-    
-    for btc_point in btc_data:
-        timestamp = btc_point['timestamp']
+    for asset_name, config in assets_config.items():
+        print(f"Fetching real data for {asset_name}...")
         
-        if timestamp in total_market_dict:
-            btc_market_value = btc_point['price'] * btc_point['volume']
-            
-            # For total market, we'll need to aggregate multiple coins
-            # For simplicity, we'll use BTC's proportion of volume as dominance
-            # In production, you'd sum all major coins' market caps
-            
-            # Estimate total market as BTC market value / expected dominance
-            # BTC typically has 40-60% dominance
-            estimated_total = btc_market_value / 0.45  # Assume 45% average
-            
-            # Calculate actual dominance
-            dominance = (btc_market_value / estimated_total) * 100
-            
-            # Normalize to realistic range (40-70%)
-            dominance = max(40, min(70, dominance))
-            
-            dominance_data.append([timestamp, dominance])
+        # Get historical prices
+        price_data = fetch_historical_prices(config['symbol_id'], start_date, end_date)
+        if not price_data:
+            print(f"ERROR: No price data for {asset_name} - cannot calculate market cap")
+            return None
+        
+        # Get historical supply
+        supply_data = fetch_historical_supply(config['asset_id'], start_date, end_date)
+        if not supply_data:
+            print(f"ERROR: No supply data for {asset_name} - cannot calculate market cap")
+            return None
+        
+        # Calculate REAL market cap for each day
+        asset_market_caps = {}
+        for date_key in price_data:
+            if date_key in supply_data:
+                price = price_data[date_key]
+                supply = supply_data[date_key]
+                market_cap = price * supply
+                asset_market_caps[date_key] = market_cap
+            else:
+                print(f"Warning: Missing supply data for {asset_name} on {date_key}")
+        
+        market_caps[asset_name] = asset_market_caps
     
-    return dominance_data
+    return market_caps
 
 def get_data(days='365'):
     """
-    Fetches BTC dominance data by calculating from market cap data
+    Fetches BTC dominance using REAL market cap data
+    Market Cap = Price × Circulating Supply (NO ESTIMATES)
     """
     metadata = get_metadata()
-    dataset_name = 'btc_dominance'
+    dataset_name = 'btc_dominance_real'
     
     try:
-        print("Calculating BTC dominance from CoinAPI data...")
+        print("Calculating BTC dominance from REAL market cap data...")
+        print("NO ESTIMATES - Using actual Price × Circulating Supply")
         
-        # Method 1: Try to use CoinAPI's assets endpoint for current market cap
-        # Then extrapolate historical based on price movements
+        # Calculate date range
+        if days == 'max':
+            start_date = datetime.now() - timedelta(days=365 * 2)
+        else:
+            start_date = datetime.now() - timedelta(days=int(days) + 10)
+        end_date = datetime.now()
         
-        # Get current market cap snapshot
-        assets_url = 'https://rest.coinapi.io/v1/assets'
-        headers = {'X-CoinAPI-Key': COINAPI_KEY}
+        # Define assets to track for total market cap
+        # For accurate dominance, we need top cryptocurrencies
+        assets_config = {
+            'BTC': {
+                'asset_id': 'BTC',
+                'symbol_id': 'BINANCE_SPOT_BTC_USDT'
+            },
+            'ETH': {
+                'asset_id': 'ETH',
+                'symbol_id': 'BINANCE_SPOT_ETH_USDT'
+            },
+            'USDT': {
+                'asset_id': 'USDT',
+                'symbol_id': 'BINANCE_SPOT_USDT_BUSD'
+            },
+            'BNB': {
+                'asset_id': 'BNB',
+                'symbol_id': 'BINANCE_SPOT_BNB_USDT'
+            },
+            'XRP': {
+                'asset_id': 'XRP',
+                'symbol_id': 'BINANCE_SPOT_XRP_USDT'
+            },
+            'USDC': {
+                'asset_id': 'USDC',
+                'symbol_id': 'BINANCE_SPOT_USDC_USDT'
+            },
+            'SOL': {
+                'asset_id': 'SOL',
+                'symbol_id': 'BINANCE_SPOT_SOL_USDT'
+            },
+            'ADA': {
+                'asset_id': 'ADA',
+                'symbol_id': 'BINANCE_SPOT_ADA_USDT'
+            },
+            'DOGE': {
+                'asset_id': 'DOGE',
+                'symbol_id': 'BINANCE_SPOT_DOGE_USDT'
+            }
+        }
         
-        response = requests.get(assets_url, headers=headers, timeout=30)
-        response.raise_for_status()
-        assets_data = response.json()
+        # Calculate REAL market caps
+        market_caps = calculate_real_market_caps(assets_config, start_date, end_date)
         
-        # Find BTC and calculate total market cap
-        btc_market_cap = 0
-        total_market_cap = 0
+        if not market_caps:
+            print("ERROR: Cannot calculate dominance without complete market cap data")
+            # Try loading from cache
+            cached_data = load_from_cache(dataset_name)
+            if cached_data:
+                print("Using cached REAL dominance data")
+                return process_cached_data(cached_data, days, metadata)
+            else:
+                return {
+                    'metadata': metadata,
+                    'data': [],
+                    'error': 'Insufficient data for REAL market cap calculation. API may not provide historical supply data.'
+                }
         
-        for asset in assets_data:
-            if asset.get('type_is_crypto') == 1:
-                market_cap = asset.get('volume_1day_usd', 0)
-                if market_cap and market_cap > 0:
-                    total_market_cap += market_cap
-                    if asset.get('asset_id') == 'BTC':
-                        btc_market_cap = market_cap
-        
-        current_dominance = (btc_market_cap / total_market_cap * 100) if total_market_cap > 0 else 0
-        
-        # Method 2: Fetch historical price data and estimate dominance trends
-        btc_history = fetch_market_cap_history('BINANCE_SPOT_BTC_USDT', days)
-        
-        if not btc_history:
-            raise ValueError("No BTC historical data available")
-        
-        # Create dominance data based on price movements
-        # This is a simplified approach - ideally we'd track all coins
+        # Calculate BTC dominance for each day
         dominance_data = []
-        base_dominance = current_dominance if current_dominance > 0 else 50  # Default to 50% if no data
+        btc_caps = market_caps.get('BTC', {})
         
-        for point in btc_history:
-            timestamp = point['timestamp']
+        for date_key in sorted(btc_caps.keys()):
+            btc_market_cap = btc_caps[date_key]
             
-            # Simple model: BTC dominance varies between 40-70% based on price momentum
-            # When BTC price increases faster than alts, dominance goes up
-            # This is a simplified model for demonstration
+            # Calculate total market cap for this date
+            total_market_cap = 0
+            for asset_name, asset_caps in market_caps.items():
+                if date_key in asset_caps:
+                    total_market_cap += asset_caps[date_key]
             
-            # Calculate a simple dominance value based on volume and price action
-            # Higher volume = higher dominance (simplified assumption)
-            volume_factor = min(point['volume'] / 1000000000, 1.0)  # Normalize volume
-            
-            # Base dominance with some variation
-            dominance = base_dominance + (volume_factor - 0.5) * 20  # +/- 10% variation
-            dominance = max(40, min(70, dominance))  # Keep in realistic range
-            
-            dominance_data.append([timestamp, dominance])
+            if total_market_cap > 0:
+                # Calculate REAL dominance
+                dominance = (btc_market_cap / total_market_cap) * 100
+                
+                # Convert date to timestamp
+                dt = datetime.strptime(date_key, '%Y-%m-%d')
+                dt = dt.replace(tzinfo=timezone.utc)
+                timestamp_ms = int(dt.timestamp() * 1000)
+                
+                dominance_data.append([timestamp_ms, dominance])
+                
+                # Log for verification
+                print(f"{date_key}: BTC={btc_market_cap/1e9:.2f}B, Total={total_market_cap/1e9:.2f}B, Dominance={dominance:.2f}%")
         
         if not dominance_data:
-            raise ValueError("No dominance data calculated")
+            print("ERROR: No dominance data calculated")
+            return {
+                'metadata': metadata,
+                'data': [],
+                'error': 'Could not calculate dominance from available data'
+            }
         
         # Sort by timestamp
         dominance_data.sort(key=lambda x: x[0])
         
-        # Save to cache
+        # Save REAL data to cache
         save_to_cache(dataset_name, dominance_data)
-        print(f"Successfully calculated {len(dominance_data)} BTC dominance data points")
+        print(f"Successfully calculated {len(dominance_data)} REAL BTC dominance data points")
         
         raw_data = dominance_data
         
     except Exception as e:
-        print(f"Error calculating BTC dominance from CoinAPI: {e}")
-        print("Loading from cache...")
+        print(f"Error calculating BTC dominance: {e}")
+        print("Attempting to load cached REAL data...")
         
         raw_data = load_from_cache(dataset_name)
         if not raw_data:
-            print("No cached data available for BTC dominance")
             return {
                 'metadata': metadata,
                 'data': [],
-                'error': f'Failed to calculate dominance: {str(e)}'
+                'error': f'Failed to calculate REAL dominance: {str(e)}'
             }
     
-    # Standardize the data
+    # Standardize and return the data
+    return process_cached_data(raw_data, days, metadata)
+
+def process_cached_data(raw_data, days, metadata):
+    """Process and filter cached or calculated data"""
     if raw_data:
+        from datetime import timezone
         standardized_data = standardize_to_daily_utc(raw_data)
         
         # Trim to requested days

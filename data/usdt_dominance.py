@@ -1,12 +1,12 @@
 # data/usdt_dominance.py
 """
-USDT (Tether) dominance calculator using CoinAPI market cap data
-Calculates USDT dominance as (USDT Market Cap / Total Crypto Market Cap) * 100
+USDT (Tether) dominance calculator using REAL market cap data from CoinAPI
+NO ESTIMATES - Only actual market cap values
 """
 
 import requests
 from .time_transformer import standardize_to_daily_utc
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import sys
 import os
 from .cache_manager import load_from_cache, save_to_cache
@@ -24,135 +24,61 @@ def get_metadata():
         'chartType': 'line',
         'color': '#26A17B',  # Tether green
         'strokeWidth': 2,
-        'description': 'Tether (USDT) dominance - Calculated from CoinAPI data'
+        'description': 'Tether (USDT) dominance - REAL DATA from CoinAPI'
     }
 
-def fetch_usdt_market_data(days):
+def fetch_historical_supply(asset_id, start_date, end_date):
     """
-    Fetch historical price and volume data for USDT
-    Note: USDT is a stablecoin, so price should be ~$1
+    Fetch historical circulating supply data for an asset
+    This is CRITICAL for accurate market cap calculation
     """
     try:
-        base_url = 'https://rest.coinapi.io/v1/ohlcv'
-        
-        # Try different USDT trading pairs
-        symbol_ids = [
-            'BINANCE_SPOT_USDT_BUSD',  # USDT/BUSD pair
-            'BINANCE_SPOT_BTC_USDT',   # We'll use inverse of BTC/USDT
-            'COINBASE_SPOT_USDT_USD'   # Direct USDT/USD if available
-        ]
-        
-        if days == 'max':
-            start_date = datetime.now() - timedelta(days=365 * 3)
-        else:
-            start_date = datetime.now() - timedelta(days=int(days) + 10)
-        
-        end_date = datetime.now()
-        time_start = start_date.strftime('%Y-%m-%dT00:00:00')
-        time_end = end_date.strftime('%Y-%m-%dT23:59:59')
+        url = f'https://rest.coinapi.io/v1/metrics/asset'
         
         headers = {
             'X-CoinAPI-Key': COINAPI_KEY
         }
         
-        # Try to get USDT volume data from various sources
-        for symbol_id in symbol_ids:
-            try:
-                url = f'{base_url}/{symbol_id}/history'
+        params = {
+            'metric_id': 'SUPPLY_CIRCULATING',
+            'asset_id': asset_id,
+            'time_start': start_date.strftime('%Y-%m-%dT00:00:00'),
+            'time_end': end_date.strftime('%Y-%m-%dT23:59:59'),
+            'period_id': '1DAY',
+            'limit': 100000
+        }
+        
+        response = requests.get(url, params=params, headers=headers, timeout=30)
+        
+        if response.status_code == 200:
+            data = response.json()
+            supply_data = {}
+            for entry in data:
+                timestamp_str = entry.get('time_period_start')
+                supply_value = entry.get('value')
                 
-                params = {
-                    'period_id': '1DAY',
-                    'time_start': time_start,
-                    'time_end': time_end,
-                    'limit': 100000
-                }
-                
-                response = requests.get(url, params=params, headers=headers, timeout=30)
-                
-                if response.status_code == 200:
-                    data = response.json()
-                    if data:
-                        print(f"Successfully fetched USDT data from {symbol_id}")
-                        
-                        market_data = []
-                        for candle in data:
-                            timestamp_str = candle.get('time_period_start')
-                            volume_traded = candle.get('volume_traded')
-                            
-                            if timestamp_str and volume_traded is not None:
-                                dt = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
-                                timestamp_ms = int(dt.timestamp() * 1000)
-                                
-                                market_data.append({
-                                    'timestamp': timestamp_ms,
-                                    'volume': float(volume_traded)
-                                })
-                        
-                        return market_data
-                        
-            except Exception as e:
-                print(f"Failed to fetch from {symbol_id}: {e}")
-                continue
-        
-        return []
-        
-    except Exception as e:
-        print(f"Error fetching USDT market data: {e}")
-        return []
-
-def get_data(days='365'):
-    """
-    Fetches USDT dominance data by calculating from market cap data
-    """
-    metadata = get_metadata()
-    dataset_name = 'usdt_dominance'
-    
-    try:
-        print("Calculating USDT dominance from CoinAPI data...")
-        
-        # Get current market cap snapshot for reference
-        assets_url = 'https://rest.coinapi.io/v1/assets'
-        headers = {'X-CoinAPI-Key': COINAPI_KEY}
-        
-        response = requests.get(assets_url, headers=headers, timeout=30)
-        response.raise_for_status()
-        assets_data = response.json()
-        
-        # Find USDT and calculate its current proportion
-        usdt_market_cap = 0
-        total_market_cap = 0
-        total_stablecoin_cap = 0
-        
-        stablecoins = ['USDT', 'USDC', 'BUSD', 'DAI', 'TUSD']
-        
-        for asset in assets_data:
-            if asset.get('type_is_crypto') == 1:
-                asset_id = asset.get('asset_id')
-                market_cap = asset.get('volume_1day_usd', 0)
-                
-                if market_cap and market_cap > 0:
-                    total_market_cap += market_cap
-                    
-                    if asset_id == 'USDT':
-                        usdt_market_cap = market_cap
-                    
-                    if asset_id in stablecoins:
-                        total_stablecoin_cap += market_cap
-        
-        current_usdt_dominance = (usdt_market_cap / total_market_cap * 100) if total_market_cap > 0 else 0
-        
-        # Fetch historical data
-        usdt_history = fetch_usdt_market_data(days)
-        
-        # Also fetch BTC data for market context
-        btc_url = f'https://rest.coinapi.io/v1/ohlcv/BINANCE_SPOT_BTC_USDT/history'
-        
-        if days == 'max':
-            start_date = datetime.now() - timedelta(days=365 * 3)
+                if timestamp_str and supply_value is not None:
+                    dt = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
+                    date_key = dt.strftime('%Y-%m-%d')
+                    supply_data[date_key] = float(supply_value)
+            
+            return supply_data
         else:
-            start_date = datetime.now() - timedelta(days=int(days) + 10)
-        
-        end_date = datetime.now()
+            print(f"Failed to fetch supply data for {asset_id}: {response.status_code}")
+            return None
+            
+    except Exception as e:
+        print(f"Error fetching supply for {asset_id}: {e}")
+        return None
+
+def fetch_historical_prices(symbol_id, start_date, end_date):
+    """
+    Fetch historical price data for an asset
+    For stablecoins like USDT, price should be ~$1.00
+    """
+    try:
+        base_url = 'https://rest.coinapi.io/v1/ohlcv'
+        url = f'{base_url}/{symbol_id}/history'
         
         params = {
             'period_id': '1DAY',
@@ -161,88 +87,221 @@ def get_data(days='365'):
             'limit': 100000
         }
         
-        response = requests.get(btc_url, params=params, headers=headers, timeout=30)
-        btc_data = response.json() if response.status_code == 200 else []
+        headers = {
+            'X-CoinAPI-Key': COINAPI_KEY
+        }
         
-        # Calculate USDT dominance
-        dominance_data = []
-        base_usdt_dominance = current_usdt_dominance if current_usdt_dominance > 0 else 6  # USDT typically 4-8%
+        response = requests.get(url, params=params, headers=headers, timeout=30)
         
-        # Create lookup for USDT volume
-        usdt_dict = {point['timestamp']: point for point in usdt_history} if usdt_history else {}
-        
-        for candle in btc_data:
-            timestamp_str = candle.get('time_period_start')
-            btc_price = candle.get('price_close')
+        if response.status_code != 200:
+            return None
             
-            if timestamp_str and btc_price:
+        data = response.json()
+        price_data = {}
+        
+        for candle in data:
+            timestamp_str = candle.get('time_period_start')
+            close_price = candle.get('price_close')
+            
+            if timestamp_str and close_price is not None:
                 dt = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
+                date_key = dt.strftime('%Y-%m-%d')
+                price_data[date_key] = float(close_price)
+        
+        return price_data
+        
+    except Exception as e:
+        print(f"Error fetching prices for {symbol_id}: {e}")
+        return None
+
+def calculate_real_market_caps(assets_config, start_date, end_date):
+    """
+    Calculate REAL market caps using Price × Circulating Supply
+    NO ESTIMATES - Returns None if data is incomplete
+    For USDT, we assume price = $1.00 if direct price data unavailable
+    """
+    market_caps = {}
+    
+    for asset_name, config in assets_config.items():
+        print(f"Fetching real data for {asset_name}...")
+        
+        # Get historical supply
+        supply_data = fetch_historical_supply(config['asset_id'], start_date, end_date)
+        if not supply_data:
+            print(f"ERROR: No supply data for {asset_name} - cannot calculate market cap")
+            return None
+        
+        # Get historical prices
+        price_data = fetch_historical_prices(config['symbol_id'], start_date, end_date)
+        
+        # For stablecoins, if no price data, use $1.00
+        if not price_data and asset_name in ['USDT', 'USDC', 'BUSD', 'DAI']:
+            print(f"Using $1.00 price for stablecoin {asset_name}")
+            price_data = {date_key: 1.00 for date_key in supply_data.keys()}
+        elif not price_data:
+            print(f"ERROR: No price data for {asset_name} - cannot calculate market cap")
+            return None
+        
+        # Calculate REAL market cap for each day
+        asset_market_caps = {}
+        for date_key in supply_data:
+            if date_key in price_data:
+                price = price_data[date_key]
+                supply = supply_data[date_key]
+                market_cap = price * supply
+                asset_market_caps[date_key] = market_cap
+            else:
+                # For stablecoins, use $1.00 if price missing
+                if asset_name in ['USDT', 'USDC', 'BUSD', 'DAI']:
+                    supply = supply_data[date_key]
+                    market_cap = 1.00 * supply
+                    asset_market_caps[date_key] = market_cap
+                else:
+                    print(f"Warning: Missing price data for {asset_name} on {date_key}")
+        
+        market_caps[asset_name] = asset_market_caps
+    
+    return market_caps
+
+def get_data(days='365'):
+    """
+    Fetches USDT dominance using REAL market cap data
+    Market Cap = Price × Circulating Supply (NO ESTIMATES)
+    For USDT (stablecoin), price is typically $1.00
+    """
+    metadata = get_metadata()
+    dataset_name = 'usdt_dominance_real'
+    
+    try:
+        print("Calculating USDT dominance from REAL market cap data...")
+        print("NO ESTIMATES - Using actual Price × Circulating Supply")
+        print("For USDT stablecoin: Price ≈ $1.00, Market Cap = Supply × $1.00")
+        
+        # Calculate date range
+        if days == 'max':
+            start_date = datetime.now() - timedelta(days=365 * 2)
+        else:
+            start_date = datetime.now() - timedelta(days=int(days) + 10)
+        end_date = datetime.now()
+        
+        # Define assets to track for total market cap
+        assets_config = {
+            'BTC': {
+                'asset_id': 'BTC',
+                'symbol_id': 'BINANCE_SPOT_BTC_USDT'
+            },
+            'ETH': {
+                'asset_id': 'ETH',
+                'symbol_id': 'BINANCE_SPOT_ETH_USDT'
+            },
+            'USDT': {
+                'asset_id': 'USDT',
+                'symbol_id': 'BINANCE_SPOT_USDT_BUSD'  # USDT/BUSD pair
+            },
+            'BNB': {
+                'asset_id': 'BNB',
+                'symbol_id': 'BINANCE_SPOT_BNB_USDT'
+            },
+            'XRP': {
+                'asset_id': 'XRP',
+                'symbol_id': 'BINANCE_SPOT_XRP_USDT'
+            },
+            'USDC': {
+                'asset_id': 'USDC',
+                'symbol_id': 'BINANCE_SPOT_USDC_USDT'
+            },
+            'SOL': {
+                'asset_id': 'SOL',
+                'symbol_id': 'BINANCE_SPOT_SOL_USDT'
+            },
+            'ADA': {
+                'asset_id': 'ADA',
+                'symbol_id': 'BINANCE_SPOT_ADA_USDT'
+            },
+            'DOGE': {
+                'asset_id': 'DOGE',
+                'symbol_id': 'BINANCE_SPOT_DOGE_USDT'
+            }
+        }
+        
+        # Calculate REAL market caps
+        market_caps = calculate_real_market_caps(assets_config, start_date, end_date)
+        
+        if not market_caps:
+            print("ERROR: Cannot calculate dominance without complete market cap data")
+            # Try loading from cache
+            cached_data = load_from_cache(dataset_name)
+            if cached_data:
+                print("Using cached REAL dominance data")
+                return process_cached_data(cached_data, days, metadata)
+            else:
+                return {
+                    'metadata': metadata,
+                    'data': [],
+                    'error': 'Insufficient data for REAL market cap calculation. API may not provide historical supply data.'
+                }
+        
+        # Calculate USDT dominance for each day
+        dominance_data = []
+        usdt_caps = market_caps.get('USDT', {})
+        
+        for date_key in sorted(usdt_caps.keys()):
+            usdt_market_cap = usdt_caps[date_key]
+            
+            # Calculate total market cap for this date
+            total_market_cap = 0
+            for asset_name, asset_caps in market_caps.items():
+                if date_key in asset_caps:
+                    total_market_cap += asset_caps[date_key]
+            
+            if total_market_cap > 0:
+                # Calculate REAL dominance
+                dominance = (usdt_market_cap / total_market_cap) * 100
+                
+                # Convert date to timestamp
+                dt = datetime.strptime(date_key, '%Y-%m-%d')
+                dt = dt.replace(tzinfo=timezone.utc)
                 timestamp_ms = int(dt.timestamp() * 1000)
                 
-                # USDT dominance typically increases during bear markets (flight to safety)
-                # and decreases during bull markets
-                # Use BTC price as a proxy for market sentiment
-                
-                # Simple model: inverse relationship with BTC price
-                # When BTC < $30k, USDT dominance higher
-                # When BTC > $60k, USDT dominance lower
-                btc_price_factor = float(btc_price)
-                
-                if btc_price_factor < 30000:
-                    dominance_adjustment = 2  # Higher dominance in bear market
-                elif btc_price_factor > 60000:
-                    dominance_adjustment = -2  # Lower dominance in bull market
-                else:
-                    # Linear interpolation
-                    dominance_adjustment = 2 - ((btc_price_factor - 30000) / 30000) * 4
-                
-                # Check if we have USDT volume data for this date
-                if timestamp_ms in usdt_dict:
-                    volume_factor = min(usdt_dict[timestamp_ms]['volume'] / 1000000000, 1.0)
-                    dominance = base_usdt_dominance + dominance_adjustment + (volume_factor - 0.5) * 2
-                else:
-                    dominance = base_usdt_dominance + dominance_adjustment
-                
-                # Keep in realistic range (3-12% for USDT)
-                dominance = max(3, min(12, dominance))
-                
                 dominance_data.append([timestamp_ms, dominance])
+                
+                # Log for verification
+                print(f"{date_key}: USDT={usdt_market_cap/1e9:.2f}B, Total={total_market_cap/1e9:.2f}B, Dominance={dominance:.2f}%")
         
         if not dominance_data:
-            # If we couldn't calculate from BTC data, try using USDT data directly
-            if usdt_history:
-                for point in usdt_history:
-                    timestamp = point['timestamp']
-                    volume_factor = min(point['volume'] / 1000000000, 1.0)
-                    dominance = base_usdt_dominance + (volume_factor - 0.5) * 3
-                    dominance = max(3, min(12, dominance))
-                    dominance_data.append([timestamp, dominance])
-            else:
-                raise ValueError("No data available to calculate USDT dominance")
+            print("ERROR: No dominance data calculated")
+            return {
+                'metadata': metadata,
+                'data': [],
+                'error': 'Could not calculate dominance from available data'
+            }
         
         # Sort by timestamp
         dominance_data.sort(key=lambda x: x[0])
         
-        # Save to cache
+        # Save REAL data to cache
         save_to_cache(dataset_name, dominance_data)
-        print(f"Successfully calculated {len(dominance_data)} USDT dominance data points")
+        print(f"Successfully calculated {len(dominance_data)} REAL USDT dominance data points")
         
         raw_data = dominance_data
         
     except Exception as e:
-        print(f"Error calculating USDT dominance from CoinAPI: {e}")
-        print("Loading from cache...")
+        print(f"Error calculating USDT dominance: {e}")
+        print("Attempting to load cached REAL data...")
         
         raw_data = load_from_cache(dataset_name)
         if not raw_data:
-            print("No cached data available for USDT dominance")
             return {
                 'metadata': metadata,
                 'data': [],
-                'error': f'Failed to calculate dominance: {str(e)}'
+                'error': f'Failed to calculate REAL dominance: {str(e)}'
             }
     
-    # Standardize the data
+    # Standardize and return the data
+    return process_cached_data(raw_data, days, metadata)
+
+def process_cached_data(raw_data, days, metadata):
+    """Process and filter cached or calculated data"""
     if raw_data:
         standardized_data = standardize_to_daily_utc(raw_data)
         

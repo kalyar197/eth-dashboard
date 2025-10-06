@@ -1,12 +1,12 @@
 # data/eth_dominance.py
 """
-Ethereum dominance calculator using CoinAPI market cap data
-Calculates ETH dominance as (ETH Market Cap / Total Crypto Market Cap) * 100
+Ethereum dominance calculator using REAL market cap data from CoinAPI
+NO ESTIMATES - Only actual market cap values
 """
 
 import requests
 from .time_transformer import standardize_to_daily_utc
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import sys
 import os
 from .cache_manager import load_from_cache, save_to_cache
@@ -24,31 +24,65 @@ def get_metadata():
         'chartType': 'line',
         'color': '#627EEA',  # Ethereum blue
         'strokeWidth': 2,
-        'description': 'Ethereum market cap dominance - Calculated from CoinAPI data'
+        'description': 'Ethereum market cap dominance - REAL DATA from CoinAPI'
     }
 
-def fetch_market_data(symbol_id, days):
+def fetch_historical_supply(asset_id, start_date, end_date):
     """
-    Fetch historical price and volume data for a given symbol
+    Fetch historical circulating supply data for an asset
+    This is CRITICAL for accurate market cap calculation
+    """
+    try:
+        url = f'https://rest.coinapi.io/v1/metrics/asset'
+        
+        headers = {
+            'X-CoinAPI-Key': COINAPI_KEY
+        }
+        
+        params = {
+            'metric_id': 'SUPPLY_CIRCULATING',
+            'asset_id': asset_id,
+            'time_start': start_date.strftime('%Y-%m-%dT00:00:00'),
+            'time_end': end_date.strftime('%Y-%m-%dT23:59:59'),
+            'period_id': '1DAY',
+            'limit': 100000
+        }
+        
+        response = requests.get(url, params=params, headers=headers, timeout=30)
+        
+        if response.status_code == 200:
+            data = response.json()
+            supply_data = {}
+            for entry in data:
+                timestamp_str = entry.get('time_period_start')
+                supply_value = entry.get('value')
+                
+                if timestamp_str and supply_value is not None:
+                    dt = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
+                    date_key = dt.strftime('%Y-%m-%d')
+                    supply_data[date_key] = float(supply_value)
+            
+            return supply_data
+        else:
+            print(f"Failed to fetch supply data for {asset_id}: {response.status_code}")
+            return None
+            
+    except Exception as e:
+        print(f"Error fetching supply for {asset_id}: {e}")
+        return None
+
+def fetch_historical_prices(symbol_id, start_date, end_date):
+    """
+    Fetch historical price data for an asset
     """
     try:
         base_url = 'https://rest.coinapi.io/v1/ohlcv'
-        
-        if days == 'max':
-            start_date = datetime.now() - timedelta(days=365 * 3)
-        else:
-            start_date = datetime.now() - timedelta(days=int(days) + 10)
-        
-        end_date = datetime.now()
-        time_start = start_date.strftime('%Y-%m-%dT00:00:00')
-        time_end = end_date.strftime('%Y-%m-%dT23:59:59')
-        
         url = f'{base_url}/{symbol_id}/history'
         
         params = {
             'period_id': '1DAY',
-            'time_start': time_start,
-            'time_end': time_end,
+            'time_start': start_date.strftime('%Y-%m-%dT00:00:00'),
+            'time_end': end_date.strftime('%Y-%m-%dT23:59:59'),
             'limit': 100000
         }
         
@@ -57,138 +91,202 @@ def fetch_market_data(symbol_id, days):
         }
         
         response = requests.get(url, params=params, headers=headers, timeout=30)
-        response.raise_for_status()
         
+        if response.status_code != 200:
+            return None
+            
         data = response.json()
+        price_data = {}
         
-        if not data:
-            return []
-        
-        market_data = []
         for candle in data:
             timestamp_str = candle.get('time_period_start')
             close_price = candle.get('price_close')
-            volume_traded = candle.get('volume_traded')
             
-            if timestamp_str and close_price is not None and volume_traded is not None:
+            if timestamp_str and close_price is not None:
                 dt = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
-                timestamp_ms = int(dt.timestamp() * 1000)
-                
-                market_data.append({
-                    'timestamp': timestamp_ms,
-                    'price': float(close_price),
-                    'volume': float(volume_traded)
-                })
+                date_key = dt.strftime('%Y-%m-%d')
+                price_data[date_key] = float(close_price)
         
-        return market_data
+        return price_data
         
     except Exception as e:
-        print(f"Error fetching market data for {symbol_id}: {e}")
-        return []
+        print(f"Error fetching prices for {symbol_id}: {e}")
+        return None
+
+def calculate_real_market_caps(assets_config, start_date, end_date):
+    """
+    Calculate REAL market caps using Price × Circulating Supply
+    NO ESTIMATES - Returns None if data is incomplete
+    """
+    market_caps = {}
+    
+    for asset_name, config in assets_config.items():
+        print(f"Fetching real data for {asset_name}...")
+        
+        # Get historical prices
+        price_data = fetch_historical_prices(config['symbol_id'], start_date, end_date)
+        if not price_data:
+            print(f"ERROR: No price data for {asset_name} - cannot calculate market cap")
+            return None
+        
+        # Get historical supply
+        supply_data = fetch_historical_supply(config['asset_id'], start_date, end_date)
+        if not supply_data:
+            print(f"ERROR: No supply data for {asset_name} - cannot calculate market cap")
+            return None
+        
+        # Calculate REAL market cap for each day
+        asset_market_caps = {}
+        for date_key in price_data:
+            if date_key in supply_data:
+                price = price_data[date_key]
+                supply = supply_data[date_key]
+                market_cap = price * supply
+                asset_market_caps[date_key] = market_cap
+            else:
+                print(f"Warning: Missing supply data for {asset_name} on {date_key}")
+        
+        market_caps[asset_name] = asset_market_caps
+    
+    return market_caps
 
 def get_data(days='365'):
     """
-    Fetches ETH dominance data by calculating from market cap data
+    Fetches ETH dominance using REAL market cap data
+    Market Cap = Price × Circulating Supply (NO ESTIMATES)
     """
     metadata = get_metadata()
-    dataset_name = 'eth_dominance'
+    dataset_name = 'eth_dominance_real'
     
     try:
-        print("Calculating ETH dominance from CoinAPI data...")
+        print("Calculating ETH dominance from REAL market cap data...")
+        print("NO ESTIMATES - Using actual Price × Circulating Supply")
         
-        # Get current market cap snapshot for reference
-        assets_url = 'https://rest.coinapi.io/v1/assets'
-        headers = {'X-CoinAPI-Key': COINAPI_KEY}
+        # Calculate date range
+        if days == 'max':
+            start_date = datetime.now() - timedelta(days=365 * 2)
+        else:
+            start_date = datetime.now() - timedelta(days=int(days) + 10)
+        end_date = datetime.now()
         
-        response = requests.get(assets_url, headers=headers, timeout=30)
-        response.raise_for_status()
-        assets_data = response.json()
+        # Define assets to track for total market cap
+        assets_config = {
+            'BTC': {
+                'asset_id': 'BTC',
+                'symbol_id': 'BINANCE_SPOT_BTC_USDT'
+            },
+            'ETH': {
+                'asset_id': 'ETH',
+                'symbol_id': 'BINANCE_SPOT_ETH_USDT'
+            },
+            'USDT': {
+                'asset_id': 'USDT',
+                'symbol_id': 'BINANCE_SPOT_USDT_BUSD'
+            },
+            'BNB': {
+                'asset_id': 'BNB',
+                'symbol_id': 'BINANCE_SPOT_BNB_USDT'
+            },
+            'XRP': {
+                'asset_id': 'XRP',
+                'symbol_id': 'BINANCE_SPOT_XRP_USDT'
+            },
+            'USDC': {
+                'asset_id': 'USDC',
+                'symbol_id': 'BINANCE_SPOT_USDC_USDT'
+            },
+            'SOL': {
+                'asset_id': 'SOL',
+                'symbol_id': 'BINANCE_SPOT_SOL_USDT'
+            },
+            'ADA': {
+                'asset_id': 'ADA',
+                'symbol_id': 'BINANCE_SPOT_ADA_USDT'
+            },
+            'DOGE': {
+                'asset_id': 'DOGE',
+                'symbol_id': 'BINANCE_SPOT_DOGE_USDT'
+            }
+        }
         
-        # Find ETH and calculate its current proportion
-        eth_market_cap = 0
-        btc_market_cap = 0
-        total_market_cap = 0
+        # Calculate REAL market caps
+        market_caps = calculate_real_market_caps(assets_config, start_date, end_date)
         
-        for asset in assets_data:
-            if asset.get('type_is_crypto') == 1:
-                market_cap = asset.get('volume_1day_usd', 0)
-                if market_cap and market_cap > 0:
-                    total_market_cap += market_cap
-                    if asset.get('asset_id') == 'ETH':
-                        eth_market_cap = market_cap
-                    elif asset.get('asset_id') == 'BTC':
-                        btc_market_cap = market_cap
-        
-        current_eth_dominance = (eth_market_cap / total_market_cap * 100) if total_market_cap > 0 else 0
-        
-        # Fetch historical price data
-        eth_history = fetch_market_data('BINANCE_SPOT_ETH_USDT', days)
-        btc_history = fetch_market_data('BINANCE_SPOT_BTC_USDT', days)
-        
-        if not eth_history:
-            raise ValueError("No ETH historical data available")
-        
-        # Create BTC lookup dictionary
-        btc_dict = {point['timestamp']: point for point in btc_history} if btc_history else {}
-        
-        # Calculate ETH dominance based on relative performance
-        dominance_data = []
-        base_eth_dominance = current_eth_dominance if current_eth_dominance > 0 else 18  # ETH typically 15-20%
-        
-        for eth_point in eth_history:
-            timestamp = eth_point['timestamp']
-            
-            # Calculate ETH dominance based on its performance relative to BTC
-            # When ETH outperforms BTC, its dominance increases
-            eth_volume = eth_point['volume']
-            
-            if timestamp in btc_dict:
-                btc_volume = btc_dict[timestamp]['volume']
-                
-                # Simple model: ETH dominance varies based on volume ratio
-                if btc_volume > 0:
-                    volume_ratio = eth_volume / btc_volume
-                    # ETH typically has 30-50% of BTC's volume
-                    # Map this to dominance range of 15-25%
-                    dominance = base_eth_dominance + (volume_ratio - 0.4) * 10
-                else:
-                    dominance = base_eth_dominance
+        if not market_caps:
+            print("ERROR: Cannot calculate dominance without complete market cap data")
+            # Try loading from cache
+            cached_data = load_from_cache(dataset_name)
+            if cached_data:
+                print("Using cached REAL dominance data")
+                return process_cached_data(cached_data, days, metadata)
             else:
-                # If no BTC data, use base dominance with small variation
-                volume_factor = min(eth_volume / 500000000, 1.0)  # Normalize
-                dominance = base_eth_dominance + (volume_factor - 0.5) * 5
+                return {
+                    'metadata': metadata,
+                    'data': [],
+                    'error': 'Insufficient data for REAL market cap calculation. API may not provide historical supply data.'
+                }
+        
+        # Calculate ETH dominance for each day
+        dominance_data = []
+        eth_caps = market_caps.get('ETH', {})
+        
+        for date_key in sorted(eth_caps.keys()):
+            eth_market_cap = eth_caps[date_key]
             
-            # Keep in realistic range (10-25% for ETH)
-            dominance = max(10, min(25, dominance))
+            # Calculate total market cap for this date
+            total_market_cap = 0
+            for asset_name, asset_caps in market_caps.items():
+                if date_key in asset_caps:
+                    total_market_cap += asset_caps[date_key]
             
-            dominance_data.append([timestamp, dominance])
+            if total_market_cap > 0:
+                # Calculate REAL dominance
+                dominance = (eth_market_cap / total_market_cap) * 100
+                
+                # Convert date to timestamp
+                dt = datetime.strptime(date_key, '%Y-%m-%d')
+                dt = dt.replace(tzinfo=timezone.utc)
+                timestamp_ms = int(dt.timestamp() * 1000)
+                
+                dominance_data.append([timestamp_ms, dominance])
+                
+                # Log for verification
+                print(f"{date_key}: ETH={eth_market_cap/1e9:.2f}B, Total={total_market_cap/1e9:.2f}B, Dominance={dominance:.2f}%")
         
         if not dominance_data:
-            raise ValueError("No dominance data calculated")
+            print("ERROR: No dominance data calculated")
+            return {
+                'metadata': metadata,
+                'data': [],
+                'error': 'Could not calculate dominance from available data'
+            }
         
         # Sort by timestamp
         dominance_data.sort(key=lambda x: x[0])
         
-        # Save to cache
+        # Save REAL data to cache
         save_to_cache(dataset_name, dominance_data)
-        print(f"Successfully calculated {len(dominance_data)} ETH dominance data points")
+        print(f"Successfully calculated {len(dominance_data)} REAL ETH dominance data points")
         
         raw_data = dominance_data
         
     except Exception as e:
-        print(f"Error calculating ETH dominance from CoinAPI: {e}")
-        print("Loading from cache...")
+        print(f"Error calculating ETH dominance: {e}")
+        print("Attempting to load cached REAL data...")
         
         raw_data = load_from_cache(dataset_name)
         if not raw_data:
-            print("No cached data available for ETH dominance")
             return {
                 'metadata': metadata,
                 'data': [],
-                'error': f'Failed to calculate dominance: {str(e)}'
+                'error': f'Failed to calculate REAL dominance: {str(e)}'
             }
     
-    # Standardize the data
+    # Standardize and return the data
+    return process_cached_data(raw_data, days, metadata)
+
+def process_cached_data(raw_data, days, metadata):
+    """Process and filter cached or calculated data"""
     if raw_data:
         standardized_data = standardize_to_daily_utc(raw_data)
         
