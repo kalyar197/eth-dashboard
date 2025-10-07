@@ -9,7 +9,9 @@ from . import btc_dominance
 from . import eth_dominance
 from . import usdt_dominance
 from . import bollinger_bands
-from . import dxy  # NEW: DXY Dollar Index module
+from . import dxy
+from . import obv  # NEW: On-Balance Volume indicator
+from . import atr  # NEW: Average True Range indicator
 from . import time_transformer
 from . import cache_manager
 
@@ -23,6 +25,8 @@ __all__ = [
     'usdt_dominance',
     'bollinger_bands',
     'dxy',
+    'obv',  # NEW
+    'atr',  # NEW
     'time_transformer',
     'cache_manager'
 ]

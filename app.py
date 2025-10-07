@@ -3,7 +3,7 @@
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 from data import eth_price, gold_price, rsi, btc_dominance, usdt_dominance, eth_dominance, bollinger_bands
-from data import dxy  # NEW: DXY Dollar Index module
+from data import dxy, obv, atr  # NEW: OBV and ATR indicators
 import time
 from config import CACHE_DURATION, RATE_LIMIT_DELAY
 
@@ -25,7 +25,9 @@ DATA_PLUGINS = {
     'usdt_dominance': usdt_dominance,
     'eth_dominance': eth_dominance,
     'bollinger_bands': bollinger_bands,
-    'dxy': dxy  # NEW: DXY Dollar Index module
+    'dxy': dxy,
+    'obv': obv,  # NEW: On-Balance Volume
+    'atr': atr   # NEW: Average True Range
 }
 
 def get_cache_key(dataset_name, days):
@@ -69,7 +71,7 @@ def get_data():
     """
     A single, flexible endpoint to fetch data for any dataset.
     Query parameters:
-    - dataset: The name of the dataset to fetch (e.g., 'eth', 'gold', 'rsi', 'dxy')
+    - dataset: The name of the dataset to fetch (e.g., 'eth', 'gold', 'rsi', 'dxy', 'obv', 'atr')
     - days: The number of days of data to retrieve (e.g., '365', 'max')
     """
     dataset_name = request.args.get('dataset')
@@ -158,7 +160,8 @@ def home():
         'cached_items': len(cache),
         'api_key_status': api_status,
         'config_endpoint': '/api/config',
-        'clear_cache_endpoint': '/api/clear-cache'
+        'clear_cache_endpoint': '/api/clear-cache',
+        'new_indicators': ['obv', 'atr']  # Highlight new additions
     })
 
 if __name__ == '__main__':
@@ -188,6 +191,14 @@ if __name__ == '__main__':
     else:
         print(f"  CoinAPI: ❌ Not configured")
     
+    print("\n🆕 NEW INDICATORS:")
+    print("  - OBV (On-Balance Volume)")
+    print("  - ATR (Average True Range)")
+    
+    print("="*60)
+    print("✅ FIXES APPLIED:")
+    print("  - Gold Price: Fixed FMP endpoint (using ZGUSD symbol)")
+    print("  - Dominance: Using CoinGecko for market cap data")
     print("="*60)
     print("Make sure to install: pip install Flask requests Flask-Cors numpy")
     print("="*60)

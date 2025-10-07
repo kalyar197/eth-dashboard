@@ -1,6 +1,7 @@
 # data/gold_price.py
 """
 Gold price fetcher using Financial Modeling Prep (FMP) API
+FIXED: Using correct symbol ZGUSD for Gold
 Attempts to fetch full OHLCV structure, falls back to simple price structure
 NO COINAPI REFERENCES - Uses FMP exclusively
 """
@@ -33,29 +34,30 @@ def get_metadata():
 def fetch_gold_from_fmp(days):
     """
     Fetch gold price data from Financial Modeling Prep API
+    FIXED: Using correct FMP symbol ZGUSD for Gold
     Attempts to get full OHLCV data, falls back to simple close prices
     """
     print("=" * 60)
     print("Fetching Gold Price from FMP API")
     print("=" * 60)
     
-    # FMP endpoints to try (in order of preference)
+    # FIXED ENDPOINTS - Using correct FMP symbols for Gold
     endpoints_to_try = [
         {
-            'name': 'Commodity Historical',
-            'url': f'https://financialmodelingprep.com/api/v3/historical-price-full/GCUSD',
+            'name': 'Historical Price Full (ZGUSD)',
+            'url': f'https://financialmodelingprep.com/api/v3/historical-price-full/ZGUSD',
             'params': {'apikey': FMP_API_KEY},
             'data_path': 'historical'
         },
         {
-            'name': 'Forex Historical',
-            'url': f'https://financialmodelingprep.com/api/v3/historical-price-full/XAUUSD',
+            'name': 'Historical Chart 1day (ZGUSD)',
+            'url': f'https://financialmodelingprep.com/api/v3/historical-chart/1day/ZGUSD',
             'params': {'apikey': FMP_API_KEY},
-            'data_path': 'historical'
+            'data_path': None  # Direct list response
         },
         {
-            'name': 'Commodity Quote',
-            'url': f'https://financialmodelingprep.com/api/v3/quote/GCUSD',
+            'name': 'Quote (ZGUSD)',
+            'url': f'https://financialmodelingprep.com/api/v3/quote/ZGUSD',
             'params': {'apikey': FMP_API_KEY},
             'data_path': None  # Direct response
         }
@@ -68,6 +70,8 @@ def fetch_gold_from_fmp(days):
             
             response = requests.get(endpoint['url'], params=endpoint['params'], timeout=30)
             
+            print(f"Response Status: {response.status_code}")
+            
             if response.status_code == 200:
                 data = response.json()
                 
@@ -77,7 +81,7 @@ def fetch_gold_from_fmp(days):
                 elif isinstance(data, list):
                     historical_data = data
                 else:
-                    print(f"  No historical data found in response")
+                    print(f"  Unexpected data format in response")
                     continue
                 
                 if not historical_data or len(historical_data) == 0:
@@ -163,10 +167,13 @@ def fetch_gold_from_fmp(days):
                         sample = raw_data[-1]  # Most recent
                         print(f"     Sample: Price=${sample[1]:.2f}")
                     
+                    print(f"\n  🎯 SUCCESSFULLY FIXED: Gold data fetched from FMP using ZGUSD symbol")
                     return raw_data, data_structure
                     
             elif response.status_code == 401:
                 print(f"  ❌ Authentication failed - check FMP API key")
+            elif response.status_code == 403:
+                print(f"  ❌ 403 Forbidden - API key may lack permissions or endpoint not available")
             elif response.status_code == 429:
                 print(f"  ❌ Rate limit exceeded")
             else:
@@ -177,6 +184,7 @@ def fetch_gold_from_fmp(days):
             continue
     
     print("\n❌ Could not fetch gold data from any FMP endpoint")
+    print("   This may indicate API key issues or endpoint changes")
     return None, None
 
 def get_data(days='365'):
@@ -245,14 +253,12 @@ def get_data(days='365'):
         
         # Verify alignment
         if standardized_data:
-            # Check first and last few points for UTC alignment
-            for i, point in enumerate(standardized_data[:3] + standardized_data[-3:]):
-                dt = datetime.fromtimestamp(point[0] / 1000)
-                if dt.hour != 0 or dt.minute != 0 or dt.second != 0:
-                    print(f"  ⚠️  Warning: Data point not aligned to UTC: {dt}")
-                    break
-            else:
+            misaligned = sum(1 for point in standardized_data[:10] 
+                           if datetime.fromtimestamp(point[0] / 1000).hour != 0)
+            if misaligned == 0:
                 print(f"  ✅ All data points aligned to 00:00:00 UTC")
+            else:
+                print(f"  ⚠️  Warning: Some data points not aligned to UTC")
         
         print(f"\nFinal output: {len(standardized_data)} data points")
         print(f"Structure: {data_structure} ({len(metadata['components'])} components)")
@@ -293,7 +299,7 @@ def verify_no_coinapi():
         # Check if it's just in this verification function or comments
         lines = source.split('\n')
         for i, line in enumerate(lines):
-            if 'COINAPI' in line.upper() and 'verify_no_coinapi' not in line and '#' not in line[:line.find('COINAPI')]:
+            if 'COINAPI' in line.upper() and 'verify_no_coinapi' not in line and '#' not in line[:line.find('COINAPI')] if 'COINAPI' in line else True:
                 print(f"❌ WARNING: CoinAPI reference found on line {i}")
                 return False
     

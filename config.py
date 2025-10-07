@@ -4,7 +4,7 @@ Centralized configuration file for all API keys and settings
 """
 
 # API Keys
-COINAPI_KEY = 'YOUR_COINAPI_KEY_HERE'  # For crypto data (BTC, ETH, dominance)
+COINAPI_KEY = '695d38a1-9337-49cf-a281-f5f0230c5a0e'  # For crypto data (BTC, ETH, dominance)
 FMP_API_KEY = '74mkQbAh1DPHnRf1VoepvTTrLsvyvUf5'  # Financial Modeling Prep for Gold
 FRED_API_KEY = 'f96bcbce8ee83ab7269b9a4b0859fcaf'  # Federal Reserve Economic Data for DXY
 
