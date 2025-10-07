@@ -4,7 +4,7 @@ Centralized configuration file for all API keys and settings
 """
 
 # API Keys
-COINAPI_KEY = 'YOUR_COINAPI_KEY_HERE'  # Add your CoinAPI key here
+COINAPI_KEY = '695d38a1-9337-49cf-a281-f5f0230c5a0e'  # Add your CoinAPI key here
 FMP_API_KEY = '74mkQbAh1DPHnRf1VoepvTTrLsvyvUf5'  # DEPRECATED - will be removed
 COINSTATS_API_KEY = 'hn8xFxvTblGTj6wEq35nxyijBlQNyBrdJUWqPIeHZCU='  # DEPRECATED - will be removed
 
