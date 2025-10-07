@@ -3,6 +3,7 @@
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 from data import eth_price, gold_price, rsi, btc_dominance, usdt_dominance, eth_dominance, bollinger_bands
+from data import dxy  # NEW: DXY Dollar Index module
 import time
 from config import CACHE_DURATION, RATE_LIMIT_DELAY
 
@@ -23,7 +24,8 @@ DATA_PLUGINS = {
     'btc_dominance': btc_dominance,
     'usdt_dominance': usdt_dominance,
     'eth_dominance': eth_dominance,
-    'bollinger_bands': bollinger_bands
+    'bollinger_bands': bollinger_bands,
+    'dxy': dxy  # NEW: DXY Dollar Index module
 }
 
 def get_cache_key(dataset_name, days):
@@ -67,7 +69,7 @@ def get_data():
     """
     A single, flexible endpoint to fetch data for any dataset.
     Query parameters:
-    - dataset: The name of the dataset to fetch (e.g., 'eth', 'gold', 'rsi')
+    - dataset: The name of the dataset to fetch (e.g., 'eth', 'gold', 'rsi', 'dxy')
     - days: The number of days of data to retrieve (e.g., '365', 'max')
     """
     dataset_name = request.args.get('dataset')
@@ -118,7 +120,7 @@ def clear_cache():
 @app.route('/api/config')
 def get_config():
     """Show current configuration (without revealing API keys)"""
-    from config import API_PROVIDER, DEFAULT_DAYS, RSI_PERIOD, ALPHA_VANTAGE_API_KEY
+    from config import API_PROVIDER, DEFAULT_DAYS, RSI_PERIOD, FMP_API_KEY, FRED_API_KEY, COINAPI_KEY
     
     return jsonify({
         'api_provider': API_PROVIDER,
@@ -126,7 +128,11 @@ def get_config():
         'rate_limit_delay': f'{RATE_LIMIT_DELAY} seconds',
         'default_days': DEFAULT_DAYS,
         'rsi_period': RSI_PERIOD,
-        'api_key_configured': bool(ALPHA_VANTAGE_API_KEY and ALPHA_VANTAGE_API_KEY != 'YOUR_ALPHA_VANTAGE_API_KEY')
+        'api_keys_configured': {
+            'fmp': bool(FMP_API_KEY and FMP_API_KEY != 'YOUR_FMP_API_KEY'),
+            'fred': bool(FRED_API_KEY and FRED_API_KEY != 'YOUR_FRED_API_KEY_HERE'),
+            'coinapi': bool(COINAPI_KEY and COINAPI_KEY != 'YOUR_COINAPI_KEY_HERE')
+        }
     })
 
 @app.route('/')
@@ -134,9 +140,14 @@ def home():
     """
     Root endpoint to verify server is running
     """
-    from config import FMP_API_KEY
+    from config import FMP_API_KEY, FRED_API_KEY, COINAPI_KEY
     
-    api_key_status = "✅ Configured" if (FMP_API_KEY and FMP_API_KEY != 'YOUR_FMP_API_KEY') else "❌ Not configured"
+    # Check API key status
+    api_status = {
+        'FMP': "✅" if (FMP_API_KEY and FMP_API_KEY != 'YOUR_FMP_API_KEY') else "❌",
+        'FRED': "✅" if (FRED_API_KEY and FRED_API_KEY != 'YOUR_FRED_API_KEY_HERE') else "❌",
+        'CoinAPI': "✅" if (COINAPI_KEY and COINAPI_KEY != 'YOUR_COINAPI_KEY_HERE') else "❌"
+    }
     
     return jsonify({
         'status': 'running',
@@ -145,13 +156,13 @@ def home():
         'available_datasets': list(DATA_PLUGINS.keys()),
         'cache_duration': f'{CACHE_DURATION} seconds',
         'cached_items': len(cache),
-        'api_key_status': api_key_status,
+        'api_key_status': api_status,
         'config_endpoint': '/api/config',
         'clear_cache_endpoint': '/api/clear-cache'
     })
 
 if __name__ == '__main__':
-    from config import FMP_API_KEY
+    from config import FMP_API_KEY, FRED_API_KEY, COINAPI_KEY
     
     print("="*60)
     print("Starting Advanced Financial Charting Server")
@@ -161,10 +172,21 @@ if __name__ == '__main__':
     print(f"Cache duration: {CACHE_DURATION} seconds")
     print(f"Rate limit: {RATE_LIMIT_DELAY} seconds between API calls")
     
+    print("\nAPI Key Status:")
     if FMP_API_KEY and FMP_API_KEY != 'YOUR_FMP_API_KEY':
-        print(f"API Key Status: ✅ Configured")
+        print(f"  FMP: ✅ Configured (for Gold)")
     else:
-        print(f"API Key Status: ❌ Not configured - Please add your key to config.py")
+        print(f"  FMP: ❌ Not configured")
+    
+    if FRED_API_KEY and FRED_API_KEY != 'YOUR_FRED_API_KEY_HERE':
+        print(f"  FRED: ✅ Configured (for DXY)")
+    else:
+        print(f"  FRED: ❌ Not configured - Add your key to config.py")
+    
+    if COINAPI_KEY and COINAPI_KEY != 'YOUR_COINAPI_KEY_HERE':
+        print(f"  CoinAPI: ✅ Configured (for Crypto)")
+    else:
+        print(f"  CoinAPI: ❌ Not configured")
     
     print("="*60)
     print("Make sure to install: pip install Flask requests Flask-Cors numpy")
