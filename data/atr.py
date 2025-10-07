@@ -148,9 +148,10 @@ def get_data(days='365'):
         
         # Combine timestamps with ATR values
         # ATR starts at index ATR_PERIOD (after we have enough data)
+        # CRITICAL FIX: First ATR value corresponds to day 14 (index 13)
         atr_data = []
         for i in range(len(atr_values)):
-            timestamp = ohlcv_data[i + ATR_PERIOD][0]
+            timestamp = ohlcv_data[i + ATR_PERIOD - 1][0]  # FIXED: -1 for correct alignment
             atr_data.append([timestamp, atr_values[i]])
         
         # Save complete ATR data to cache

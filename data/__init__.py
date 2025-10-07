@@ -10,8 +10,11 @@ from . import eth_dominance
 from . import usdt_dominance
 from . import bollinger_bands
 from . import dxy
-from . import obv  # NEW: On-Balance Volume indicator
-from . import atr  # NEW: Average True Range indicator
+from . import obv  # Phase 3: On-Balance Volume indicator
+from . import atr  # Phase 3: Average True Range indicator
+from . import vwap  # Phase 4: Volume Weighted Average Price
+from . import macd  # Phase 4: MACD indicator
+from . import adx  # Phase 4: Average Directional Index
 from . import time_transformer
 from . import cache_manager
 
@@ -25,8 +28,11 @@ __all__ = [
     'usdt_dominance',
     'bollinger_bands',
     'dxy',
-    'obv',  # NEW
-    'atr',  # NEW
+    'obv',   # Phase 3
+    'atr',   # Phase 3
+    'vwap',  # Phase 4
+    'macd',  # Phase 4
+    'adx',   # Phase 4
     'time_transformer',
     'cache_manager'
 ]

@@ -3,7 +3,7 @@
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 from data import eth_price, gold_price, rsi, btc_dominance, usdt_dominance, eth_dominance, bollinger_bands
-from data import dxy, obv, atr  # NEW: OBV and ATR indicators
+from data import dxy, obv, atr, vwap, macd, adx  # PHASE 4: Added VWAP, MACD, ADX
 import time
 from config import CACHE_DURATION, RATE_LIMIT_DELAY
 
@@ -26,8 +26,11 @@ DATA_PLUGINS = {
     'eth_dominance': eth_dominance,
     'bollinger_bands': bollinger_bands,
     'dxy': dxy,
-    'obv': obv,  # NEW: On-Balance Volume
-    'atr': atr   # NEW: Average True Range
+    'obv': obv,      # Phase 3
+    'atr': atr,      # Phase 3
+    'vwap': vwap,    # Phase 4
+    'macd': macd,    # Phase 4
+    'adx': adx       # Phase 4
 }
 
 def get_cache_key(dataset_name, days):
@@ -161,7 +164,8 @@ def home():
         'api_key_status': api_status,
         'config_endpoint': '/api/config',
         'clear_cache_endpoint': '/api/clear-cache',
-        'new_indicators': ['obv', 'atr']  # Highlight new additions
+        'phase3_indicators': ['obv', 'atr'],
+        'phase4_indicators': ['vwap', 'macd', 'adx']
     })
 
 if __name__ == '__main__':
@@ -191,14 +195,21 @@ if __name__ == '__main__':
     else:
         print(f"  CoinAPI: ❌ Not configured")
     
-    print("\n🆕 NEW INDICATORS:")
+    print("\n🆕 PHASE 3 INDICATORS:")
     print("  - OBV (On-Balance Volume)")
     print("  - ATR (Average True Range)")
     
+    print("\n🆕 PHASE 4 INDICATORS:")
+    print("  - VWAP (Volume Weighted Average Price)")
+    print("  - MACD (Moving Average Convergence Divergence)")
+    print("  - ADX (Average Directional Index)")
+    
     print("="*60)
-    print("✅ FIXES APPLIED:")
+    print("✅ CRITICAL FIXES APPLIED:")
     print("  - Gold Price: Fixed FMP endpoint (using ZGUSD symbol)")
     print("  - Dominance: Using CoinGecko for market cap data")
+    print("  - ATR: Fixed indexing error (alignment bug)")
+    print("  - Test Script: Added UTF-8 encoding")
     print("="*60)
     print("Make sure to install: pip install Flask requests Flask-Cors numpy")
     print("="*60)
