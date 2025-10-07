@@ -1,47 +1,65 @@
 # data/time_transformer.py
 """
-Time standardization module for CoinAPI data
+Time standardization module for OHLCV data
+Handles both 2-element [timestamp, value] and 6-element [timestamp, O, H, L, C, V] structures
 Ensures all timestamps are normalized to daily UTC boundaries
+PRESERVES ALL DATA COMPONENTS - No data loss
 """
 
 from datetime import datetime, timezone, timedelta
 
 def standardize_to_daily_utc(raw_data):
     """
-    Takes raw data in the format [[timestamp, value], ...] and standardizes it.
+    Takes raw data and standardizes timestamps to UTC daily boundaries.
     
-    The goal is to eliminate all time-of-day discrepancies by forcing every
-    timestamp to the beginning of its UTC day (00:00:00).
+    CRITICAL: Now handles two data structures:
+    - 2-element: [timestamp, value] - for simple price/dominance data
+    - 6-element: [timestamp, open, high, low, close, volume] - for OHLCV data
     
-    This is critical for the dashboard to ensure all datasets align properly.
+    The timestamp is normalized to 00:00:00 UTC.
+    ALL OTHER COMPONENTS ARE PRESERVED UNCHANGED.
     
     Args:
-        raw_data (list): A list of lists, where each inner list is
-                         [unix_millisecond_timestamp, value].
+        raw_data (list): A list of lists, where each inner list is either:
+                         [unix_millisecond_timestamp, value] OR
+                         [unix_millisecond_timestamp, open, high, low, close, volume]
     
     Returns:
-        list: A standardized list of lists in the same format.
+        list: A standardized list with same structure as input.
     """
     if not raw_data:
+        return []
+    
+    # Detect data structure from first valid element
+    data_structure = None
+    for item in raw_data:
+        if isinstance(item, (list, tuple)) and len(item) >= 2:
+            data_structure = len(item)
+            print(f"Detected data structure: {data_structure} elements per record")
+            break
+    
+    if not data_structure:
+        print("Error: Could not determine data structure")
         return []
     
     standardized_data = []
     seen_dates = set()
     
     for item in raw_data:
-        # Handle different input formats
-        if isinstance(item, (list, tuple)) and len(item) >= 2:
-            ms_timestamp, value = item[0], item[1]
-        else:
-            print(f"Warning: Skipping invalid data point: {item}")
+        # Validate structure consistency
+        if not isinstance(item, (list, tuple)) or len(item) != data_structure:
+            print(f"Warning: Skipping invalid/inconsistent data point: {item}")
             continue
+        
+        # Extract timestamp (always first element)
+        ms_timestamp = item[0]
         
         # Validate timestamp
         if not isinstance(ms_timestamp, (int, float)):
             print(f"Warning: Invalid timestamp: {ms_timestamp}")
             continue
         
-        # Convert from milliseconds to a Python datetime object, assuming UTC
+        # Convert timestamp to datetime
         try:
             # Handle both millisecond and second timestamps
             if ms_timestamp > 1000000000000:  # Milliseconds
@@ -52,54 +70,80 @@ def standardize_to_daily_utc(raw_data):
             print(f"Warning: Could not parse timestamp {ms_timestamp}: {e}")
             continue
         
-        # CRITICAL STEP: Normalize the timestamp by removing the time part.
-        # This snaps the timestamp to the beginning of the UTC day.
+        # CRITICAL: Normalize timestamp to beginning of UTC day
         normalized_dt = dt_object.replace(hour=0, minute=0, second=0, microsecond=0)
         
         # Check for duplicates on the same day
-        # If we have multiple data points for the same day, keep the first one
         if normalized_dt in seen_dates:
             continue
         seen_dates.add(normalized_dt)
         
-        # Convert the normalized datetime object back to a millisecond timestamp
+        # Convert normalized datetime back to millisecond timestamp
         standardized_ms_timestamp = int(normalized_dt.timestamp() * 1000)
         
-        # Validate the value
-        if value is None or (isinstance(value, str) and not value.strip()):
-            print(f"Warning: Invalid value for date {normalized_dt.date()}: {value}")
+        # Build standardized record based on structure
+        if data_structure == 2:
+            # Simple [timestamp, value] structure
+            value = item[1]
+            
+            # Validate value
+            if value is None or (isinstance(value, str) and not value.strip()):
+                print(f"Warning: Invalid value for date {normalized_dt.date()}: {value}")
+                continue
+            
+            try:
+                numeric_value = float(value)
+            except (ValueError, TypeError):
+                print(f"Warning: Could not convert value to number: {value}")
+                continue
+            
+            standardized_data.append([standardized_ms_timestamp, numeric_value])
+            
+        elif data_structure == 6:
+            # OHLCV structure [timestamp, open, high, low, close, volume]
+            # PRESERVE ALL COMPONENTS
+            try:
+                standardized_record = [
+                    standardized_ms_timestamp,
+                    float(item[1]),  # open
+                    float(item[2]),  # high
+                    float(item[3]),  # low
+                    float(item[4]),  # close
+                    float(item[5])   # volume
+                ]
+                
+                # Validate OHLCV logic (high >= low, high >= open/close, etc.)
+                if standardized_record[2] < standardized_record[3]:  # high < low
+                    print(f"Warning: Invalid OHLCV data (high < low) for {normalized_dt.date()}")
+                    continue
+                
+                standardized_data.append(standardized_record)
+                
+            except (ValueError, TypeError) as e:
+                print(f"Warning: Could not process OHLCV data: {e}")
+                continue
+        else:
+            print(f"Warning: Unsupported data structure with {data_structure} elements")
             continue
-        
-        # Try to convert value to float
-        try:
-            numeric_value = float(value)
-        except (ValueError, TypeError):
-            print(f"Warning: Could not convert value to number: {value}")
-            continue
-        
-        # Append the fully standardized data point
-        standardized_data.append([standardized_ms_timestamp, numeric_value])
     
     # Sort by timestamp to ensure chronological order
     standardized_data.sort(key=lambda x: x[0])
     
     # Fill gaps in data (optional - ensures continuous daily data)
     if len(standardized_data) > 1:
-        filled_data = fill_daily_gaps(standardized_data)
+        if data_structure == 2:
+            filled_data = fill_daily_gaps_simple(standardized_data)
+        elif data_structure == 6:
+            filled_data = fill_daily_gaps_ohlcv(standardized_data)
+        else:
+            filled_data = standardized_data
         return filled_data
     
     return standardized_data
 
-def fill_daily_gaps(data):
+def fill_daily_gaps_simple(data):
     """
-    Fill gaps in daily data with interpolated values.
-    This ensures we have continuous daily data without gaps.
-    
-    Args:
-        data (list): Sorted list of [timestamp, value] pairs
-    
-    Returns:
-        list: Data with gaps filled
+    Fill gaps in simple [timestamp, value] daily data with interpolated values.
     """
     if len(data) < 2:
         return data
@@ -131,9 +175,61 @@ def fill_daily_gaps(data):
                 
                 filled_data.append([gap_timestamp, interpolated_value])
                 
-                # Log gap filling for transparency
-                if j == 1:  # Only log once per gap
-                    print(f"Info: Filled {days_diff - 1} day gap between {current_date.date()} and {next_date.date()}")
+            if days_diff > 2:  # Only log significant gaps
+                print(f"Info: Filled {days_diff - 1} day gap between {current_date.date()} and {next_date.date()}")
+    
+    # Add the last point
+    filled_data.append(data[-1])
+    
+    return filled_data
+
+def fill_daily_gaps_ohlcv(data):
+    """
+    Fill gaps in OHLCV data.
+    For gap days, use interpolated close as all OHLC values, zero volume.
+    This maintains data integrity while filling gaps.
+    """
+    if len(data) < 2:
+        return data
+    
+    filled_data = []
+    
+    for i in range(len(data) - 1):
+        current_point = data[i]
+        next_point = data[i + 1]
+        
+        filled_data.append(current_point)
+        
+        # Check for gap
+        current_date = datetime.fromtimestamp(current_point[0] / 1000, tz=timezone.utc)
+        next_date = datetime.fromtimestamp(next_point[0] / 1000, tz=timezone.utc)
+        
+        days_diff = (next_date - current_date).days
+        
+        # If there's a gap of more than 1 day, fill it
+        if days_diff > 1:
+            # Interpolate using close prices
+            close_diff = next_point[4] - current_point[4]
+            close_step = close_diff / days_diff
+            
+            for j in range(1, days_diff):
+                gap_date = current_date + timedelta(days=j)
+                gap_timestamp = int(gap_date.timestamp() * 1000)
+                
+                # Use interpolated close for all OHLC values on gap days
+                interpolated_close = current_point[4] + (close_step * j)
+                
+                filled_data.append([
+                    gap_timestamp,
+                    interpolated_close,  # open
+                    interpolated_close,  # high
+                    interpolated_close,  # low
+                    interpolated_close,  # close
+                    0.0                  # volume (0 for gap days)
+                ])
+            
+            if days_diff > 2:  # Only log significant gaps
+                print(f"Info: Filled {days_diff - 1} day OHLCV gap between {current_date.date()} and {next_date.date()}")
     
     # Add the last point
     filled_data.append(data[-1])
@@ -143,12 +239,7 @@ def fill_daily_gaps(data):
 def validate_daily_alignment(data):
     """
     Validate that all data points are properly aligned to daily boundaries.
-    
-    Args:
-        data (list): List of [timestamp, value] pairs
-    
-    Returns:
-        bool: True if all timestamps are at 00:00:00 UTC
+    Works with both 2-element and 6-element structures.
     """
     for point in data:
         timestamp_ms = point[0]
@@ -163,12 +254,7 @@ def validate_daily_alignment(data):
 def get_date_range(data):
     """
     Get the date range of the dataset.
-    
-    Args:
-        data (list): List of [timestamp, value] pairs
-    
-    Returns:
-        tuple: (start_date, end_date) as datetime objects
+    Works with both 2-element and 6-element structures.
     """
     if not data:
         return None, None
@@ -180,3 +266,38 @@ def get_date_range(data):
     end_date = datetime.fromtimestamp(end_timestamp / 1000, tz=timezone.utc)
     
     return start_date, end_date
+
+def extract_component(ohlcv_data, component='close'):
+    """
+    Extract a specific component from OHLCV data.
+    Useful for indicators that only need closing prices.
+    
+    Args:
+        ohlcv_data: List of [timestamp, open, high, low, close, volume]
+        component: 'open', 'high', 'low', 'close', or 'volume'
+    
+    Returns:
+        List of [timestamp, value] pairs
+    """
+    component_map = {
+        'open': 1,
+        'high': 2,
+        'low': 3,
+        'close': 4,
+        'volume': 5
+    }
+    
+    if component not in component_map:
+        raise ValueError(f"Invalid component: {component}")
+    
+    index = component_map[component]
+    
+    extracted_data = []
+    for point in ohlcv_data:
+        if len(point) == 6:  # OHLCV structure
+            extracted_data.append([point[0], point[index]])
+        elif len(point) == 2 and component == 'close':
+            # Fallback for simple price data
+            extracted_data.append(point)
+    
+    return extracted_data

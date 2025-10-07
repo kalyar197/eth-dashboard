@@ -1,7 +1,8 @@
 # data/eth_price.py
 """
-Ethereum price data fetcher using CoinAPI
-Fetches daily OHLCV data and uses closing price
+Ethereum OHLCV data fetcher using CoinAPI
+Returns FULL OHLCV data structure: [timestamp, open, high, low, close, volume]
+NO DATA DISCARDING - All 6 components preserved
 """
 
 import requests
@@ -24,19 +25,23 @@ def get_metadata():
         'chartType': 'line',
         'color': '#627EEA',  # Ethereum's brand color
         'strokeWidth': 2,
-        'description': 'Ethereum daily closing price in USD'
+        'description': 'Ethereum OHLCV data - Full 6-component structure',
+        'data_structure': 'OHLCV',  # Indicates full OHLCV data
+        'components': ['timestamp', 'open', 'high', 'low', 'close', 'volume']
     }
 
 def get_data(days='365'):
     """
-    Fetches Ethereum price data using CoinAPI's OHLCV history endpoint.
-    Returns daily closing prices processed through time_transformer.
+    Fetches Ethereum FULL OHLCV data using CoinAPI's history endpoint.
+    Returns 6-component data: [timestamp, open, high, low, close, volume]
+    NO DATA LOSS - All OHLCV components preserved for technical indicators.
     """
     metadata = get_metadata()
-    dataset_name = 'eth_price'
+    dataset_name = 'eth_ohlcv'  # Changed to reflect OHLCV structure
 
     try:
-        print("Fetching ETH price data from CoinAPI...")
+        print("Fetching ETH FULL OHLCV data from CoinAPI...")
+        print("Structure: [timestamp, open, high, low, close, volume]")
         
         # CoinAPI OHLCV History endpoint configuration
         base_url = 'https://rest.coinapi.io/v1/ohlcv'
@@ -80,45 +85,70 @@ def get_data(days='365'):
         if not data:
             raise ValueError("No data returned from CoinAPI")
         
-        # Process the OHLCV data
+        # Process the FULL OHLCV data - ALL 6 COMPONENTS
         raw_data = []
         for candle in data:
-            # CoinAPI returns time_period_start as the timestamp
-            # and price_close as the closing price
+            # Extract ALL OHLCV components
             timestamp_str = candle.get('time_period_start')
-            close_price = candle.get('price_close')
             
-            if timestamp_str and close_price is not None:
+            # CRITICAL: Extract all 6 components
+            open_price = candle.get('price_open')
+            high_price = candle.get('price_high')
+            low_price = candle.get('price_low')
+            close_price = candle.get('price_close')
+            volume_traded = candle.get('volume_traded')
+            
+            # Validate all components exist
+            if (timestamp_str and 
+                open_price is not None and 
+                high_price is not None and 
+                low_price is not None and 
+                close_price is not None and 
+                volume_traded is not None):
+                
                 # Parse the ISO timestamp
                 dt = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
                 timestamp_ms = int(dt.timestamp() * 1000)
-                raw_data.append([timestamp_ms, float(close_price)])
+                
+                # CRITICAL: Store all 6 components
+                raw_data.append([
+                    timestamp_ms,
+                    float(open_price),
+                    float(high_price),
+                    float(low_price),
+                    float(close_price),
+                    float(volume_traded)
+                ])
+            else:
+                print(f"Warning: Incomplete OHLCV data for {timestamp_str}, skipping...")
         
         if not raw_data:
-            raise ValueError("No valid price data extracted from CoinAPI response")
+            raise ValueError("No valid OHLCV data extracted from CoinAPI response")
         
         # Sort by timestamp (oldest first)
         raw_data.sort(key=lambda x: x[0])
         
-        # Save the complete dataset to cache
+        # Save the complete OHLCV dataset to cache
         save_to_cache(dataset_name, raw_data)
-        print(f"Successfully fetched {len(raw_data)} ETH price data points from CoinAPI")
+        print(f"Successfully fetched {len(raw_data)} FULL OHLCV data points from CoinAPI")
+        print(f"Sample data structure: timestamp={raw_data[0][0]}, O={raw_data[0][1]:.2f}, H={raw_data[0][2]:.2f}, L={raw_data[0][3]:.2f}, C={raw_data[0][4]:.2f}, V={raw_data[0][5]:.2f}")
         
     except requests.exceptions.RequestException as e:
-        print(f"API request failed for ETH price: {e}")
+        print(f"API request failed for ETH OHLCV: {e}")
         # Load from cache if API fails
         raw_data = load_from_cache(dataset_name)
         if not raw_data:
             return {'metadata': metadata, 'data': []}
             
     except Exception as e:
-        print(f"Error fetching ETH price from CoinAPI: {e}")
+        print(f"Error fetching ETH OHLCV from CoinAPI: {e}")
         # Load from cache if any error occurs
         raw_data = load_from_cache(dataset_name)
         if not raw_data:
             return {'metadata': metadata, 'data': []}
     
-    # Standardize the data to daily UTC format
+    # Standardize the OHLCV data to daily UTC format
+    # time_transformer must handle 6-element structure
     standardized_data = standardize_to_daily_utc(raw_data)
     
     # Trim to the exact requested number of days
@@ -127,7 +157,13 @@ def get_data(days='365'):
         cutoff_ms = int(cutoff_date.timestamp() * 1000)
         standardized_data = [d for d in standardized_data if d[0] >= cutoff_ms]
     
+    # Log structure verification
+    if standardized_data:
+        print(f"Returning {len(standardized_data)} OHLCV records with 6 components each")
+        print(f"First record has {len(standardized_data[0])} elements (should be 6)")
+    
     return {
         'metadata': metadata,
-        'data': standardized_data
+        'data': standardized_data,
+        'structure': 'OHLCV'  # Explicit structure indicator
     }

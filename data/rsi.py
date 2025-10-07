@@ -1,9 +1,14 @@
 # data/rsi.py
+"""
+RSI calculator compatible with OHLCV data structure
+Extracts closing prices from 6-element OHLCV data
+"""
 
 from datetime import datetime, timedelta
 import sys
 import os
 from .cache_manager import load_from_cache, save_to_cache
+from .time_transformer import extract_component
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config import RSI_PERIOD
@@ -74,7 +79,7 @@ def calculate_rsi(prices, period=RSI_PERIOD):
     return rsi_values
 
 def get_data(days='365'):
-    """Fetches ETH price data and calculates RSI"""
+    """Fetches ETH OHLCV data and calculates RSI from closing prices"""
     metadata = get_metadata()
     dataset_name = 'rsi'
     
@@ -85,7 +90,7 @@ def get_data(days='365'):
         else:
             request_days = str(int(days) + RSI_PERIOD + 10)  # Extra buffer for RSI calculation
         
-        # Get ETH price data from the eth_price module
+        # Get ETH OHLCV data from the eth_price module
         eth_data = eth_price.get_data(request_days)
         
         if not eth_data or not eth_data.get('data') or len(eth_data['data']) == 0:
@@ -101,14 +106,27 @@ def get_data(days='365'):
                 return {'metadata': metadata, 'data': cached_data}
             return {'metadata': metadata, 'data': []}
         
-        standardized_price_data = eth_data['data']
+        ohlcv_data = eth_data['data']
         
-        if len(standardized_price_data) < RSI_PERIOD:
+        # Check if we have OHLCV structure or simple price structure
+        if ohlcv_data and len(ohlcv_data[0]) == 6:
+            # Extract closing prices from OHLCV data
+            print("Extracting closing prices from OHLCV data for RSI calculation")
+            price_data = extract_component(ohlcv_data, 'close')
+        elif ohlcv_data and len(ohlcv_data[0]) == 2:
+            # Simple price data (backward compatibility)
+            print("Using simple price data for RSI calculation")
+            price_data = ohlcv_data
+        else:
+            print(f"Unexpected data structure: {len(ohlcv_data[0]) if ohlcv_data else 0} elements")
+            return {'metadata': metadata, 'data': []}
+        
+        if len(price_data) < RSI_PERIOD:
             print(f"Insufficient data for RSI calculation (need at least {RSI_PERIOD} data points)")
             return {'metadata': metadata, 'data': []}
         
-        timestamps = [item[0] for item in standardized_price_data]
-        closing_prices = [item[1] for item in standardized_price_data]
+        timestamps = [item[0] for item in price_data]
+        closing_prices = [item[1] for item in price_data]
 
         # Calculate RSI
         rsi_values = calculate_rsi(closing_prices, RSI_PERIOD)
@@ -121,6 +139,7 @@ def get_data(days='365'):
         # Save complete RSI data to cache
         save_to_cache(dataset_name, rsi_data)
         print(f"Successfully calculated and cached {dataset_name}")
+        print(f"RSI calculated from {len(closing_prices)} price points")
         
         # Trim to requested days if not 'max'
         if days != 'max':

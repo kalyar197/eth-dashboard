@@ -1,4 +1,8 @@
 # data/gold_price.py
+"""
+Gold price fetcher with OHLCV structure support
+Maintains consistency with ETH data structure
+"""
 
 import requests
 from .time_transformer import standardize_to_daily_utc
@@ -20,11 +24,17 @@ def get_metadata():
         'chartType': 'line',
         'color': '#FFD700',
         'strokeWidth': 2,
-        'description': 'Gold spot price per troy ounce in USD'
+        'description': 'Gold spot price per troy ounce in USD',
+        'data_structure': 'simple',  # Gold uses simple [timestamp, price] for now
+        'components': ['timestamp', 'close']
     }
 
 def get_data(days='365'):
-    """Fetches gold price data, using a local cache to minimize API calls."""
+    """
+    Fetches gold price data.
+    For consistency with other modules, returns [timestamp, close] structure.
+    Can be upgraded to OHLCV if gold OHLCV data becomes available.
+    """
     metadata = get_metadata()
     dataset_name = 'gold_price'
     
@@ -62,14 +72,33 @@ def get_data(days='365'):
                     raw_data = []
                     
                     # Process all the data
+                    # NOTE: Currently using simple structure for gold
+                    # Can be upgraded to OHLCV if data source provides it
                     for item in historical_data:
                         date = datetime.strptime(item['date'], '%Y-%m-%d')
-                        price = float(item['close'])
-                        raw_data.append([int(date.timestamp() * 1000), price])
+                        
+                        # Check if OHLCV data is available
+                        if all(k in item for k in ['open', 'high', 'low', 'close', 'volume']):
+                            # Full OHLCV data available
+                            raw_data.append([
+                                int(date.timestamp() * 1000),
+                                float(item['open']),
+                                float(item['high']),
+                                float(item['low']),
+                                float(item['close']),
+                                float(item.get('volume', 0))
+                            ])
+                            metadata['data_structure'] = 'OHLCV'
+                            metadata['components'] = ['timestamp', 'open', 'high', 'low', 'close', 'volume']
+                        else:
+                            # Simple price data only
+                            price = float(item['close'])
+                            raw_data.append([int(date.timestamp() * 1000), price])
                     
                     # Save to cache
                     save_to_cache(dataset_name, raw_data)
                     print(f"Successfully updated cache for {dataset_name}")
+                    print(f"Data structure: {metadata['data_structure']}")
                     successfully_fetched = True
                     break
         
@@ -86,6 +115,8 @@ def get_data(days='365'):
     
     # Sort and process the data
     raw_data.sort(key=lambda x: x[0])
+    
+    # Standardize the data (works with both 2-element and 6-element structures)
     standardized_data = standardize_to_daily_utc(raw_data)
     
     # Trim to requested days
@@ -96,5 +127,6 @@ def get_data(days='365'):
     
     return {
         'metadata': metadata,
-        'data': standardized_data
+        'data': standardized_data,
+        'structure': metadata.get('data_structure', 'simple')
     }

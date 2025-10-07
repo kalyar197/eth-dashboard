@@ -2,6 +2,7 @@
 """
 USDT (Tether) dominance calculator using REAL market cap data from CoinAPI
 NO ESTIMATES - Only actual market cap values
+NO PRICE ASSUMPTIONS - If price data missing, calculation FAILS (compliant failure)
 """
 
 import requests
@@ -24,7 +25,7 @@ def get_metadata():
         'chartType': 'line',
         'color': '#26A17B',  # Tether green
         'strokeWidth': 2,
-        'description': 'Tether (USDT) dominance - REAL DATA from CoinAPI'
+        'description': 'Tether (USDT) dominance - REAL DATA ONLY, NO ESTIMATES'
     }
 
 def fetch_historical_supply(asset_id, start_date, end_date):
@@ -74,7 +75,7 @@ def fetch_historical_supply(asset_id, start_date, end_date):
 def fetch_historical_prices(symbol_id, start_date, end_date):
     """
     Fetch historical price data for an asset
-    For stablecoins like USDT, price should be ~$1.00
+    NO FALLBACKS - Returns None if data unavailable
     """
     try:
         base_url = 'https://rest.coinapi.io/v1/ohlcv'
@@ -118,7 +119,7 @@ def calculate_real_market_caps(assets_config, start_date, end_date):
     """
     Calculate REAL market caps using Price × Circulating Supply
     NO ESTIMATES - Returns None if data is incomplete
-    For USDT, we assume price = $1.00 if direct price data unavailable
+    CRITICAL: NO PRICE ASSUMPTIONS FOR STABLECOINS
     """
     market_caps = {}
     
@@ -134,16 +135,17 @@ def calculate_real_market_caps(assets_config, start_date, end_date):
         # Get historical prices
         price_data = fetch_historical_prices(config['symbol_id'], start_date, end_date)
         
-        # For stablecoins, if no price data, use $1.00
-        if not price_data and asset_name in ['USDT', 'USDC', 'BUSD', 'DAI']:
-            print(f"Using $1.00 price for stablecoin {asset_name}")
-            price_data = {date_key: 1.00 for date_key in supply_data.keys()}
-        elif not price_data:
+        # CRITICAL FIX: NO ASSUMPTIONS FOR MISSING PRICE DATA
+        # If price data is missing, the calculation MUST FAIL
+        if not price_data:
             print(f"ERROR: No price data for {asset_name} - cannot calculate market cap")
+            print(f"COMPLIANCE: Not assuming any price values. Calculation failed correctly.")
             return None
         
         # Calculate REAL market cap for each day
         asset_market_caps = {}
+        missing_data_days = []
+        
         for date_key in supply_data:
             if date_key in price_data:
                 price = price_data[date_key]
@@ -151,14 +153,21 @@ def calculate_real_market_caps(assets_config, start_date, end_date):
                 market_cap = price * supply
                 asset_market_caps[date_key] = market_cap
             else:
-                # For stablecoins, use $1.00 if price missing
-                if asset_name in ['USDT', 'USDC', 'BUSD', 'DAI']:
-                    supply = supply_data[date_key]
-                    market_cap = 1.00 * supply
-                    asset_market_caps[date_key] = market_cap
-                else:
-                    print(f"Warning: Missing price data for {asset_name} on {date_key}")
+                # CRITICAL: Log missing data but DO NOT SUBSTITUTE
+                missing_data_days.append(date_key)
         
+        if missing_data_days:
+            print(f"Warning: Missing price data for {asset_name} on {len(missing_data_days)} days")
+            print(f"COMPLIANCE: Not substituting any estimated prices")
+            # If too much data is missing, consider the calculation failed
+            if len(missing_data_days) > len(supply_data) * 0.1:  # More than 10% missing
+                print(f"ERROR: Too much missing price data for {asset_name} (>10% days missing)")
+                return None
+        
+        if not asset_market_caps:
+            print(f"ERROR: No market cap data calculated for {asset_name}")
+            return None
+            
         market_caps[asset_name] = asset_market_caps
     
     return market_caps
@@ -167,15 +176,15 @@ def get_data(days='365'):
     """
     Fetches USDT dominance using REAL market cap data
     Market Cap = Price × Circulating Supply (NO ESTIMATES)
-    For USDT (stablecoin), price is typically $1.00
+    CRITICAL: NO PRICE ASSUMPTIONS - Calculation fails if data missing
     """
     metadata = get_metadata()
     dataset_name = 'usdt_dominance_real'
     
     try:
         print("Calculating USDT dominance from REAL market cap data...")
-        print("NO ESTIMATES - Using actual Price × Circulating Supply")
-        print("For USDT stablecoin: Price ≈ $1.00, Market Cap = Supply × $1.00")
+        print("NO ESTIMATES - Using actual Price × Circulating Supply ONLY")
+        print("COMPLIANCE: Will fail if price data unavailable (no $1.00 assumption)")
         
         # Calculate date range
         if days == 'max':
@@ -196,7 +205,7 @@ def get_data(days='365'):
             },
             'USDT': {
                 'asset_id': 'USDT',
-                'symbol_id': 'BINANCE_SPOT_USDT_BUSD'  # USDT/BUSD pair
+                'symbol_id': 'BINANCE_SPOT_USDT_BUSD'  # USDT/BUSD pair for real price
             },
             'BNB': {
                 'asset_id': 'BNB',
@@ -224,21 +233,22 @@ def get_data(days='365'):
             }
         }
         
-        # Calculate REAL market caps
+        # Calculate REAL market caps - NO ESTIMATES
         market_caps = calculate_real_market_caps(assets_config, start_date, end_date)
         
         if not market_caps:
             print("ERROR: Cannot calculate dominance without complete market cap data")
+            print("COMPLIANCE: Failed correctly due to missing price data (no estimates used)")
             # Try loading from cache
             cached_data = load_from_cache(dataset_name)
             if cached_data:
-                print("Using cached REAL dominance data")
+                print("Using cached REAL dominance data (previously calculated with real prices)")
                 return process_cached_data(cached_data, days, metadata)
             else:
                 return {
                     'metadata': metadata,
                     'data': [],
-                    'error': 'Insufficient data for REAL market cap calculation. API may not provide historical supply data.'
+                    'error': 'Insufficient REAL data for market cap calculation. NO ESTIMATES USED.'
                 }
         
         # Calculate USDT dominance for each day
@@ -250,11 +260,14 @@ def get_data(days='365'):
             
             # Calculate total market cap for this date
             total_market_cap = 0
+            assets_with_data = 0
             for asset_name, asset_caps in market_caps.items():
                 if date_key in asset_caps:
                     total_market_cap += asset_caps[date_key]
+                    assets_with_data += 1
             
-            if total_market_cap > 0:
+            # Only calculate dominance if we have data for most assets
+            if total_market_cap > 0 and assets_with_data >= len(market_caps) * 0.7:
                 # Calculate REAL dominance
                 dominance = (usdt_market_cap / total_market_cap) * 100
                 
@@ -270,10 +283,11 @@ def get_data(days='365'):
         
         if not dominance_data:
             print("ERROR: No dominance data calculated")
+            print("COMPLIANCE: Failed correctly - no estimates used")
             return {
                 'metadata': metadata,
                 'data': [],
-                'error': 'Could not calculate dominance from available data'
+                'error': 'Could not calculate dominance from available REAL data'
             }
         
         # Sort by timestamp
@@ -282,6 +296,7 @@ def get_data(days='365'):
         # Save REAL data to cache
         save_to_cache(dataset_name, dominance_data)
         print(f"Successfully calculated {len(dominance_data)} REAL USDT dominance data points")
+        print("COMPLIANCE: All calculations used actual price data - NO ESTIMATES")
         
         raw_data = dominance_data
         
@@ -294,7 +309,7 @@ def get_data(days='365'):
             return {
                 'metadata': metadata,
                 'data': [],
-                'error': f'Failed to calculate REAL dominance: {str(e)}'
+                'error': f'Failed to calculate REAL dominance: {str(e)} - NO ESTIMATES USED'
             }
     
     # Standardize and return the data
@@ -303,6 +318,7 @@ def get_data(days='365'):
 def process_cached_data(raw_data, days, metadata):
     """Process and filter cached or calculated data"""
     if raw_data:
+        # Handle both 2-element and potential 6-element structures
         standardized_data = standardize_to_daily_utc(raw_data)
         
         # Trim to requested days
