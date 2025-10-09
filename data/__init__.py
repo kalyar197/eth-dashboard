@@ -16,6 +16,7 @@ from . import vwap  # Phase 4: Volume Weighted Average Price
 from . import macd  # Phase 4: MACD indicator
 from . import adx  # Phase 4: Average Directional Index
 from . import google_trends  # Google Trends search interest data
+from . import options_data  # P2: Options Data (IV, Greeks, OI) placeholder
 from . import time_transformer
 from . import cache_manager
 
@@ -35,6 +36,7 @@ __all__ = [
     'macd',  # Phase 4
     'adx',   # Phase 4
     'google_trends',
+    'options_data',  # P2
     'time_transformer',
     'cache_manager'
 ]

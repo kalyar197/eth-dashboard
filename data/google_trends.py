@@ -37,7 +37,7 @@ def get_data(days='365', keyword='ethereum'):
 
     RATE LIMIT HANDLING:
     - Fetches data in 6-month chunks to avoid API truncation
-    - Adds 15-second cooldown between chunks to prevent rate limiting
+    - Adds 10-second cooldown between chunks to prevent rate limiting
     - Works backward from present to oldest data
     - Continues fetching even if individual chunks fail
     - Caches successful fetches for offline fallback
@@ -73,7 +73,7 @@ def get_data(days='365', keyword='ethereum'):
         # Generate 6-month chunks (working backward from end_date)
         current_end = end_date
         chunk_size_days = 180  # Approximately 6 months
-        COOLDOWN_SECONDS = 15  # Cooldown between API calls to avoid rate limiting
+        COOLDOWN_SECONDS = 10  # Cooldown between API calls to avoid rate limiting
         INITIAL_DELAY = 3  # Initial delay before first request
 
         print(f"Fetching Google Trends data for '{keyword}' from {start_date.date()} to {end_date.date()}...")
