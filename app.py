@@ -1,7 +1,8 @@
 # app.py
 
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
+import os
 from data import eth_price, gold_price, rsi, btc_dominance, usdt_dominance, eth_dominance, bollinger_bands
 from data import dxy, obv, atr, vwap, macd, adx  # PHASE 4: Added VWAP, MACD, ADX
 from data import google_trends  # Google Trends search interest data
@@ -147,17 +148,31 @@ def get_config():
 @app.route('/')
 def home():
     """
-    Root endpoint to verify server is running
+    Serve the main HTML page
+    """
+    return send_from_directory('.', 'index.html')
+
+@app.route('/js/<path:filename>')
+def serve_js(filename):
+    """
+    Serve JavaScript files from the static/js directory
+    """
+    return send_from_directory('static/js', filename)
+
+@app.route('/api/status')
+def api_status():
+    """
+    API status endpoint to verify server is running
     """
     from config import FMP_API_KEY, FRED_API_KEY, COINAPI_KEY
-    
+
     # Check API key status
     api_status = {
         'FMP': "✅" if (FMP_API_KEY and FMP_API_KEY != 'YOUR_FMP_API_KEY') else "❌",
         'FRED': "✅" if (FRED_API_KEY and FRED_API_KEY != 'YOUR_FRED_API_KEY_HERE') else "❌",
         'CoinAPI': "✅" if (COINAPI_KEY and COINAPI_KEY != 'YOUR_COINAPI_KEY_HERE') else "❌"
     }
-    
+
     return jsonify({
         'status': 'running',
         'message': 'Advanced Financial Charting API Server',
