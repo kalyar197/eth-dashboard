@@ -2,11 +2,12 @@
 """
 Centralized configuration file for all API keys and settings
 """
+import os
 
 # API Keys
-COINAPI_KEY = '695d38a1-9337-49cf-a281-f5f0230c5a0e'  # For crypto data (BTC, ETH, dominance)
-FMP_API_KEY = '74mkQbAh1DPHnRf1VoepvTTrLsvyvUf5'  # Financial Modeling Prep for Gold
-FRED_API_KEY = 'f96bcbce8ee83ab7269b9a4b0859fcaf'  # Federal Reserve Economic Data for DXY
+COINAPI_KEY = os.environ.get('COINAPI_KEY')  # For crypto data (BTC, ETH, dominance)
+FMP_API_KEY = os.environ.get('FMP_API_KEY')  # Financial Modeling Prep for Gold
+FRED_API_KEY = os.environ.get('FRED_API_KEY')  # Federal Reserve Economic Data for DXY
 
 # Legacy/Deprecated API Keys (kept for reference only)
 COINSTATS_API_KEY = 'hn8xFxvTblGTj6wEq35nxyijBlQNyBrdJUWqPIeHZCU='  # DEPRECATED
