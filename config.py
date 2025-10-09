@@ -4,7 +4,17 @@ Centralized configuration file for all API keys and settings
 """
 import os
 
-# API Keys
+# Load environment variables from .env file
+# IMPORTANT: You must install python-dotenv first: pip install python-dotenv
+try:
+    from dotenv import load_dotenv
+    load_dotenv()  # This loads variables from .env file into os.environ
+    print("✅ Environment variables loaded from .env file")
+except ImportError:
+    print("⚠️  python-dotenv not installed. Run: pip install python-dotenv")
+    print("⚠️  Falling back to system environment variables only")
+
+# API Keys (loaded from .env file or system environment)
 COINAPI_KEY = os.environ.get('COINAPI_KEY')  # For crypto data (BTC, ETH, dominance)
 FMP_API_KEY = os.environ.get('FMP_API_KEY')  # Financial Modeling Prep for Gold
 FRED_API_KEY = os.environ.get('FRED_API_KEY')  # Federal Reserve Economic Data for DXY
