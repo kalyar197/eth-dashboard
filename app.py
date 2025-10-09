@@ -4,6 +4,7 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 from data import eth_price, gold_price, rsi, btc_dominance, usdt_dominance, eth_dominance, bollinger_bands
 from data import dxy, obv, atr, vwap, macd, adx  # PHASE 4: Added VWAP, MACD, ADX
+from data import google_trends  # Google Trends search interest data
 import time
 from config import CACHE_DURATION, RATE_LIMIT_DELAY
 
@@ -30,7 +31,8 @@ DATA_PLUGINS = {
     'atr': atr,      # Phase 3
     'vwap': vwap,    # Phase 4
     'macd': macd,    # Phase 4
-    'adx': adx       # Phase 4
+    'adx': adx,      # Phase 4
+    'google_trends': google_trends  # Google Trends search interest
 }
 
 def get_cache_key(dataset_name, days):
