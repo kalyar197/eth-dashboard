@@ -9,10 +9,10 @@ import os
 try:
     from dotenv import load_dotenv
     load_dotenv()  # This loads variables from .env file into os.environ
-    print("✅ Environment variables loaded from .env file")
+    print("[OK] Environment variables loaded from .env file")
 except ImportError:
-    print("⚠️  python-dotenv not installed. Run: pip install python-dotenv")
-    print("⚠️  Falling back to system environment variables only")
+    print("[WARNING] python-dotenv not installed. Run: pip install python-dotenv")
+    print("[WARNING] Falling back to system environment variables only")
 
 # API Keys (loaded from .env file or system environment)
 COINAPI_KEY = os.environ.get('COINAPI_KEY')  # For crypto data (BTC, ETH, dominance)

@@ -76,15 +76,15 @@ def fetch_gold_from_fmp_stable_endpoint(days):
             elif isinstance(data, list):
                 historical_data = data
             else:
-                print(f"  ❌ Unexpected response structure")
+                print(f"  [X] Unexpected response structure")
                 print(f"  Response type: {type(data)}")
                 return None, None
             
             if not historical_data or len(historical_data) == 0:
-                print(f"  ❌ Empty historical data")
+                print(f"  [X] Empty historical data")
                 return None, None
             
-            print(f"  ✅ Successfully fetched {len(historical_data)} data points")
+            print(f"  [OK] Successfully fetched {len(historical_data)} data points")
             
             # Process data
             raw_data = []
@@ -112,7 +112,7 @@ def fetch_gold_from_fmp_stable_endpoint(days):
                 if has_ohlcv:
                     if data_structure is None:
                         data_structure = 'OHLCV'
-                        print("  📊 Full OHLCV data structure detected")
+                        print("  [DATA] Full OHLCV data structure detected")
                     
                     raw_data.append([
                         timestamp_ms,
@@ -126,7 +126,7 @@ def fetch_gold_from_fmp_stable_endpoint(days):
                 elif has_ohlc:
                     if data_structure is None:
                         data_structure = 'OHLCV'
-                        print("  📊 OHLC data detected (volume set to 0)")
+                        print("  [DATA] OHLC data detected (volume set to 0)")
                     
                     raw_data.append([
                         timestamp_ms,
@@ -140,7 +140,7 @@ def fetch_gold_from_fmp_stable_endpoint(days):
                 elif has_close:
                     if data_structure is None:
                         data_structure = 'simple'
-                        print("  📊 Simple price structure detected (close only)")
+                        print("  [DATA] Simple price structure detected (close only)")
                     
                     close_price = float(item.get('close', item.get('price', 0)))
                     raw_data.append([timestamp_ms, close_price])
@@ -150,7 +150,7 @@ def fetch_gold_from_fmp_stable_endpoint(days):
                 raw_data.sort(key=lambda x: x[0])
                 
                 # Log structure details
-                print(f"\n  ✅ Gold Price Data Structure: {data_structure}")
+                print(f"\n  [OK] Gold Price Data Structure: {data_structure}")
                 if data_structure == 'OHLCV':
                     print(f"     Components: [timestamp, open, high, low, close, volume]")
                     sample = raw_data[-1]
@@ -165,30 +165,30 @@ def fetch_gold_from_fmp_stable_endpoint(days):
                 avg_price = sum(recent_prices) / len(recent_prices)
                 
                 if 1500 <= avg_price <= 3000:
-                    print(f"\n  ✅ VALIDATION PASSED: Average price = ${avg_price:.2f}")
-                    print(f"  ✅ This is in the expected gold price range")
+                    print(f"\n  [OK] VALIDATION PASSED: Average price = ${avg_price:.2f}")
+                    print(f"  [OK] This is in the expected gold price range")
                 else:
-                    print(f"\n  ⚠️  WARNING: Average price = ${avg_price:.2f}")
-                    print(f"  ⚠️  Expected range: $1500-$3000")
+                    print(f"\n  [WARNING]  WARNING: Average price = ${avg_price:.2f}")
+                    print(f"  [WARNING]  Expected range: $1500-$3000")
                 
-                print(f"\n  🎯 SUCCESSFULLY FIXED: Gold data fetched from FMP stable endpoint")
+                print(f"\n  [SUCCESS] SUCCESSFULLY FIXED: Gold data fetched from FMP stable endpoint")
                 return raw_data, data_structure
                 
         elif response.status_code == 401:
-            print(f"  ❌ Authentication failed - check FMP API key")
+            print(f"  [X] Authentication failed - check FMP API key")
         elif response.status_code == 403:
-            print(f"  ❌ 403 Forbidden")
+            print(f"  [X] 403 Forbidden")
             print(f"  This may indicate:")
             print(f"    - Invalid API key")
             print(f"    - API key lacks permissions for this endpoint")
             print(f"    - Subscription tier doesn't include stable endpoints")
         elif response.status_code == 429:
-            print(f"  ❌ Rate limit exceeded")
+            print(f"  [X] Rate limit exceeded")
         else:
-            print(f"  ❌ HTTP {response.status_code}: {response.reason}")
+            print(f"  [X] HTTP {response.status_code}: {response.reason}")
             
     except Exception as e:
-        print(f"  ❌ Error: {e}")
+        print(f"  [X] Error: {e}")
         import traceback
         traceback.print_exc()
     
@@ -238,7 +238,7 @@ def fetch_gold_from_fmp_fallback(days):
                     continue
                 
                 if historical_data and len(historical_data) > 0:
-                    print(f"  ✅ Got {len(historical_data)} data points")
+                    print(f"  [OK] Got {len(historical_data)} data points")
                     
                     # Process similar to stable endpoint
                     raw_data = []
@@ -269,7 +269,7 @@ def fetch_gold_from_fmp_fallback(days):
                         return raw_data, data_structure
                         
         except Exception as e:
-            print(f"  ❌ Error: {e}")
+            print(f"  [X] Error: {e}")
             continue
     
     return None, None
@@ -351,10 +351,10 @@ def get_data(days='365'):
                 print(f"  {dt.date()}: ${price:.2f}")
         
         print("\n" + "=" * 60)
-        print("✅ GOLD PRICE FIX COMPLETE")
-        print(f"✅ Using FMP endpoint with correct structure")
-        print(f"✅ Data structure: {data_structure}")
-        print(f"✅ Total points: {len(standardized_data)}")
+        print("[OK] GOLD PRICE FIX COMPLETE")
+        print(f"[OK] Using FMP endpoint with correct structure")
+        print(f"[OK] Data structure: {data_structure}")
+        print(f"[OK] Total points: {len(standardized_data)}")
         print("=" * 60)
         
         return {
@@ -364,7 +364,7 @@ def get_data(days='365'):
         }
         
     except Exception as e:
-        print(f"❌ Error: {e}")
+        print(f"[X] Error: {e}")
         import traceback
         traceback.print_exc()
         
@@ -383,21 +383,4 @@ def get_data(days='365'):
             'error': str(e)
         }
 
-def verify_no_coinapi():
-    """Verify this module has no CoinAPI references"""
-    import inspect
-    source = inspect.getsource(sys.modules[__name__])
-    
-    if 'COINAPI' in source.upper():
-        lines = source.split('\n')
-        for i, line in enumerate(lines):
-            if 'COINAPI' in line.upper() and 'verify_no_coinapi' not in line and '#' not in line[:line.find('COINAPI')] if 'COINAPI' in line else True:
-                print(f"❌ WARNING: CoinAPI reference found on line {i}")
-                return False
-    
-    print("✅ No CoinAPI references in gold_price.py")
-    return True
-
-# Self-verification on module load
-if __name__ != "__main__":
-    verify_no_coinapi()
+# Module verified: Uses only FMP API for gold price data

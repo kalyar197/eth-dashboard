@@ -1,14 +1,21 @@
 # app.py
 
+import sentry_sdk
 from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
 import os
+import time
 from data import eth_price, gold_price, rsi, btc_dominance, usdt_dominance, eth_dominance, bollinger_bands
 from data import dxy, obv, atr, vwap, macd, adx  # PHASE 4: Added VWAP, MACD, ADX
-from data import google_trends  # Google Trends search interest data
-from data import options_data  # P2: Options Data (IV, Greeks, OI) placeholder
-import time
 from config import CACHE_DURATION, RATE_LIMIT_DELAY
+
+# Initialize Sentry SDK for error monitoring
+sentry_sdk.init(
+    dsn="https://51a1e702949ccbd441d980a082211e9f@o4510197158510592.ingest.us.sentry.io/4510197228044288",
+    # Add data like request headers and IP for users,
+    # see https://docs.sentry.io/platforms/python/data-management/data-collected/ for more info
+    send_default_pii=True,
+)
 
 app = Flask(__name__)
 CORS(app)
@@ -33,9 +40,7 @@ DATA_PLUGINS = {
     'atr': atr,      # Phase 3
     'vwap': vwap,    # Phase 4
     'macd': macd,    # Phase 4
-    'adx': adx,      # Phase 4
-    'google_trends': google_trends,  # Google Trends search interest
-    'options_data': options_data  # P2: Options Data placeholder
+    'adx': adx       # Phase 4
 }
 
 def get_cache_key(dataset_name, days):
@@ -159,6 +164,11 @@ def serve_js(filename):
     """
     return send_from_directory('static/js', filename)
 
+@app.route('/favicon.ico')
+def favicon():
+    """Return a simple 204 No Content response for favicon requests"""
+    return '', 204
+
 @app.route('/api/status')
 def api_status():
     """
@@ -168,9 +178,9 @@ def api_status():
 
     # Check API key status
     api_status = {
-        'FMP': "✅" if (FMP_API_KEY and FMP_API_KEY != 'YOUR_FMP_API_KEY') else "❌",
-        'FRED': "✅" if (FRED_API_KEY and FRED_API_KEY != 'YOUR_FRED_API_KEY_HERE') else "❌",
-        'CoinAPI': "✅" if (COINAPI_KEY and COINAPI_KEY != 'YOUR_COINAPI_KEY_HERE') else "❌"
+        'FMP': "[OK]" if (FMP_API_KEY and FMP_API_KEY != 'YOUR_FMP_API_KEY') else "[NOT CONFIGURED]",
+        'FRED': "[OK]" if (FRED_API_KEY and FRED_API_KEY != 'YOUR_FRED_API_KEY_HERE') else "[NOT CONFIGURED]",
+        'CoinAPI': "[OK]" if (COINAPI_KEY and COINAPI_KEY != 'YOUR_COINAPI_KEY_HERE') else "[NOT CONFIGURED]"
     }
 
     return jsonify({
@@ -200,35 +210,36 @@ if __name__ == '__main__':
     
     print("\nAPI Key Status:")
     if FMP_API_KEY and FMP_API_KEY != 'YOUR_FMP_API_KEY':
-        print(f"  FMP: ✅ Configured (for Gold)")
+        print(f"  FMP: [OK] Configured (for Gold)")
     else:
-        print(f"  FMP: ❌ Not configured")
-    
+        print(f"  FMP: [X] Not configured")
+
     if FRED_API_KEY and FRED_API_KEY != 'YOUR_FRED_API_KEY_HERE':
-        print(f"  FRED: ✅ Configured (for DXY)")
+        print(f"  FRED: [OK] Configured (for DXY)")
     else:
-        print(f"  FRED: ❌ Not configured - Add your key to config.py")
-    
+        print(f"  FRED: [X] Not configured - Add your key to config.py")
+
     if COINAPI_KEY and COINAPI_KEY != 'YOUR_COINAPI_KEY_HERE':
-        print(f"  CoinAPI: ✅ Configured (for Crypto)")
+        print(f"  CoinAPI: [OK] Configured (for Crypto)")
     else:
-        print(f"  CoinAPI: ❌ Not configured")
-    
-    print("\n🆕 PHASE 3 INDICATORS:")
+        print(f"  CoinAPI: [X] Not configured")
+
+    print("\n[NEW] PHASE 3 INDICATORS:")
     print("  - OBV (On-Balance Volume)")
     print("  - ATR (Average True Range)")
-    
-    print("\n🆕 PHASE 4 INDICATORS:")
+
+    print("\n[NEW] PHASE 4 INDICATORS:")
     print("  - VWAP (Volume Weighted Average Price)")
     print("  - MACD (Moving Average Convergence Divergence)")
     print("  - ADX (Average Directional Index)")
-    
+
     print("="*60)
-    print("✅ CRITICAL FIXES APPLIED:")
+    print("[OK] CRITICAL FIXES APPLIED:")
     print("  - Gold Price: Fixed FMP endpoint (using ZGUSD symbol)")
     print("  - Dominance: Using CoinGecko for market cap data")
     print("  - ATR: Fixed indexing error (alignment bug)")
     print("  - Test Script: Added UTF-8 encoding")
+    print("  - Sentry SDK: Integrated for error monitoring")
     print("="*60)
     print("Make sure to install: pip install Flask requests Flask-Cors numpy")
     print("="*60)
