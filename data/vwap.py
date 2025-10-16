@@ -12,7 +12,7 @@ import os
 from .cache_manager import load_from_cache, save_to_cache
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from . import eth_price
+from . import btc_price
 
 def get_metadata():
     """Returns metadata describing how VWAP should be displayed"""
@@ -70,21 +70,21 @@ def calculate_vwap(ohlcv_data):
     return vwap_values
 
 def get_data(days='365'):
-    """Fetches ETH OHLCV data and calculates VWAP"""
+    """Fetches BTC OHLCV data and calculates VWAP"""
     metadata = get_metadata()
     dataset_name = 'vwap'
     
     try:
-        # Get ETH OHLCV data
+        # Get BTC OHLCV data
         if days == 'max':
             request_days = 'max'
         else:
             request_days = str(int(days) + 10)  # Extra buffer
-        
-        eth_data = eth_price.get_data(request_days)
-        
-        if not eth_data or not eth_data.get('data') or len(eth_data['data']) == 0:
-            print("No ETH data available for VWAP calculation")
+
+        btc_data = btc_price.get_data(request_days)
+
+        if not btc_data or not btc_data.get('data') or len(btc_data['data']) == 0:
+            print("No BTC data available for VWAP calculation")
             # Try loading from cache
             cached_data = load_from_cache(dataset_name)
             if cached_data:
@@ -96,7 +96,7 @@ def get_data(days='365'):
                 return {'metadata': metadata, 'data': cached_data}
             return {'metadata': metadata, 'data': []}
         
-        ohlcv_data = eth_data['data']
+        ohlcv_data = btc_data['data']
         
         # Verify we have OHLCV structure (6 elements)
         if ohlcv_data and len(ohlcv_data[0]) != 6:

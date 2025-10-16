@@ -5,8 +5,8 @@ from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
 import os
 import time
-from data import eth_price, gold_price, rsi, btc_dominance, usdt_dominance, eth_dominance, bollinger_bands
-from data import dxy, obv, atr, vwap, macd, adx  # PHASE 4: Added VWAP, MACD, ADX
+from data import eth_price, btc_price, gold_price, rsi, btc_dominance, usdt_dominance, eth_dominance, bollinger_bands
+from data import dxy, atr, vwap, macd, adx  # PHASE 4: Added VWAP, MACD, ADX
 from config import CACHE_DURATION, RATE_LIMIT_DELAY
 
 # Initialize Sentry SDK for error monitoring
@@ -29,6 +29,7 @@ last_api_call = {}
 # A dictionary mapping dataset names to their data-fetching modules
 DATA_PLUGINS = {
     'eth': eth_price,
+    'btc': btc_price,
     'gold': gold_price,
     'rsi': rsi,
     'btc_dominance': btc_dominance,
@@ -36,7 +37,6 @@ DATA_PLUGINS = {
     'eth_dominance': eth_dominance,
     'bollinger_bands': bollinger_bands,
     'dxy': dxy,
-    'obv': obv,      # Phase 3
     'atr': atr,      # Phase 3
     'vwap': vwap,    # Phase 4
     'macd': macd,    # Phase 4
@@ -84,7 +84,7 @@ def get_data():
     """
     A single, flexible endpoint to fetch data for any dataset.
     Query parameters:
-    - dataset: The name of the dataset to fetch (e.g., 'eth', 'gold', 'rsi', 'dxy', 'obv', 'atr')
+    - dataset: The name of the dataset to fetch (e.g., 'eth', 'btc', 'gold', 'rsi', 'dxy', 'atr', 'vwap', 'macd', 'adx')
     - days: The number of days of data to retrieve (e.g., '365', 'max')
     """
     dataset_name = request.args.get('dataset')
@@ -193,7 +193,7 @@ def api_status():
         'api_key_status': api_status,
         'config_endpoint': '/api/config',
         'clear_cache_endpoint': '/api/clear-cache',
-        'phase3_indicators': ['obv', 'atr'],
+        'phase3_indicators': ['atr'],
         'phase4_indicators': ['vwap', 'macd', 'adx']
     })
 
@@ -225,7 +225,6 @@ if __name__ == '__main__':
         print(f"  CoinAPI: [X] Not configured")
 
     print("\n[NEW] PHASE 3 INDICATORS:")
-    print("  - OBV (On-Balance Volume)")
     print("  - ATR (Average True Range)")
 
     print("\n[NEW] PHASE 4 INDICATORS:")

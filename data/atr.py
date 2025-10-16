@@ -13,7 +13,7 @@ from .cache_manager import load_from_cache, save_to_cache
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config import RSI_PERIOD  # We can use same period as RSI, or define ATR_PERIOD
-from . import eth_price
+from . import btc_price
 
 # ATR typically uses 14-period moving average
 ATR_PERIOD = 14
@@ -28,7 +28,7 @@ def get_metadata():
         'chartType': 'line',
         'color': '#9C27B0',  # Purple
         'strokeWidth': 2,
-        'description': f'{ATR_PERIOD}-period Average True Range for ETH - measures volatility'
+        'description': f'{ATR_PERIOD}-period Average True Range for BTC - measures volatility'
     }
 
 def calculate_true_range(ohlcv_data):
@@ -96,7 +96,7 @@ def calculate_atr(true_ranges, period=ATR_PERIOD):
     return atr_values
 
 def get_data(days='365'):
-    """Fetches ETH OHLCV data and calculates ATR from high, low, close prices"""
+    """Fetches BTC OHLCV data and calculates ATR from high, low, close prices"""
     metadata = get_metadata()
     dataset_name = 'atr'
     
@@ -107,11 +107,11 @@ def get_data(days='365'):
         else:
             request_days = str(int(days) + ATR_PERIOD + 10)  # Extra buffer
         
-        # Get ETH OHLCV data
-        eth_data = eth_price.get_data(request_days)
-        
-        if not eth_data or not eth_data.get('data') or len(eth_data['data']) == 0:
-            print("No ETH data available for ATR calculation")
+        # Get BTC OHLCV data
+        btc_data = btc_price.get_data(request_days)
+
+        if not btc_data or not btc_data.get('data') or len(btc_data['data']) == 0:
+            print("No BTC data available for ATR calculation")
             # Try loading from cache
             cached_data = load_from_cache(dataset_name)
             if cached_data:
@@ -123,7 +123,7 @@ def get_data(days='365'):
                 return {'metadata': metadata, 'data': cached_data}
             return {'metadata': metadata, 'data': []}
         
-        ohlcv_data = eth_data['data']
+        ohlcv_data = btc_data['data']
         
         # Verify we have OHLCV structure (6 elements)
         if ohlcv_data and len(ohlcv_data[0]) != 6:

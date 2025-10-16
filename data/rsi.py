@@ -12,7 +12,7 @@ from .time_transformer import extract_component
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config import RSI_PERIOD
-from . import eth_price
+from . import btc_price
 
 def get_metadata():
     """Returns metadata describing how RSI should be displayed"""
@@ -24,7 +24,7 @@ def get_metadata():
         'chartType': 'line',
         'color': '#FF9500',
         'strokeWidth': 2,
-        'description': f'{RSI_PERIOD}-period Relative Strength Index for ETH',
+        'description': f'{RSI_PERIOD}-period Relative Strength Index for BTC',
         'yDomain': [0, 100],  # RSI is always 0-100
         'referenceLines': [
             {'value': 30, 'label': 'Oversold', 'color': '#4CAF50', 'strokeDasharray': '5,5'},
@@ -79,7 +79,7 @@ def calculate_rsi(prices, period=RSI_PERIOD):
     return rsi_values
 
 def get_data(days='365'):
-    """Fetches ETH OHLCV data and calculates RSI from closing prices"""
+    """Fetches BTC OHLCV data and calculates RSI from closing prices"""
     metadata = get_metadata()
     dataset_name = 'rsi'
     
@@ -90,11 +90,11 @@ def get_data(days='365'):
         else:
             request_days = str(int(days) + RSI_PERIOD + 10)  # Extra buffer for RSI calculation
         
-        # Get ETH OHLCV data from the eth_price module
-        eth_data = eth_price.get_data(request_days)
-        
-        if not eth_data or not eth_data.get('data') or len(eth_data['data']) == 0:
-            print("No ETH data available for RSI calculation")
+        # Get BTC OHLCV data from the btc_price module
+        btc_data = btc_price.get_data(request_days)
+
+        if not btc_data or not btc_data.get('data') or len(btc_data['data']) == 0:
+            print("No BTC data available for RSI calculation")
             # Try loading from cache
             cached_data = load_from_cache(dataset_name)
             if cached_data:
@@ -106,7 +106,7 @@ def get_data(days='365'):
                 return {'metadata': metadata, 'data': cached_data}
             return {'metadata': metadata, 'data': []}
         
-        ohlcv_data = eth_data['data']
+        ohlcv_data = btc_data['data']
         
         # Check if we have OHLCV structure or simple price structure
         if ohlcv_data and len(ohlcv_data[0]) == 6:

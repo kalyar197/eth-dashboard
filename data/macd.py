@@ -14,7 +14,7 @@ from .cache_manager import load_from_cache, save_to_cache
 from .time_transformer import extract_component
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from . import eth_price
+from . import btc_price
 
 # MACD standard parameters
 MACD_FAST = 12
@@ -104,7 +104,7 @@ def calculate_macd(closing_prices):
     return macd_line, signal_line, histogram
 
 def get_data(days='365'):
-    """Fetches ETH OHLCV data and calculates MACD from closing prices"""
+    """Fetches BTC OHLCV data and calculates MACD from closing prices"""
     metadata = get_metadata()
     dataset_name = 'macd'
     
@@ -115,11 +115,11 @@ def get_data(days='365'):
         else:
             request_days = str(int(days) + MACD_SLOW + MACD_SIGNAL + 10)
         
-        # Get ETH OHLCV data
-        eth_data = eth_price.get_data(request_days)
-        
-        if not eth_data or not eth_data.get('data') or len(eth_data['data']) == 0:
-            print("No ETH data available for MACD calculation")
+        # Get BTC OHLCV data
+        btc_data = btc_price.get_data(request_days)
+
+        if not btc_data or not btc_data.get('data') or len(btc_data['data']) == 0:
+            print("No BTC data available for MACD calculation")
             cached_data = load_from_cache(dataset_name)
             if cached_data:
                 if days != 'max':
@@ -132,7 +132,7 @@ def get_data(days='365'):
                 return {'metadata': metadata, 'data': cached_data}
             return {'metadata': metadata, 'data': {'macd': [], 'signal': [], 'histogram': []}}
         
-        ohlcv_data = eth_data['data']
+        ohlcv_data = btc_data['data']
         
         # Check structure
         if ohlcv_data and len(ohlcv_data[0]) == 6:

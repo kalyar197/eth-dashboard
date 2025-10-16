@@ -13,7 +13,7 @@ from .time_transformer import extract_component
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config import FMP_API_KEY
-from . import eth_price
+from . import btc_price
 
 def get_metadata():
     """Returns metadata describing how Bollinger Bands should be displayed"""
@@ -27,7 +27,7 @@ def get_metadata():
         'upperBandColor': '#4CAF50',  # Green for upper band
         'lowerBandColor': '#F44336',  # Red for lower band
         'strokeWidth': 1,
-        'description': '20-day Bollinger Bands for ETH',
+        'description': '20-day Bollinger Bands for BTC',
         'fillOpacity': 0.1
     }
 
@@ -58,21 +58,21 @@ def calculate_bollinger_bands(prices, period=20, num_std=2):
     return middle_band, upper_band, lower_band
 
 def get_data(days='365'):
-    """Fetches ETH OHLCV data and calculates Bollinger Bands from closing prices"""
+    """Fetches BTC OHLCV data and calculates Bollinger Bands from closing prices"""
     metadata = get_metadata()
     dataset_name = 'bollinger_bands'
     
     try:
-        # Get ETH OHLCV data
+        # Get BTC OHLCV data
         if days == 'max':
             request_days = 'max'
         else:
             request_days = str(int(days) + 30)  # Extra days for calculation
-        
-        eth_data = eth_price.get_data(request_days)
-        
-        if not eth_data or not eth_data.get('data') or len(eth_data['data']) == 0:
-            print("No ETH data available for Bollinger Bands calculation")
+
+        btc_data = btc_price.get_data(request_days)
+
+        if not btc_data or not btc_data.get('data') or len(btc_data['data']) == 0:
+            print("No BTC data available for Bollinger Bands calculation")
             # Try loading from cache
             cached_data = load_from_cache(dataset_name)
             if cached_data:
@@ -88,7 +88,7 @@ def get_data(days='365'):
                 return {'metadata': metadata, 'data': cached_data}
             return {'metadata': metadata, 'data': {'middle': [], 'upper': [], 'lower': []}}
         
-        ohlcv_data = eth_data['data']
+        ohlcv_data = btc_data['data']
         
         # Check if we have OHLCV structure or simple price structure
         if ohlcv_data and len(ohlcv_data[0]) == 6:
