@@ -55,15 +55,9 @@ data/
   btc_price.py             # CoinAPI BTC OHLCV data fetcher
   eth_price.py             # CoinAPI ETH OHLCV data fetcher
   gold_price.py            # FMP gold price (ZGUSD symbol)
-  dxy.py                   # FRED Trade-Weighted USD Index
   rsi.py                   # RSI indicator (calculated from BTC)
-  btc_dominance.py         # BTC market dominance
-  eth_dominance.py         # ETH market dominance
-  usdt_dominance.py        # USDT market dominance
   bollinger_bands.py       # Bollinger Bands indicator (calculated from BTC)
-  atr.py                   # Average True Range (calculated from BTC)
   vwap.py                  # Volume Weighted Avg Price (calculated from BTC)
-  macd.py                  # MACD indicator (calculated from BTC)
   adx.py                   # Average Directional Index (calculated from BTC)
 data_cache/                # JSON cache files for offline fallback
 ```
@@ -126,10 +120,9 @@ When API calls fail, the system automatically falls back to disk cache if availa
 
 ### API Configuration
 
-**Three API providers** configured in `config.py`:
-- **CoinAPI**: Cryptocurrency OHLCV data and dominance calculations
+**Two API providers** configured in `config.py`:
+- **CoinAPI**: Cryptocurrency OHLCV data
 - **FMP (Financial Modeling Prep)**: Gold price data (using ZGUSD symbol)
-- **FRED**: US Dollar Index (Trade-Weighted, 2006=100 base)
 
 **API keys are stored in `config.py`** - This file contains sensitive credentials and should not be committed to version control.
 
@@ -148,17 +141,11 @@ The frontend dynamically queries `/api/datasets` to discover available datasets 
 
 ### Data Quality Fixes (Phase 3/4)
 
-**BTC Dominance**: Uses CoinGecko global market cap endpoint to calculate accurate dominance percentages (50-60% range). Previous implementations had incorrect calculation methods.
-
 **Gold Price**: Fixed to use FMP's `/stable/historical-price-eod/full` endpoint with ZGUSD symbol. The `/historical-chart/` endpoint returns 403 Forbidden.
-
-**DXY Index Limitation**: FRED provides Trade-Weighted USD Index (2006=100, ~120 value), NOT the ICE DXY (~98 value). This is documented in metadata warnings but is a known data source limitation.
-
-**ATR Calculation**: Fixed indexing error where alignment between price data and ATR values was off by one.
 
 ### OHLCV Data Handling
 
-The BTC price module returns **full 6-component OHLCV data** to enable technical indicator calculations. Indicators like RSI, MACD, ATR, Bollinger Bands, VWAP, and ADX use `time_transformer.extract_component()` to get specific values (typically closing prices) from OHLCV arrays.
+The BTC price module returns **full 6-component OHLCV data** to enable technical indicator calculations. Indicators like RSI, Bollinger Bands, VWAP, and ADX use `time_transformer.extract_component()` to get specific values (typically closing prices) from OHLCV arrays.
 
 **Do not discard OHLCV components** when modifying data pipelines - indicators depend on having access to open, high, low, close, and volume data.
 
@@ -198,8 +185,8 @@ The Flask backend implements **2-second rate limiting** between API calls (confi
 ## Project Phases
 
 The codebase references implementation phases:
-- **Phase 1-2**: Core infrastructure (BTC/ETH, Gold, RSI, Dominance metrics)
-- **Phase 3**: Added ATR indicator, migrated technical indicators from ETH to BTC
-- **Phase 4**: Added VWAP, MACD, ADX indicators
+- **Phase 1-2**: Core infrastructure (BTC/ETH, Gold, RSI, Bollinger Bands)
+- **Phase 3**: Migrated technical indicators from ETH to BTC
+- **Phase 4**: Added VWAP and ADX indicators
 
 Phase comments in code indicate feature evolution and can guide understanding of system complexity layers.

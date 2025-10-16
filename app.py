@@ -5,8 +5,8 @@ from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
 import os
 import time
-from data import eth_price, btc_price, gold_price, rsi, btc_dominance, usdt_dominance, eth_dominance, bollinger_bands
-from data import dxy, atr, vwap, macd, adx  # PHASE 4: Added VWAP, MACD, ADX
+from data import eth_price, btc_price, gold_price, rsi, bollinger_bands
+from data import vwap, adx  # PHASE 4: Added VWAP, ADX
 from config import CACHE_DURATION, RATE_LIMIT_DELAY
 
 # Initialize Sentry SDK for error monitoring
@@ -32,14 +32,8 @@ DATA_PLUGINS = {
     'btc': btc_price,
     'gold': gold_price,
     'rsi': rsi,
-    'btc_dominance': btc_dominance,
-    'usdt_dominance': usdt_dominance,
-    'eth_dominance': eth_dominance,
     'bollinger_bands': bollinger_bands,
-    'dxy': dxy,
-    'atr': atr,      # Phase 3
     'vwap': vwap,    # Phase 4
-    'macd': macd,    # Phase 4
     'adx': adx       # Phase 4
 }
 
@@ -84,7 +78,7 @@ def get_data():
     """
     A single, flexible endpoint to fetch data for any dataset.
     Query parameters:
-    - dataset: The name of the dataset to fetch (e.g., 'eth', 'btc', 'gold', 'rsi', 'dxy', 'atr', 'vwap', 'macd', 'adx')
+    - dataset: The name of the dataset to fetch (e.g., 'eth', 'btc', 'gold', 'rsi', 'vwap', 'adx')
     - days: The number of days of data to retrieve (e.g., '365', 'max')
     """
     dataset_name = request.args.get('dataset')
@@ -135,8 +129,8 @@ def clear_cache():
 @app.route('/api/config')
 def get_config():
     """Show current configuration (without revealing API keys)"""
-    from config import API_PROVIDER, DEFAULT_DAYS, RSI_PERIOD, FMP_API_KEY, FRED_API_KEY, COINAPI_KEY
-    
+    from config import API_PROVIDER, DEFAULT_DAYS, RSI_PERIOD, FMP_API_KEY, COINAPI_KEY
+
     return jsonify({
         'api_provider': API_PROVIDER,
         'cache_duration': f'{CACHE_DURATION} seconds',
@@ -145,7 +139,6 @@ def get_config():
         'rsi_period': RSI_PERIOD,
         'api_keys_configured': {
             'fmp': bool(FMP_API_KEY and FMP_API_KEY != 'YOUR_FMP_API_KEY'),
-            'fred': bool(FRED_API_KEY and FRED_API_KEY != 'YOUR_FRED_API_KEY_HERE'),
             'coinapi': bool(COINAPI_KEY and COINAPI_KEY != 'YOUR_COINAPI_KEY_HERE')
         }
     })
@@ -174,12 +167,11 @@ def api_status():
     """
     API status endpoint to verify server is running
     """
-    from config import FMP_API_KEY, FRED_API_KEY, COINAPI_KEY
+    from config import FMP_API_KEY, COINAPI_KEY
 
     # Check API key status
     api_status = {
         'FMP': "[OK]" if (FMP_API_KEY and FMP_API_KEY != 'YOUR_FMP_API_KEY') else "[NOT CONFIGURED]",
-        'FRED': "[OK]" if (FRED_API_KEY and FRED_API_KEY != 'YOUR_FRED_API_KEY_HERE') else "[NOT CONFIGURED]",
         'CoinAPI': "[OK]" if (COINAPI_KEY and COINAPI_KEY != 'YOUR_COINAPI_KEY_HERE') else "[NOT CONFIGURED]"
     }
 
@@ -193,13 +185,12 @@ def api_status():
         'api_key_status': api_status,
         'config_endpoint': '/api/config',
         'clear_cache_endpoint': '/api/clear-cache',
-        'phase3_indicators': ['atr'],
-        'phase4_indicators': ['vwap', 'macd', 'adx']
+        'phase4_indicators': ['vwap', 'adx']
     })
 
 if __name__ == '__main__':
-    from config import FMP_API_KEY, FRED_API_KEY, COINAPI_KEY
-    
+    from config import FMP_API_KEY, COINAPI_KEY
+
     print("="*60)
     print("Starting Advanced Financial Charting Server")
     print("="*60)
@@ -207,40 +198,28 @@ if __name__ == '__main__':
     print(f"Available datasets: {list(DATA_PLUGINS.keys())}")
     print(f"Cache duration: {CACHE_DURATION} seconds")
     print(f"Rate limit: {RATE_LIMIT_DELAY} seconds between API calls")
-    
+
     print("\nAPI Key Status:")
     if FMP_API_KEY and FMP_API_KEY != 'YOUR_FMP_API_KEY':
         print(f"  FMP: [OK] Configured (for Gold)")
     else:
         print(f"  FMP: [X] Not configured")
 
-    if FRED_API_KEY and FRED_API_KEY != 'YOUR_FRED_API_KEY_HERE':
-        print(f"  FRED: [OK] Configured (for DXY)")
-    else:
-        print(f"  FRED: [X] Not configured - Add your key to config.py")
-
     if COINAPI_KEY and COINAPI_KEY != 'YOUR_COINAPI_KEY_HERE':
         print(f"  CoinAPI: [OK] Configured (for Crypto)")
     else:
         print(f"  CoinAPI: [X] Not configured")
 
-    print("\n[NEW] PHASE 3 INDICATORS:")
-    print("  - ATR (Average True Range)")
-
     print("\n[NEW] PHASE 4 INDICATORS:")
     print("  - VWAP (Volume Weighted Average Price)")
-    print("  - MACD (Moving Average Convergence Divergence)")
     print("  - ADX (Average Directional Index)")
 
     print("="*60)
     print("[OK] CRITICAL FIXES APPLIED:")
     print("  - Gold Price: Fixed FMP endpoint (using ZGUSD symbol)")
-    print("  - Dominance: Using CoinGecko for market cap data")
-    print("  - ATR: Fixed indexing error (alignment bug)")
-    print("  - Test Script: Added UTF-8 encoding")
     print("  - Sentry SDK: Integrated for error monitoring")
     print("="*60)
     print("Make sure to install: pip install Flask requests Flask-Cors numpy")
     print("="*60)
-    
+
     app.run(debug=True, port=5000)

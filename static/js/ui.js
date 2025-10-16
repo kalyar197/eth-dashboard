@@ -68,7 +68,7 @@ function buildPluginControls(datasets) {
     container.innerHTML = '';
 
     // Default plugins to select on initialization
-    const defaultPlugins = ['eth', 'btc_dominance'];
+    const defaultPlugins = ['eth', 'btc'];
 
     Object.entries(datasets).forEach(([key, metadata]) => {
         const wrapper = document.createElement('span');
