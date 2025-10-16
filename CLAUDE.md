@@ -52,19 +52,19 @@ data/
   __init__.py              # Registers all data plugins
   cache_manager.py         # Disk-based JSON caching system
   time_transformer.py      # UTC timestamp standardization
-  eth_price.py             # CoinAPI OHLCV data fetcher
+  btc_price.py             # CoinAPI BTC OHLCV data fetcher
+  eth_price.py             # CoinAPI ETH OHLCV data fetcher
   gold_price.py            # FMP gold price (ZGUSD symbol)
   dxy.py                   # FRED Trade-Weighted USD Index
-  rsi.py                   # RSI indicator (calculated from ETH)
+  rsi.py                   # RSI indicator (calculated from BTC)
   btc_dominance.py         # BTC market dominance
   eth_dominance.py         # ETH market dominance
   usdt_dominance.py        # USDT market dominance
-  bollinger_bands.py       # Bollinger Bands indicator
-  obv.py                   # On-Balance Volume (Phase 3)
-  atr.py                   # Average True Range (Phase 3)
-  vwap.py                  # Volume Weighted Avg Price (Phase 4)
-  macd.py                  # MACD indicator (Phase 4)
-  adx.py                   # Average Directional Index (Phase 4)
+  bollinger_bands.py       # Bollinger Bands indicator (calculated from BTC)
+  atr.py                   # Average True Range (calculated from BTC)
+  vwap.py                  # Volume Weighted Avg Price (calculated from BTC)
+  macd.py                  # MACD indicator (calculated from BTC)
+  adx.py                   # Average Directional Index (calculated from BTC)
 data_cache/                # JSON cache files for offline fallback
 ```
 
@@ -103,7 +103,7 @@ def get_data(days='365'):
 **Two data formats are supported**:
 
 1. **Simple**: `[timestamp_ms, value]` - Used for most indicators and single-value datasets
-2. **OHLCV**: `[timestamp_ms, open, high, low, close, volume]` - Used for ETH price data
+2. **OHLCV**: `[timestamp_ms, open, high, low, close, volume]` - Used for BTC/ETH price data
 
 The `time_transformer.py` module handles standardization to daily UTC timestamps and can extract specific components from OHLCV data (e.g., closing prices for RSI calculation).
 
@@ -158,7 +158,7 @@ The frontend dynamically queries `/api/datasets` to discover available datasets 
 
 ### OHLCV Data Handling
 
-The ETH price module returns **full 6-component OHLCV data** to enable technical indicator calculations. Indicators like RSI, MACD, ATR use `time_transformer.extract_component()` to get specific values (typically closing prices) from OHLCV arrays.
+The BTC price module returns **full 6-component OHLCV data** to enable technical indicator calculations. Indicators like RSI, MACD, ATR, Bollinger Bands, VWAP, and ADX use `time_transformer.extract_component()` to get specific values (typically closing prices) from OHLCV arrays.
 
 **Do not discard OHLCV components** when modifying data pipelines - indicators depend on having access to open, high, low, close, and volume data.
 
@@ -198,8 +198,8 @@ The Flask backend implements **2-second rate limiting** between API calls (confi
 ## Project Phases
 
 The codebase references implementation phases:
-- **Phase 1-2**: Core infrastructure (ETH, Gold, RSI, Dominance metrics)
-- **Phase 3**: Added OBV and ATR indicators
+- **Phase 1-2**: Core infrastructure (BTC/ETH, Gold, RSI, Dominance metrics)
+- **Phase 3**: Added ATR indicator, migrated technical indicators from ETH to BTC
 - **Phase 4**: Added VWAP, MACD, ADX indicators
 
 Phase comments in code indicate feature evolution and can guide understanding of system complexity layers.
