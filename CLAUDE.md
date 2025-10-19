@@ -53,7 +53,7 @@ data/
   cache_manager.py         # Disk-based JSON caching system
   time_transformer.py      # UTC timestamp standardization
   btc_price.py             # CoinAPI BTC OHLCV data fetcher
-  eth_price.py             # CoinAPI ETH OHLCV data fetcher
+  eth_btc_ratio.py         # CoinAPI ETH/BTC ratio data fetcher
   gold_price.py            # FMP gold price (ZGUSD symbol)
   rsi.py                   # RSI indicator (calculated from BTC)
   bollinger_bands.py       # Bollinger Bands indicator (calculated from BTC)

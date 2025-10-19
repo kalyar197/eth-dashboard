@@ -79,14 +79,28 @@
             border-color: var(--plugin-color, #555);
         }
         
-        #chart-container { 
-            background: #1a1a1a; 
-            border-radius: 12px; 
+        .chart-section {
+            width: 100%;
+            max-width: 1600px;
+            margin-bottom: 40px;
+        }
+
+        .chart-section h2 {
+            color: #ffffff;
+            font-size: 1.2rem;
+            font-weight: 400;
+            margin-bottom: 15px;
+            padding-left: 10px;
+            border-left: 3px solid #627EEA;
+        }
+
+        #chart-container, #indexed-chart-container {
+            background: #1a1a1a;
+            border-radius: 12px;
             border: 1px solid #2a2a2a;
-            width: 100%; 
-            max-width: 1600px; /* Increased for more axes */
-            min-height: 600px; 
-            position: relative; 
+            width: 100%;
+            min-height: 600px;
+            position: relative;
             padding: 20px;
             overflow-x: auto; /* Allow horizontal scroll if needed */
         }
@@ -267,7 +281,7 @@
         }
         
         /* Plugin specific colors */
-        .eth-label { --plugin-color: #627EEA; --plugin-color-dark: rgba(98, 126, 234, 0.2); }
+        .eth_btc-label { --plugin-color: #627EEA; --plugin-color-dark: rgba(98, 126, 234, 0.2); }
 	.btc-label { --plugin-color: #F7931A; --plugin-color-dark: rgba(247, 147, 26, 0.2); }
 	.gold-label { --plugin-color: #FFD700; --plugin-color-dark: rgba(255, 215, 0, 0.2); }
 	.rsi-label { --plugin-color: #FF9500; --plugin-color-dark: rgba(255, 149, 0, 0.2); }
@@ -292,6 +306,10 @@
         .y-axis-price_usd text {
             fill: #627EEA;
         }
+
+        .y-axis-indexed text {
+            fill: #4a9eff;
+        }
     </style>
 </head>
 <body>
@@ -309,16 +327,32 @@
         </div>
     </div>
 
-    <div id="chart-container">
-        <div class="zoom-controls">
-            <button class="zoom-btn" id="reset-zoom" title="Reset Zoom">↺</button>
-            <button class="zoom-btn" id="zoom-in" title="Zoom In">+</button>
-            <button class="zoom-btn" id="zoom-out" title="Zoom Out">−</button>
+    <div class="chart-section">
+        <h2>Raw Values</h2>
+        <div id="chart-container">
+            <div class="zoom-controls">
+                <button class="zoom-btn" id="reset-zoom" title="Reset Zoom">↺</button>
+                <button class="zoom-btn" id="zoom-in" title="Zoom In">+</button>
+                <button class="zoom-btn" id="zoom-out" title="Zoom Out">−</button>
+            </div>
+            <div class="info-text">Click and drag to zoom • Hover for details</div>
         </div>
-        <div class="info-text">Click and drag to zoom • Hover for details</div>
+    </div>
+
+    <div class="chart-section">
+        <h2>Indexed Performance (Base 100)</h2>
+        <div id="indexed-chart-container">
+            <div class="zoom-controls">
+                <button class="zoom-btn" id="indexed-reset-zoom" title="Reset Zoom">↺</button>
+                <button class="zoom-btn" id="indexed-zoom-in" title="Zoom In">+</button>
+                <button class="zoom-btn" id="indexed-zoom-out" title="Zoom Out">−</button>
+            </div>
+            <div class="info-text">All indicators normalized to 100 at start • Click and drag to zoom</div>
+        </div>
     </div>
 
     <div class="tooltip" id="tooltip"></div>
+    <div class="tooltip" id="indexed-tooltip"></div>
 
     <script type="module" src="/js/main.js"></script>
 </body>

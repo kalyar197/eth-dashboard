@@ -3,7 +3,6 @@
 Bitcoin OHLCV data fetcher using CoinAPI
 Returns FULL OHLCV data structure: [timestamp, open, high, low, close, volume]
 NO DATA DISCARDING - All 6 components preserved
-Mirrors eth_price.py structure exactly
 """
 
 import requests

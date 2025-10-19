@@ -2,7 +2,7 @@
 # This file makes 'data' a Python package and allows importing the modules
 
 # Import all data modules for easy access
-from . import eth_price
+from . import eth_btc_ratio
 from . import btc_price
 from . import gold_price
 from . import rsi
@@ -14,7 +14,7 @@ from . import cache_manager
 
 # List of all available data modules
 __all__ = [
-    'eth_price',
+    'eth_btc_ratio',
     'btc_price',
     'gold_price',
     'rsi',
