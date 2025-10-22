@@ -7,7 +7,6 @@ import os
 import time
 from data import eth_btc_ratio, btc_price, gold_price, rsi, bollinger_bands
 from data import vwap, adx  # PHASE 4: Added VWAP, ADX
-from data.indexer import index_to_baseline
 from config import CACHE_DURATION, RATE_LIMIT_DELAY
 
 # Initialize Sentry SDK for error monitoring
@@ -119,81 +118,6 @@ def get_data():
             return jsonify(cache[cache_key]['data'])
         
         return jsonify({'error': f'Server error processing {dataset_name}: {str(e)}'}), 500
-
-@app.route('/api/indexed-data')
-def get_indexed_data():
-    """
-    Returns indexed data for a dataset, normalized to baseline 100 at start.
-    Query parameters:
-    - dataset: The name of the dataset to fetch (e.g., 'eth_btc', 'btc', 'gold', 'rsi', 'vwap', 'adx')
-    - days: The number of days of data to retrieve (e.g., '365', 'max')
-    - baseline: The baseline value (default: 100)
-    """
-    dataset_name = request.args.get('dataset')
-    days = request.args.get('days', '365')
-    baseline = int(request.args.get('baseline', '100'))
-
-    if not dataset_name or dataset_name not in DATA_PLUGINS:
-        return jsonify({'error': 'Invalid or missing dataset parameter'}), 400
-
-    # Check cache first
-    cache_key = f"indexed_{dataset_name}_{days}_{baseline}"
-
-    if is_cache_valid(cache_key):
-        print(f"Serving indexed {dataset_name} from cache")
-        return jsonify(cache[cache_key]['data'])
-
-    try:
-        # Apply rate limiting before making API call
-        rate_limit_check(dataset_name)
-
-        # Get raw data from the plugin
-        data_module = DATA_PLUGINS[dataset_name]
-        raw_data_response = data_module.get_data(days)
-
-        # Extract data and metadata
-        raw_data = raw_data_response.get('data', [])
-        metadata = raw_data_response.get('metadata', {})
-
-        # Apply indexing transformation
-        indexed_data = index_to_baseline(raw_data, baseline=baseline)
-
-        # Modify metadata for indexed version
-        indexed_metadata = metadata.copy()
-        indexed_metadata['yAxisId'] = 'indexed'
-        indexed_metadata['yAxisLabel'] = f'Indexed (Base {baseline})'
-        indexed_metadata['unit'] = ''  # Remove $ or % units
-        indexed_metadata['label'] = metadata.get('label', dataset_name) + ' (Indexed)'
-
-        # Remove fixed domains (like RSI's 0-100) for indexed data
-        if 'yDomain' in indexed_metadata:
-            del indexed_metadata['yDomain']
-
-        # Remove reference lines (they don't make sense in indexed context)
-        if 'referenceLines' in indexed_metadata:
-            del indexed_metadata['referenceLines']
-
-        result = {
-            'metadata': indexed_metadata,
-            'data': indexed_data
-        }
-
-        # Store in cache
-        cache[cache_key] = {
-            'data': result,
-            'timestamp': time.time()
-        }
-
-        print(f"Fetched and indexed data for {dataset_name}")
-        return jsonify(result)
-
-    except Exception as e:
-        # If we have cached data (even if expired), return it on error
-        if cache_key in cache:
-            print(f"Error fetching indexed {dataset_name}, returning stale cache: {str(e)}")
-            return jsonify(cache[cache_key]['data'])
-
-        return jsonify({'error': f'Server error processing indexed {dataset_name}: {str(e)}'}), 500
 
 @app.route('/api/clear-cache')
 def clear_cache():

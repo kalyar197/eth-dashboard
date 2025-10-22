@@ -4,19 +4,16 @@
  */
 
 // Import functions from all modules
-import { getDatasets, getDatasetData, getIndexedData } from './api.js';
+import { getDatasets, getDatasetData } from './api.js';
 import { initChart, updateChart, getZoomControls } from './chart.js';
-import { initIndexedChart, updateIndexedChart, getIndexedZoomControls } from './indexed-chart.js';
 import { initializeControls } from './ui.js';
 
 // Central application state
 const appState = {
     days: '365',              // Current time range
     activePlugins: [],        // Currently selected plugins
-    datasets: {},             // Cached dataset data (raw)
-    metadata: {},             // Cached metadata for each dataset (raw)
-    indexedDatasets: {},      // Cached indexed dataset data
-    indexedMetadata: {},      // Cached metadata for indexed datasets
+    datasets: {},             // Cached dataset data
+    metadata: {},             // Cached metadata for each dataset
     isLoading: false          // Loading state flag
 };
 
@@ -29,21 +26,14 @@ async function main() {
     // Wait for DOM to be ready
     document.addEventListener('DOMContentLoaded', async () => {
         try {
-            // Step 1: Initialize both chart structures
-            console.log('Initializing charts...');
+            // Step 1: Initialize chart structure
+            console.log('Initializing chart...');
             initChart('chart-container', 'tooltip');
-            initIndexedChart('indexed-chart-container', 'indexed-tooltip');
 
-            // Step 2: Get zoom controls from both chart modules
+            // Step 2: Get zoom controls from chart module
             const zoomControls = getZoomControls();
-            const indexedZoomControls = getIndexedZoomControls();
 
-            // Step 3: Set up indexed chart zoom button handlers
-            document.getElementById('indexed-reset-zoom').addEventListener('click', indexedZoomControls.resetZoom);
-            document.getElementById('indexed-zoom-in').addEventListener('click', indexedZoomControls.zoomIn);
-            document.getElementById('indexed-zoom-out').addEventListener('click', indexedZoomControls.zoomOut);
-
-            // Step 4: Initialize UI controls with callbacks
+            // Step 3: Initialize UI controls with callbacks
             console.log('Initializing UI controls...');
             await initializeControls({
                 getDatasets: getDatasets,
@@ -71,10 +61,9 @@ async function handlePluginChange(plugins) {
     // Update application state
     appState.activePlugins = plugins;
 
-    // If no plugins selected, clear both charts
+    // If no plugins selected, clear chart
     if (plugins.length === 0) {
         updateChart([], {}, {}, appState.days);
-        updateIndexedChart([], {}, {}, appState.days);
         showInfoMessage('Select at least one dataset to display');
         return;
     }
@@ -122,30 +111,26 @@ async function fetchAndRenderData() {
     try {
         console.log(`Fetching data for ${appState.activePlugins.length} plugins...`);
 
-        // Fetch both raw and indexed data for all active plugins in parallel
+        // Fetch data for all active plugins in parallel
         const promises = appState.activePlugins.map(async plugin => {
             try {
-                // Fetch raw data
-                const rawResult = await getDatasetData(plugin, appState.days);
-
-                // Fetch indexed data
-                const indexedResult = await getIndexedData(plugin, appState.days, 100);
+                // Fetch data
+                const result = await getDatasetData(plugin, appState.days);
 
                 // Check if data is empty
-                if (!rawResult.data ||
-                    (Array.isArray(rawResult.data) && rawResult.data.length === 0) ||
-                    (typeof rawResult.data === 'object' && rawResult.data.middle && rawResult.data.middle.length === 0)) {
-                    errors.push(`${rawResult.metadata?.label || plugin}: No data available`);
+                if (!result.data ||
+                    (Array.isArray(result.data) && result.data.length === 0) ||
+                    (typeof result.data === 'object' && result.data.middle && result.data.middle.length === 0)) {
+                    errors.push(`${result.metadata?.label || plugin}: No data available`);
                 }
 
-                return { plugin, rawResult, indexedResult };
+                return { plugin, result };
             } catch (error) {
                 console.error(`Error fetching ${plugin}:`, error);
                 errors.push(`${plugin}: Failed to load`);
                 return {
                     plugin,
-                    rawResult: { data: [], metadata: {} },
-                    indexedResult: { data: [], metadata: {} }
+                    result: { data: [], metadata: {} }
                 };
             }
         });
@@ -153,22 +138,14 @@ async function fetchAndRenderData() {
         const results = await Promise.all(promises);
 
         // Update application state with fetched data
-        results.forEach(({ plugin, rawResult, indexedResult }) => {
-            // Handle special case for Bollinger Bands in raw data
-            if (plugin === 'bollinger_bands' && rawResult.data && typeof rawResult.data === 'object' && 'middle' in rawResult.data) {
-                appState.datasets[plugin] = rawResult.data;
+        results.forEach(({ plugin, result }) => {
+            // Handle special case for Bollinger Bands
+            if (plugin === 'bollinger_bands' && result.data && typeof result.data === 'object' && 'middle' in result.data) {
+                appState.datasets[plugin] = result.data;
             } else {
-                appState.datasets[plugin] = rawResult.data || [];
+                appState.datasets[plugin] = result.data || [];
             }
-            appState.metadata[plugin] = rawResult.metadata || {};
-
-            // Handle special case for Bollinger Bands in indexed data
-            if (plugin === 'bollinger_bands' && indexedResult.data && typeof indexedResult.data === 'object' && 'middle' in indexedResult.data) {
-                appState.indexedDatasets[plugin] = indexedResult.data;
-            } else {
-                appState.indexedDatasets[plugin] = indexedResult.data || [];
-            }
-            appState.indexedMetadata[plugin] = indexedResult.metadata || {};
+            appState.metadata[plugin] = result.metadata || {};
         });
 
         // Clear loading state
@@ -186,18 +163,11 @@ async function fetchAndRenderData() {
         if (!hasData) {
             showErrorMessage('No data available. This could be due to API rate limits or invalid API key. Check server console for details.');
         } else {
-            // Render both charts with new data
+            // Render chart with new data
             updateChart(
                 appState.activePlugins,
                 appState.datasets,
                 appState.metadata,
-                appState.days
-            );
-
-            updateIndexedChart(
-                appState.activePlugins,
-                appState.indexedDatasets,
-                appState.indexedMetadata,
                 appState.days
             );
 
