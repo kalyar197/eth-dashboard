@@ -5,8 +5,7 @@ from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
 import os
 import time
-from data import eth_btc_ratio, btc_price, gold_price, rsi, bollinger_bands
-from data import vwap, adx  # PHASE 4: Added VWAP, ADX
+# Data plugins will be imported as they are added during the rebuild
 from config import CACHE_DURATION, RATE_LIMIT_DELAY
 
 # Initialize Sentry SDK for error monitoring
@@ -27,15 +26,8 @@ cache = {}
 last_api_call = {}
 
 # A dictionary mapping dataset names to their data-fetching modules
-DATA_PLUGINS = {
-    'eth_btc': eth_btc_ratio,
-    'btc': btc_price,
-    'gold': gold_price,
-    'rsi': rsi,
-    'bollinger_bands': bollinger_bands,
-    'vwap': vwap,    # Phase 4
-    'adx': adx       # Phase 4
-}
+# Empty during rebuild - plugins will be added as trading system is developed
+DATA_PLUGINS = {}
 
 def get_cache_key(dataset_name, days):
     """Generate a cache key for the dataset and days combination"""
@@ -177,7 +169,7 @@ def api_status():
 
     return jsonify({
         'status': 'running',
-        'message': 'Advanced Financial Charting API Server',
+        'message': 'BTC Trading System - Core Infrastructure (Rebuild Mode)',
         'endpoint': '/api/data?dataset=<name>&days=<number>',
         'available_datasets': list(DATA_PLUGINS.keys()),
         'cache_duration': f'{CACHE_DURATION} seconds',
@@ -185,41 +177,40 @@ def api_status():
         'api_key_status': api_status,
         'config_endpoint': '/api/config',
         'clear_cache_endpoint': '/api/clear-cache',
-        'phase4_indicators': ['vwap', 'adx']
+        'rebuild_status': 'Core infrastructure only - plugins will be added incrementally'
     })
 
 if __name__ == '__main__':
     from config import FMP_API_KEY, COINAPI_KEY
 
     print("="*60)
-    print("Starting Advanced Financial Charting Server")
+    print("BTC Trading System - Core Infrastructure")
     print("="*60)
     print(f"Server URL: http://127.0.0.1:5000")
-    print(f"Available datasets: {list(DATA_PLUGINS.keys())}")
+    print(f"Status: REBUILD MODE - Core infrastructure only")
+    print(f"Available datasets: {list(DATA_PLUGINS.keys()) if DATA_PLUGINS else 'None (rebuild in progress)'}")
     print(f"Cache duration: {CACHE_DURATION} seconds")
     print(f"Rate limit: {RATE_LIMIT_DELAY} seconds between API calls")
 
     print("\nAPI Key Status:")
     if FMP_API_KEY and FMP_API_KEY != 'YOUR_FMP_API_KEY':
-        print(f"  FMP: [OK] Configured (for Gold)")
+        print(f"  FMP: [OK] Configured")
     else:
         print(f"  FMP: [X] Not configured")
 
     if COINAPI_KEY and COINAPI_KEY != 'YOUR_COINAPI_KEY_HERE':
-        print(f"  CoinAPI: [OK] Configured (for Crypto)")
+        print(f"  CoinAPI: [OK] Configured")
     else:
         print(f"  CoinAPI: [X] Not configured")
 
-    print("\n[NEW] PHASE 4 INDICATORS:")
-    print("  - VWAP (Volume Weighted Average Price)")
-    print("  - ADX (Average Directional Index)")
+    print("\n[REBUILD] Trading System Features:")
+    print("  - Core infrastructure preserved")
+    print("  - Frontend design and styling intact")
+    print("  - Data plugins will be added one-by-one")
+    print("  - Chart system ready for 12+ normalized indicators")
 
     print("="*60)
-    print("[OK] CRITICAL FIXES APPLIED:")
-    print("  - Gold Price: Fixed FMP endpoint (using ZGUSD symbol)")
-    print("  - Sentry SDK: Integrated for error monitoring")
-    print("="*60)
-    print("Make sure to install: pip install Flask requests Flask-Cors numpy")
+    print("Dependencies: pip install Flask requests Flask-Cors numpy")
     print("="*60)
 
     app.run(debug=True, port=5000)

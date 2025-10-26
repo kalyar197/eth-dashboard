@@ -94,15 +94,30 @@
             border-left: 3px solid #627EEA;
         }
 
-        #chart-container {
+        /* Chart containers for price (top 60%) and oscillators (bottom 40%) */
+        #price-chart-container {
             background: #1a1a1a;
             border-radius: 12px;
             border: 1px solid #2a2a2a;
             width: 100%;
-            min-height: 600px;
+            min-height: 500px;
+            height: 60vh;
             position: relative;
             padding: 20px;
-            overflow-x: auto; /* Allow horizontal scroll if needed */
+            overflow-x: auto;
+            margin-bottom: 20px;
+        }
+
+        #oscillator-chart-container {
+            background: #1a1a1a;
+            border-radius: 12px;
+            border: 1px solid #2a2a2a;
+            width: 100%;
+            min-height: 300px;
+            height: 35vh;
+            position: relative;
+            padding: 20px;
+            overflow-x: auto;
         }
         
         .loading, .error { 
@@ -324,12 +339,24 @@
     </div>
 
     <div class="chart-section">
-        <h2>Raw Values</h2>
-        <div id="chart-container">
+        <h2>Price Chart</h2>
+        <div id="price-chart-container">
             <div class="zoom-controls">
-                <button class="zoom-btn" id="reset-zoom" title="Reset Zoom">↺</button>
-                <button class="zoom-btn" id="zoom-in" title="Zoom In">+</button>
-                <button class="zoom-btn" id="zoom-out" title="Zoom Out">−</button>
+                <button class="zoom-btn" id="reset-zoom-price" title="Reset Zoom">↺</button>
+                <button class="zoom-btn" id="zoom-in-price" title="Zoom In">+</button>
+                <button class="zoom-btn" id="zoom-out-price" title="Zoom Out">−</button>
+            </div>
+            <div class="info-text">Click and drag to zoom • Hover for details</div>
+        </div>
+    </div>
+
+    <div class="chart-section">
+        <h2>Oscillators</h2>
+        <div id="oscillator-chart-container">
+            <div class="zoom-controls">
+                <button class="zoom-btn" id="reset-zoom-oscillator" title="Reset Zoom">↺</button>
+                <button class="zoom-btn" id="zoom-in-oscillator" title="Zoom In">+</button>
+                <button class="zoom-btn" id="zoom-out-oscillator" title="Zoom Out">−</button>
             </div>
             <div class="info-text">Click and drag to zoom • Hover for details</div>
         </div>

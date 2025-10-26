@@ -5,7 +5,8 @@
 
 // Import functions from all modules
 import { getDatasets, getDatasetData } from './api.js';
-import { initChart, updateChart, getZoomControls } from './chart.js';
+// REBUILD MODE: Chart.js deleted - will be rewritten for trading system
+// import { initChart, updateChart, getZoomControls } from './chart.js';
 import { initializeControls } from './ui.js';
 
 // Central application state
@@ -26,12 +27,13 @@ async function main() {
     // Wait for DOM to be ready
     document.addEventListener('DOMContentLoaded', async () => {
         try {
+            // REBUILD MODE: Chart initialization commented out
             // Step 1: Initialize chart structure
-            console.log('Initializing chart...');
-            initChart('chart-container', 'tooltip');
+            // console.log('Initializing chart...');
+            // initChart('chart-container', 'tooltip');
 
             // Step 2: Get zoom controls from chart module
-            const zoomControls = getZoomControls();
+            // const zoomControls = getZoomControls();
 
             // Step 3: Initialize UI controls with callbacks
             console.log('Initializing UI controls...');
@@ -39,10 +41,11 @@ async function main() {
                 getDatasets: getDatasets,
                 onPluginChange: handlePluginChange,
                 onDaysChange: handleDaysChange,
-                zoomControls: zoomControls
+                // REBUILD MODE: Zoom controls will be reconnected when chart.js is rewritten
+                // zoomControls: zoomControls
             });
 
-            console.log('Financial Dashboard initialized successfully!');
+            console.log('BTC Trading System - Core infrastructure initialized!');
 
         } catch (error) {
             console.error('Failed to initialize application:', error);
@@ -63,7 +66,8 @@ async function handlePluginChange(plugins) {
 
     // If no plugins selected, clear chart
     if (plugins.length === 0) {
-        updateChart([], {}, {}, appState.days);
+        // REBUILD MODE: Chart update commented out
+        // updateChart([], {}, {}, appState.days);
         showInfoMessage('Select at least one dataset to display');
         return;
     }
@@ -163,13 +167,16 @@ async function fetchAndRenderData() {
         if (!hasData) {
             showErrorMessage('No data available. This could be due to API rate limits or invalid API key. Check server console for details.');
         } else {
+            // REBUILD MODE: Chart rendering commented out
             // Render chart with new data
-            updateChart(
-                appState.activePlugins,
-                appState.datasets,
-                appState.metadata,
-                appState.days
-            );
+            // updateChart(
+            //     appState.activePlugins,
+            //     appState.datasets,
+            //     appState.metadata,
+            //     appState.days
+            // );
+
+            console.log('Data fetched successfully:', Object.keys(appState.datasets));
 
             // Show any partial errors
             if (errors.length > 0) {
@@ -190,7 +197,8 @@ async function fetchAndRenderData() {
  * @param {boolean} isLoading - Whether the application is loading
  */
 function setLoadingState(isLoading) {
-    const container = document.getElementById('chart-container');
+    // REBUILD MODE: Show loading in price chart container
+    const container = document.getElementById('price-chart-container');
 
     // Remove any existing loading messages
     const existingLoading = container.querySelectorAll('.loading');
@@ -209,7 +217,8 @@ function setLoadingState(isLoading) {
  * @param {string} message - Error message to display
  */
 function showErrorMessage(message) {
-    const container = document.getElementById('chart-container');
+    // REBUILD MODE: Show errors in price chart container
+    const container = document.getElementById('price-chart-container');
 
     // Remove any existing messages
     container.querySelectorAll('.loading, .error, .message').forEach(el => el.remove());
@@ -247,7 +256,8 @@ function showInfoMessage(message) {
  * @param {string} type - Message type ('warning' or 'info')
  */
 function showMessage(message, type = 'info') {
-    const container = document.getElementById('chart-container');
+    // REBUILD MODE: Show messages in price chart container
+    const container = document.getElementById('price-chart-container');
 
     // Remove any existing temporary messages
     container.querySelectorAll('.message').forEach(el => el.remove());

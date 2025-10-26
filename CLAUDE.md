@@ -2,9 +2,36 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## ⚠️ PROJECT REBUILD IN PROGRESS
+
+**Status**: Core Infrastructure Only
+
+This project has been stripped down to its core infrastructure and is being rebuilt as a **BTC Trading System** for options and swing trading. The goal is a comprehensive trading dashboard with 12+ normalized indicators (-100 to +100 scale), multiple chart layouts, and options data integration.
+
+**What's Currently Available:**
+- ✅ Flask backend structure (app.py, caching, CORS, rate limiting)
+- ✅ API configuration system (config.py)
+- ✅ Plugin registration framework (data/__init__.py)
+- ✅ Disk caching system (data/cache_manager.py)
+- ✅ Time transformation utilities (data/time_transformer.py)
+- ✅ Complete frontend design (dark theme, styling, controls, UI)
+- ✅ Two chart containers (price chart + oscillators)
+- ✅ API communication layer (static/js/api.js)
+- ✅ UI controls system (static/js/ui.js)
+
+**What's Been Removed:**
+- ❌ All data plugins (will be added back one-by-one)
+- ❌ Chart rendering logic (static/js/chart.js deleted - needs complete rewrite)
+- ❌ Cached data files (clean slate)
+
+**Next Steps:**
+Data plugins and chart system will be rebuilt incrementally to support the new trading system requirements.
+
+---
+
 ## Overview
 
-This is a **Financial Dashboard** application that displays cryptocurrency and financial market data through interactive D3.js charts. The system fetches data from multiple APIs (CoinAPI, FMP, FRED) and displays technical indicators for market analysis.
+This is being rebuilt as a **BTC Trading System** for options and swing trading. The system will fetch data from multiple APIs and display technical indicators normalized to a -100 to +100 scale for consistent analysis.
 
 **Architecture**: Flask backend (Python) + D3.js frontend (vanilla JavaScript)
 
