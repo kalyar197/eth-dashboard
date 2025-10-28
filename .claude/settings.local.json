@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git commit:*)",
+      "Bash(git add:*)",
+      "Bash(python:*)",
+      "Bash(git push)",
+      "Bash(curl:*)",
+      "Bash(del test_incremental_fetch.py)",
+      "Bash(del \"data\\normalizers\\percentage_diff.py\")"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

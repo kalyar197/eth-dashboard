@@ -5,7 +5,9 @@ from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
 import os
 import time
-# Data plugins will be imported as they are added during the rebuild
+# Data plugins
+from data import eth_price, btc_price, gold_price, rsi, macd, volume, dxy
+from data.normalizers import zscore
 from config import CACHE_DURATION, RATE_LIMIT_DELAY
 
 # Initialize Sentry SDK for error monitoring
@@ -26,8 +28,24 @@ cache = {}
 last_api_call = {}
 
 # A dictionary mapping dataset names to their data-fetching modules
-# Empty during rebuild - plugins will be added as trading system is developed
-DATA_PLUGINS = {}
+DATA_PLUGINS = {
+    'eth': eth_price,
+    'btc': btc_price,
+    'gold': gold_price
+}
+
+# Oscillator plugins (require asset parameter)
+OSCILLATOR_PLUGINS = {
+    'rsi': rsi,
+    'macd': macd,
+    'volume': volume,
+    'dxy': dxy
+}
+
+# Normalizer function (using only zscore - Regression Divergence)
+NORMALIZERS = {
+    'zscore': zscore
+}
 
 def get_cache_key(dataset_name, days):
     """Generate a cache key for the dataset and days combination"""
@@ -110,6 +128,116 @@ def get_data():
             return jsonify(cache[cache_key]['data'])
         
         return jsonify({'error': f'Server error processing {dataset_name}: {str(e)}'}), 500
+
+@app.route('/api/oscillator-data')
+def get_oscillator_data():
+    """
+    Fetch multiple oscillator datasets with normalization.
+    Query parameters:
+    - asset: 'btc' | 'eth' | 'gold'
+    - datasets: comma-separated list (e.g., 'rsi,macd,volume,dxy')
+    - days: '7' | '30' | '180' | '1095'
+    - normalizer: 'zscore' (Regression Divergence - only normalizer available)
+    """
+    asset = request.args.get('asset')
+    datasets_param = request.args.get('datasets', '')
+    days = request.args.get('days', '30')
+    normalizer_name = request.args.get('normalizer', 'zscore')
+
+    if not asset or asset not in DATA_PLUGINS:
+        return jsonify({'error': 'Invalid or missing asset parameter'}), 400
+
+    if not datasets_param:
+        return jsonify({'error': 'Missing datasets parameter'}), 400
+
+    # Parse dataset names
+    dataset_names = [d.strip() for d in datasets_param.split(',') if d.strip()]
+
+    if not dataset_names:
+        return jsonify({'error': 'No valid datasets specified'}), 400
+
+    # Validate normalizer
+    if normalizer_name not in NORMALIZERS:
+        return jsonify({'error': f'Invalid normalizer: {normalizer_name}'}), 400
+
+    # Generate cache key
+    cache_key = f"oscillator_{asset}_{datasets_param}_{days}_{normalizer_name}"
+
+    # Check cache
+    if is_cache_valid(cache_key):
+        print(f"Serving oscillator data from cache: {cache_key}")
+        return jsonify(cache[cache_key]['data'])
+
+    try:
+        # Fetch asset price data (needed for normalization)
+        asset_module = DATA_PLUGINS[asset]
+        asset_result = asset_module.get_data(days)
+        asset_ohlcv_data = asset_result['data']
+
+        if not asset_ohlcv_data:
+            raise ValueError(f"No {asset.upper()} price data available")
+
+        # Fetch oscillator datasets
+        result = {
+            'asset': asset,
+            'normalizer': normalizer_name,
+            'datasets': {}
+        }
+
+        normalizer_module = NORMALIZERS[normalizer_name]
+
+        for dataset_name in dataset_names:
+            if dataset_name not in OSCILLATOR_PLUGINS:
+                print(f"Warning: Unknown oscillator dataset '{dataset_name}', skipping...")
+                continue
+
+            try:
+                # Apply rate limiting
+                rate_limit_check(f"{dataset_name}_{asset}")
+
+                # Fetch raw oscillator data
+                oscillator_module = OSCILLATOR_PLUGINS[dataset_name]
+
+                # DXY doesn't need asset parameter
+                if dataset_name == 'dxy':
+                    oscillator_result = oscillator_module.get_data(days)
+                else:
+                    oscillator_result = oscillator_module.get_data(days, asset)
+
+                raw_data = oscillator_result['data']
+
+                if not raw_data:
+                    print(f"Warning: No data for {dataset_name}, skipping...")
+                    continue
+
+                # Apply normalization
+                normalized_data = normalizer_module.normalize(raw_data, asset_ohlcv_data)
+
+                # Get metadata
+                metadata = oscillator_result['metadata']
+
+                result['datasets'][dataset_name] = {
+                    'data': normalized_data,
+                    'metadata': metadata
+                }
+
+                print(f"Fetched and normalized {dataset_name} for {asset}: {len(normalized_data)} points")
+
+            except Exception as e:
+                print(f"Error fetching oscillator {dataset_name}: {e}")
+                # Continue with other datasets
+
+        # Store in cache
+        cache[cache_key] = {
+            'data': result,
+            'timestamp': time.time()
+        }
+
+        return jsonify(result)
+
+    except Exception as e:
+        print(f"Error processing oscillator data: {e}")
+        return jsonify({'error': f'Server error processing oscillator data: {str(e)}'}), 500
 
 @app.route('/api/clear-cache')
 def clear_cache():

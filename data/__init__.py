@@ -1,13 +1,32 @@
 # data/__init__.py
 # This file makes 'data' a Python package and allows importing the modules
 
-# Import core infrastructure modules only
-# Data plugins will be added as the trading system is rebuilt
+# Import core infrastructure modules
 from . import time_transformer
 from . import cache_manager
+from . import incremental_data_manager
+
+# Import data plugins
+from . import eth_price
+from . import btc_price
+from . import gold_price
+
+# Import oscillator plugins
+from . import rsi
+from . import macd
+from . import volume
+from . import dxy
 
 # List of all available data modules
 __all__ = [
     'time_transformer',
-    'cache_manager'
+    'cache_manager',
+    'incremental_data_manager',
+    'eth_price',
+    'btc_price',
+    'gold_price',
+    'rsi',
+    'macd',
+    'volume',
+    'dxy'
 ]

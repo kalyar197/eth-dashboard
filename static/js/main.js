@@ -1,233 +1,338 @@
 /**
- * Main Application Module - Orchestrates the entire application
- * Connects API, UI, and Chart modules together
+ * Main Application Module - Tab-based trading system
+ * Handles BTC and ETH charts with independent time controls
  */
 
-// Import functions from all modules
-import { getDatasets, getDatasetData } from './api.js';
-// REBUILD MODE: Chart.js deleted - will be rewritten for trading system
-// import { initChart, updateChart, getZoomControls } from './chart.js';
-import { initializeControls } from './ui.js';
+// Import functions from modules
+import { getDatasetData } from './api.js';
+import { initChart, renderChart } from './chart.js';
+import { initOscillatorChart, renderOscillatorChart } from './oscillator.js';
 
-// Central application state
+// Application state
 const appState = {
-    days: '365',              // Current time range
-    activePlugins: [],        // Currently selected plugins
-    datasets: {},             // Cached dataset data
-    metadata: {},             // Cached metadata for each dataset
-    isLoading: false          // Loading state flag
+    activeTab: 'btc',              // Current active tab
+    days: {
+        btc: 30,                    // Default 1M for BTC
+        eth: 30,                    // Default 1M for ETH
+        gold: 30                    // Default 1M for Gold
+    },
+    chartData: {
+        btc: null,
+        eth: null,
+        gold: null
+    },
+    chartsInitialized: {
+        btc: false,
+        eth: false,
+        gold: false
+    },
+    colors: {
+        btc: '#F7931A',             // Bitcoin orange
+        eth: '#627EEA',             // Ethereum blue
+        gold: '#FFD700'             // Gold yellow
+    },
+    // Oscillator state
+    oscillatorData: {
+        btc: {},
+        eth: {},
+        gold: {}
+    },
+    oscillatorsInitialized: {
+        btc: false,
+        eth: false,
+        gold: false
+    },
+    selectedDatasets: {
+        btc: ['rsi', 'macd', 'volume', 'dxy'],
+        eth: ['rsi', 'macd', 'volume', 'dxy'],
+        gold: ['rsi', 'macd', 'dxy']  // No volume for gold
+    },
+    datasetColors: {
+        rsi: '#FF9500',
+        macd: '#2196F3',
+        volume: '#9C27B0',
+        dxy: '#4CAF50'
+    }
 };
 
 /**
  * Main application entry point
  */
 async function main() {
-    console.log('Financial Dashboard initializing...');
+    console.log('BTC Trading System initializing...');
 
     // Wait for DOM to be ready
-    document.addEventListener('DOMContentLoaded', async () => {
-        try {
-            // REBUILD MODE: Chart initialization commented out
-            // Step 1: Initialize chart structure
-            // console.log('Initializing chart...');
-            // initChart('chart-container', 'tooltip');
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initialize);
+    } else {
+        await initialize();
+    }
+}
 
-            // Step 2: Get zoom controls from chart module
-            // const zoomControls = getZoomControls();
+/**
+ * Initialize the application
+ */
+async function initialize() {
+    try {
+        console.log('Initializing application...');
 
-            // Step 3: Initialize UI controls with callbacks
-            console.log('Initializing UI controls...');
-            await initializeControls({
-                getDatasets: getDatasets,
-                onPluginChange: handlePluginChange,
-                onDaysChange: handleDaysChange,
-                // REBUILD MODE: Zoom controls will be reconnected when chart.js is rewritten
-                // zoomControls: zoomControls
+        // Setup tab switching
+        setupTabs();
+
+        // Setup time period controls
+        setupTimeControls();
+
+        // Setup oscillator controls
+        setupOscillatorControls();
+
+        // Initialize and load the default tab (BTC)
+        await loadTab('btc');
+
+        console.log('Application initialized successfully!');
+
+    } catch (error) {
+        console.error('Failed to initialize application:', error);
+        showErrorMessage('btc', 'Failed to initialize application. Please refresh the page.');
+    }
+}
+
+/**
+ * Setup tab switching behavior
+ */
+function setupTabs() {
+    const tabButtons = document.querySelectorAll('.tab-btn');
+
+    tabButtons.forEach(button => {
+        button.addEventListener('click', async () => {
+            const tabName = button.dataset.tab;
+
+            if (tabName === appState.activeTab) {
+                return; // Already on this tab
+            }
+
+            // Update UI
+            tabButtons.forEach(btn => btn.classList.remove('active'));
+            button.classList.add('active');
+
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
             });
+            document.getElementById(`${tabName}-tab`).classList.add('active');
 
-            console.log('BTC Trading System - Core infrastructure initialized!');
+            // Update state
+            appState.activeTab = tabName;
 
-        } catch (error) {
-            console.error('Failed to initialize application:', error);
-            showErrorMessage('Failed to initialize application. Please refresh the page.');
-        }
+            // Load tab data
+            await loadTab(tabName);
+        });
     });
 }
 
 /**
- * Handles plugin selection changes from the UI
- * @param {Array<string>} plugins - Array of selected plugin names
+ * Setup time period control buttons
  */
-async function handlePluginChange(plugins) {
-    console.log('Plugin selection changed:', plugins);
+function setupTimeControls() {
+    const timeButtons = document.querySelectorAll('.time-btn');
 
-    // Update application state
-    appState.activePlugins = plugins;
+    timeButtons.forEach(button => {
+        button.addEventListener('click', async () => {
+            const dataset = button.dataset.dataset;
+            const days = parseInt(button.dataset.days);
 
-    // If no plugins selected, clear chart
-    if (plugins.length === 0) {
-        // REBUILD MODE: Chart update commented out
-        // updateChart([], {}, {}, appState.days);
-        showInfoMessage('Select at least one dataset to display');
-        return;
-    }
+            // Update active button for this dataset
+            document.querySelectorAll(`.time-btn[data-dataset="${dataset}"]`).forEach(btn => {
+                btn.classList.remove('active');
+            });
+            button.classList.add('active');
 
-    // Fetch and render data for selected plugins
-    await fetchAndRenderData();
+            // Update state and reload chart
+            appState.days[dataset] = days;
+            await loadChartData(dataset);
+            await loadOscillatorData(dataset);
+        });
+    });
 }
 
 /**
- * Handles time range changes from the UI
- * @param {string} days - New time range ('30', '90', '365', 'max')
+ * Setup oscillator control event handlers
  */
-async function handleDaysChange(days) {
-    console.log('Time range changed to:', days);
+function setupOscillatorControls() {
+    // Setup dataset checkboxes
+    document.querySelectorAll('.dataset-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', async () => {
+            const asset = checkbox.dataset.asset;
+            const datasetName = checkbox.dataset.dataset;
 
-    // Update application state
-    appState.days = days;
+            // Update selected datasets
+            if (checkbox.checked) {
+                if (!appState.selectedDatasets[asset].includes(datasetName)) {
+                    appState.selectedDatasets[asset].push(datasetName);
+                }
+            } else {
+                appState.selectedDatasets[asset] = appState.selectedDatasets[asset].filter(
+                    d => d !== datasetName
+                );
+            }
 
-    // Clear zoom when changing time range
-    // (The chart will reset zoom automatically when new data is provided)
-
-    // Fetch and render data with new time range
-    await fetchAndRenderData();
+            // Reload oscillator data
+            await loadOscillatorData(asset);
+        });
+    });
 }
 
 /**
- * Fetches data for all active plugins and renders the chart
+ * Load a tab (initialize chart if needed, fetch and render data)
+ * @param {string} dataset - Dataset name ('btc', 'eth', 'gold')
  */
-async function fetchAndRenderData() {
-    if (appState.isLoading) {
-        console.log('Already loading data, skipping...');
-        return;
+async function loadTab(dataset) {
+    console.log(`Loading tab: ${dataset}`);
+
+    // Initialize price chart if not already initialized
+    if (!appState.chartsInitialized[dataset]) {
+        const containerId = `${dataset}-chart-container`;
+        const color = appState.colors[dataset];
+
+        console.log(`Initializing price chart for ${dataset}`);
+        initChart(containerId, dataset, color);
+        appState.chartsInitialized[dataset] = true;
     }
 
-    if (appState.activePlugins.length === 0) {
-        console.log('No plugins selected, skipping data fetch');
-        return;
+    // Initialize oscillator chart if not already initialized
+    if (!appState.oscillatorsInitialized[dataset]) {
+        const containerId = `${dataset}-oscillator-container`;
+        const color = appState.colors[dataset];
+
+        console.log(`Initializing oscillator chart for ${dataset}`);
+        initOscillatorChart(containerId, dataset, color);
+        appState.oscillatorsInitialized[dataset] = true;
     }
 
-    appState.isLoading = true;
-    setLoadingState(true);
+    // Load price chart data
+    await loadChartData(dataset);
 
-    const errors = [];
+    // Load oscillator data
+    await loadOscillatorData(dataset);
+}
+
+/**
+ * Fetch data and render chart for a dataset
+ * @param {string} dataset - Dataset name ('btc' or 'eth')
+ */
+async function loadChartData(dataset) {
+    const days = appState.days[dataset];
+
+    console.log(`Fetching ${dataset} data for ${days} days...`);
+
+    // Show loading state
+    showLoadingMessage(dataset);
 
     try {
-        console.log(`Fetching data for ${appState.activePlugins.length} plugins...`);
+        // Fetch data from API
+        const result = await getDatasetData(dataset, days);
 
-        // Fetch data for all active plugins in parallel
-        const promises = appState.activePlugins.map(async plugin => {
-            try {
-                // Fetch data
-                const result = await getDatasetData(plugin, appState.days);
-
-                // Check if data is empty
-                if (!result.data ||
-                    (Array.isArray(result.data) && result.data.length === 0) ||
-                    (typeof result.data === 'object' && result.data.middle && result.data.middle.length === 0)) {
-                    errors.push(`${result.metadata?.label || plugin}: No data available`);
-                }
-
-                return { plugin, result };
-            } catch (error) {
-                console.error(`Error fetching ${plugin}:`, error);
-                errors.push(`${plugin}: Failed to load`);
-                return {
-                    plugin,
-                    result: { data: [], metadata: {} }
-                };
-            }
-        });
-
-        const results = await Promise.all(promises);
-
-        // Update application state with fetched data
-        results.forEach(({ plugin, result }) => {
-            // Handle special case for Bollinger Bands
-            if (plugin === 'bollinger_bands' && result.data && typeof result.data === 'object' && 'middle' in result.data) {
-                appState.datasets[plugin] = result.data;
-            } else {
-                appState.datasets[plugin] = result.data || [];
-            }
-            appState.metadata[plugin] = result.metadata || {};
-        });
-
-        // Clear loading state
-        setLoadingState(false);
-        appState.isLoading = false;
-
-        // Check if we have any valid data
-        const hasData = Object.entries(appState.datasets).some(([key, d]) => {
-            if (key === 'bollinger_bands') {
-                return d.middle && d.middle.length > 0;
-            }
-            return d.length > 0;
-        });
-
-        if (!hasData) {
-            showErrorMessage('No data available. This could be due to API rate limits or invalid API key. Check server console for details.');
-        } else {
-            // REBUILD MODE: Chart rendering commented out
-            // Render chart with new data
-            // updateChart(
-            //     appState.activePlugins,
-            //     appState.datasets,
-            //     appState.metadata,
-            //     appState.days
-            // );
-
-            console.log('Data fetched successfully:', Object.keys(appState.datasets));
-
-            // Show any partial errors
-            if (errors.length > 0) {
-                showWarningMessage(errors.join(' " '));
-            }
+        if (!result || !result.data || result.data.length === 0) {
+            throw new Error('No data available');
         }
 
+        console.log(`Received ${result.data.length} data points for ${dataset}`);
+
+        // Store data in state
+        appState.chartData[dataset] = result.data;
+
+        // Render chart
+        renderChart(dataset, result.data);
+
+        // Clear loading message
+        clearMessages(dataset);
+
     } catch (error) {
-        console.error('Error fetching and rendering data:', error);
-        setLoadingState(false);
-        appState.isLoading = false;
-        showErrorMessage('Failed to fetch data. Please ensure the Flask server is running on port 5000.');
+        console.error(`Error loading ${dataset} data:`, error);
+        showErrorMessage(dataset, `Failed to load ${dataset.toUpperCase()} data. Please check server connection.`);
     }
 }
 
 /**
- * Sets the loading state in the UI
- * @param {boolean} isLoading - Whether the application is loading
+ * Fetch oscillator data and render oscillator chart
+ * @param {string} asset - Asset name ('btc', 'eth', 'gold')
  */
-function setLoadingState(isLoading) {
-    // REBUILD MODE: Show loading in price chart container
-    const container = document.getElementById('price-chart-container');
+async function loadOscillatorData(asset) {
+    const days = appState.days[asset];
+    const datasets = appState.selectedDatasets[asset].join(',');
+    const normalizer = 'zscore';  // Always use zscore (regression divergence) normalizer
 
-    // Remove any existing loading messages
-    const existingLoading = container.querySelectorAll('.loading');
-    existingLoading.forEach(el => el.remove());
+    if (!datasets) {
+        console.log(`No datasets selected for ${asset} oscillator`);
+        return;
+    }
 
-    if (isLoading) {
-        const loadingDiv = document.createElement('div');
-        loadingDiv.className = 'loading';
-        loadingDiv.textContent = 'Loading data...';
-        container.appendChild(loadingDiv);
+    console.log(`Fetching oscillator data for ${asset}: datasets=${datasets}, normalizer=${normalizer}, days=${days}`);
+
+    try {
+        // Fetch from API
+        const url = `/api/oscillator-data?asset=${asset}&datasets=${datasets}&days=${days}&normalizer=${normalizer}`;
+        const response = await fetch(url);
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const result = await response.json();
+
+        if (!result || !result.datasets) {
+            throw new Error('Invalid oscillator data received');
+        }
+
+        console.log(`Received oscillator data for ${asset}:`, Object.keys(result.datasets));
+
+        // Store data in state
+        appState.oscillatorData[asset] = result;
+
+        // Prepare data for rendering
+        const datasetsData = {};
+        Object.entries(result.datasets).forEach(([datasetName, datasetInfo]) => {
+            datasetsData[datasetName] = datasetInfo.data;
+        });
+
+        // Render oscillator chart
+        renderOscillatorChart(asset, datasetsData, appState.datasetColors);
+
+    } catch (error) {
+        console.error(`Error loading oscillator data for ${asset}:`, error);
     }
 }
 
 /**
- * Shows an error message
- * @param {string} message - Error message to display
+ * Show loading message in chart container
+ * @param {string} dataset - Dataset name
  */
-function showErrorMessage(message) {
-    // REBUILD MODE: Show errors in price chart container
-    const container = document.getElementById('price-chart-container');
+function showLoadingMessage(dataset) {
+    const container = document.getElementById(`${dataset}-chart-container`);
 
-    // Remove any existing messages
-    container.querySelectorAll('.loading, .error, .message').forEach(el => el.remove());
+    // Remove existing messages
+    clearMessages(dataset);
+
+    const loadingDiv = document.createElement('div');
+    loadingDiv.className = 'loading';
+    loadingDiv.textContent = `Loading ${dataset.toUpperCase()} data...`;
+    container.appendChild(loadingDiv);
+}
+
+/**
+ * Show error message in chart container
+ * @param {string} dataset - Dataset name
+ * @param {string} message - Error message
+ */
+function showErrorMessage(dataset, message) {
+    const container = document.getElementById(`${dataset}-chart-container`);
+
+    // Remove existing messages
+    clearMessages(dataset);
 
     const errorDiv = document.createElement('div');
     errorDiv.className = 'error';
     errorDiv.innerHTML = `
         <div style="text-align: center;">
-            <div style="font-size: 24px; margin-bottom: 10px;">�</div>
+            <div style="font-size: 24px; margin-bottom: 10px;">⚠</div>
             <div>${message}</div>
         </div>
     `;
@@ -235,56 +340,15 @@ function showErrorMessage(message) {
 }
 
 /**
- * Shows a warning message (temporary, auto-dismisses)
- * @param {string} message - Warning message to display
+ * Clear all messages from chart container
+ * @param {string} dataset - Dataset name
  */
-function showWarningMessage(message) {
-    showMessage(message, 'warning');
-}
+function clearMessages(dataset) {
+    const container = document.getElementById(`${dataset}-chart-container`);
 
-/**
- * Shows an info message (temporary, auto-dismisses)
- * @param {string} message - Info message to display
- */
-function showInfoMessage(message) {
-    showMessage(message, 'info');
-}
-
-/**
- * Shows a temporary message that auto-dismisses
- * @param {string} message - Message to display
- * @param {string} type - Message type ('warning' or 'info')
- */
-function showMessage(message, type = 'info') {
-    // REBUILD MODE: Show messages in price chart container
-    const container = document.getElementById('price-chart-container');
-
-    // Remove any existing temporary messages
-    container.querySelectorAll('.message').forEach(el => el.remove());
-
-    const messageDiv = document.createElement('div');
-    messageDiv.className = `message message-${type}`;
-    messageDiv.style.position = 'absolute';
-    messageDiv.style.top = '60px';
-    messageDiv.style.left = '50%';
-    messageDiv.style.transform = 'translateX(-50%)';
-    messageDiv.style.padding = '8px 16px';
-    messageDiv.style.background = type === 'warning' ? 'rgba(255, 149, 0, 0.2)' : 'rgba(98, 126, 234, 0.2)';
-    messageDiv.style.border = `1px solid ${type === 'warning' ? '#FF9500' : '#627EEA'}`;
-    messageDiv.style.borderRadius = '6px';
-    messageDiv.style.color = type === 'warning' ? '#FF9500' : '#627EEA';
-    messageDiv.style.fontSize = '12px';
-    messageDiv.style.zIndex = '100';
-    messageDiv.textContent = message;
-
-    container.appendChild(messageDiv);
-
-    // Auto-remove after 5 seconds
-    setTimeout(() => {
-        messageDiv.style.transition = 'opacity 0.5s';
-        messageDiv.style.opacity = '0';
-        setTimeout(() => messageDiv.remove(), 500);
-    }, 5000);
+    // Remove loading and error messages
+    const messages = container.querySelectorAll('.loading, .error');
+    messages.forEach(msg => msg.remove());
 }
 
 // Start the application

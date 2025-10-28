@@ -321,44 +321,306 @@
         .y-axis-price_usd text {
             fill: #627EEA;
         }
+
+        /* Tab Navigation */
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin: 20px 0;
+            justify-content: center;
+        }
+
+        .tab-btn {
+            padding: 12px 30px;
+            border: 1px solid #333;
+            border-radius: 8px 8px 0 0;
+            background: #0a0a0a;
+            color: #666;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+            font-size: 15px;
+            white-space: nowrap;
+        }
+
+        .tab-btn:hover {
+            border-color: #555;
+            color: #aaa;
+        }
+
+        .tab-btn.active {
+            background: #1a1a1a;
+            color: #fff;
+            border-bottom-color: #1a1a1a;
+        }
+
+        .tab-btn.active[data-tab="btc"] {
+            border-top: 3px solid #F7931A;
+        }
+
+        .tab-btn.active[data-tab="eth"] {
+            border-top: 3px solid #627EEA;
+        }
+
+        .tab-btn.active[data-tab="gold"] {
+            border-top: 3px solid #FFD700;
+        }
+
+        /* Tab Content */
+        .tab-content {
+            display: none;
+            width: 100%;
+            max-width: 1600px;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Chart containers specific - Price charts (60% height) */
+        #btc-chart-container, #eth-chart-container, #gold-chart-container {
+            background: #1a1a1a;
+            border-radius: 12px;
+            border: 1px solid #2a2a2a;
+            width: 100%;
+            min-height: 400px;
+            height: 42vh;
+            position: relative;
+            padding: 20px;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+
+        /* Oscillator containers (40% height) */
+        #btc-oscillator-container, #eth-oscillator-container, #gold-oscillator-container {
+            background: #1a1a1a;
+            border-radius: 12px;
+            border: 1px solid #2a2a2a;
+            width: 100%;
+            min-height: 300px;
+            height: 28vh;
+            position: relative;
+            padding: 20px;
+            overflow: hidden;
+        }
+
+        /* Oscillator controls */
+        .oscillator-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 15px;
+            padding: 15px;
+            background: #0a0a0a;
+            border-radius: 8px;
+            border: 1px solid #2a2a2a;
+        }
+
+        .dataset-checkboxes {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .dataset-checkbox-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .dataset-checkbox-wrapper input[type="checkbox"] {
+            cursor: pointer;
+        }
+
+        .dataset-checkbox-wrapper label {
+            color: #888;
+            font-size: 12px;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .dataset-checkbox-wrapper input[type="checkbox"]:checked + label {
+            color: #fff;
+            font-weight: 500;
+        }
     </style>
 </head>
 <body>
-    <h1>FINANCIAL DASHBOARD</h1>
+    <h1>BTC TRADING SYSTEM</h1>
 
-    <div class="controls">
-        <div class="button-container control-group">
-            <button data-days="30">1M</button>
-            <button data-days="90">3M</button>
-            <button data-days="365" class="active">1Y</button>
-            <button data-days="max">ALL</button>
+    <!-- Tab Navigation -->
+    <div class="tabs">
+        <button class="tab-btn active" data-tab="btc">Bitcoin (BTC)</button>
+        <button class="tab-btn" data-tab="eth">Ethereum (ETH)</button>
+        <button class="tab-btn" data-tab="gold">Gold (XAU/USD)</button>
+    </div>
+
+    <!-- BTC Tab Content -->
+    <div class="tab-content active" id="btc-tab">
+        <div class="controls">
+            <div class="button-container control-group">
+                <button class="time-btn" data-dataset="btc" data-days="7">1W</button>
+                <button class="time-btn active" data-dataset="btc" data-days="30">1M</button>
+                <button class="time-btn" data-dataset="btc" data-days="180">6M</button>
+                <button class="time-btn" data-dataset="btc" data-days="1095">3Y</button>
+            </div>
         </div>
-        <div class="plugins-container control-group" id="plugin-controls">
-            <!-- Will be populated dynamically -->
+
+        <!-- Price Chart Section (60%) -->
+        <div class="chart-section">
+            <div id="btc-chart-container">
+                <div class="zoom-controls">
+                    <button class="zoom-btn reset-zoom" title="Reset Zoom">↺</button>
+                    <button class="zoom-btn zoom-in" title="Zoom In">+</button>
+                    <button class="zoom-btn zoom-out" title="Zoom Out">−</button>
+                </div>
+                <div class="info-text">Click and drag to zoom • Hover for OHLCV details</div>
+            </div>
+        </div>
+
+        <!-- Oscillator Section (40%) -->
+        <div class="chart-section">
+            <div class="oscillator-controls">
+                <div class="dataset-checkboxes">
+                    <div class="dataset-checkbox-wrapper">
+                        <input type="checkbox" id="rsi-btc" class="dataset-checkbox" data-asset="btc" data-dataset="rsi" checked>
+                        <label for="rsi-btc">RSI</label>
+                    </div>
+                    <div class="dataset-checkbox-wrapper">
+                        <input type="checkbox" id="macd-btc" class="dataset-checkbox" data-asset="btc" data-dataset="macd" checked>
+                        <label for="macd-btc">MACD</label>
+                    </div>
+                    <div class="dataset-checkbox-wrapper">
+                        <input type="checkbox" id="volume-btc" class="dataset-checkbox" data-asset="btc" data-dataset="volume" checked>
+                        <label for="volume-btc">Volume</label>
+                    </div>
+                    <div class="dataset-checkbox-wrapper">
+                        <input type="checkbox" id="dxy-btc" class="dataset-checkbox" data-asset="btc" data-dataset="dxy" checked>
+                        <label for="dxy-btc">DXY</label>
+                    </div>
+                </div>
+            </div>
+            <div id="btc-oscillator-container">
+                <div class="zoom-controls">
+                    <button class="zoom-btn reset-zoom" title="Reset Zoom">↺</button>
+                    <button class="zoom-btn zoom-in" title="Zoom In">+</button>
+                    <button class="zoom-btn zoom-out" title="Zoom Out">−</button>
+                </div>
+                <div class="info-text">Oscillator: 0 line = BTC price • Synchronized zoom</div>
+            </div>
         </div>
     </div>
 
-    <div class="chart-section">
-        <h2>Price Chart</h2>
-        <div id="price-chart-container">
-            <div class="zoom-controls">
-                <button class="zoom-btn" id="reset-zoom-price" title="Reset Zoom">↺</button>
-                <button class="zoom-btn" id="zoom-in-price" title="Zoom In">+</button>
-                <button class="zoom-btn" id="zoom-out-price" title="Zoom Out">−</button>
+    <!-- ETH Tab Content -->
+    <div class="tab-content" id="eth-tab">
+        <div class="controls">
+            <div class="button-container control-group">
+                <button class="time-btn" data-dataset="eth" data-days="7">1W</button>
+                <button class="time-btn active" data-dataset="eth" data-days="30">1M</button>
+                <button class="time-btn" data-dataset="eth" data-days="180">6M</button>
+                <button class="time-btn" data-dataset="eth" data-days="1095">3Y</button>
             </div>
-            <div class="info-text">Click and drag to zoom • Hover for details</div>
+        </div>
+
+        <!-- Price Chart Section (60%) -->
+        <div class="chart-section">
+            <div id="eth-chart-container">
+                <div class="zoom-controls">
+                    <button class="zoom-btn reset-zoom" title="Reset Zoom">↺</button>
+                    <button class="zoom-btn zoom-in" title="Zoom In">+</button>
+                    <button class="zoom-btn zoom-out" title="Zoom Out">−</button>
+                </div>
+                <div class="info-text">Click and drag to zoom • Hover for OHLCV details</div>
+            </div>
+        </div>
+
+        <!-- Oscillator Section (40%) -->
+        <div class="chart-section">
+            <div class="oscillator-controls">
+                <div class="dataset-checkboxes">
+                    <div class="dataset-checkbox-wrapper">
+                        <input type="checkbox" id="rsi-eth" class="dataset-checkbox" data-asset="eth" data-dataset="rsi" checked>
+                        <label for="rsi-eth">RSI</label>
+                    </div>
+                    <div class="dataset-checkbox-wrapper">
+                        <input type="checkbox" id="macd-eth" class="dataset-checkbox" data-asset="eth" data-dataset="macd" checked>
+                        <label for="macd-eth">MACD</label>
+                    </div>
+                    <div class="dataset-checkbox-wrapper">
+                        <input type="checkbox" id="volume-eth" class="dataset-checkbox" data-asset="eth" data-dataset="volume" checked>
+                        <label for="volume-eth">Volume</label>
+                    </div>
+                    <div class="dataset-checkbox-wrapper">
+                        <input type="checkbox" id="dxy-eth" class="dataset-checkbox" data-asset="eth" data-dataset="dxy" checked>
+                        <label for="dxy-eth">DXY</label>
+                    </div>
+                </div>
+            </div>
+            <div id="eth-oscillator-container">
+                <div class="zoom-controls">
+                    <button class="zoom-btn reset-zoom" title="Reset Zoom">↺</button>
+                    <button class="zoom-btn zoom-in" title="Zoom In">+</button>
+                    <button class="zoom-btn zoom-out" title="Zoom Out">−</button>
+                </div>
+                <div class="info-text">Oscillator: 0 line = ETH price • Synchronized zoom</div>
+            </div>
         </div>
     </div>
 
-    <div class="chart-section">
-        <h2>Oscillators</h2>
-        <div id="oscillator-chart-container">
-            <div class="zoom-controls">
-                <button class="zoom-btn" id="reset-zoom-oscillator" title="Reset Zoom">↺</button>
-                <button class="zoom-btn" id="zoom-in-oscillator" title="Zoom In">+</button>
-                <button class="zoom-btn" id="zoom-out-oscillator" title="Zoom Out">−</button>
+    <!-- Gold Tab Content -->
+    <div class="tab-content" id="gold-tab">
+        <div class="controls">
+            <div class="button-container control-group">
+                <button class="time-btn" data-dataset="gold" data-days="7">1W</button>
+                <button class="time-btn active" data-dataset="gold" data-days="30">1M</button>
+                <button class="time-btn" data-dataset="gold" data-days="180">6M</button>
+                <button class="time-btn" data-dataset="gold" data-days="1095">3Y</button>
             </div>
-            <div class="info-text">Click and drag to zoom • Hover for details</div>
+        </div>
+
+        <!-- Price Chart Section (60%) -->
+        <div class="chart-section">
+            <div id="gold-chart-container">
+                <div class="zoom-controls">
+                    <button class="zoom-btn reset-zoom" title="Reset Zoom">↺</button>
+                    <button class="zoom-btn zoom-in" title="Zoom In">+</button>
+                    <button class="zoom-btn zoom-out" title="Zoom Out">−</button>
+                </div>
+                <div class="info-text">Click and drag to zoom • Hover for OHLCV details</div>
+            </div>
+        </div>
+
+        <!-- Oscillator Section (40%) -->
+        <div class="chart-section">
+            <div class="oscillator-controls">
+                <div class="dataset-checkboxes">
+                    <div class="dataset-checkbox-wrapper">
+                        <input type="checkbox" id="rsi-gold" class="dataset-checkbox" data-asset="gold" data-dataset="rsi" checked>
+                        <label for="rsi-gold">RSI</label>
+                    </div>
+                    <div class="dataset-checkbox-wrapper">
+                        <input type="checkbox" id="macd-gold" class="dataset-checkbox" data-asset="gold" data-dataset="macd" checked>
+                        <label for="macd-gold">MACD</label>
+                    </div>
+                    <div class="dataset-checkbox-wrapper">
+                        <input type="checkbox" id="volume-gold" class="dataset-checkbox" data-asset="gold" data-dataset="volume" disabled>
+                        <label for="volume-gold">Volume (N/A)</label>
+                    </div>
+                    <div class="dataset-checkbox-wrapper">
+                        <input type="checkbox" id="dxy-gold" class="dataset-checkbox" data-asset="gold" data-dataset="dxy" checked>
+                        <label for="dxy-gold">DXY</label>
+                    </div>
+                </div>
+            </div>
+            <div id="gold-oscillator-container">
+                <div class="zoom-controls">
+                    <button class="zoom-btn reset-zoom" title="Reset Zoom">↺</button>
+                    <button class="zoom-btn zoom-in" title="Zoom In">+</button>
+                    <button class="zoom-btn zoom-out" title="Zoom Out">−</button>
+                </div>
+                <div class="info-text">Oscillator: 0 line = Gold price • Synchronized zoom</div>
+            </div>
         </div>
     </div>
 
