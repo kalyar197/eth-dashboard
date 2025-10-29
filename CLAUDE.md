@@ -2,11 +2,11 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## ⚠️ PROJECT REBUILD IN PROGRESS
+## ⚠️ PROJECT STATUS: PILOT & RADAR OSCILLATOR SYSTEM COMPLETE
 
-**Status**: Core Infrastructure Only
+**Status**: Advanced Composite Oscillator with Regime Detection
 
-This project has been stripped down to its core infrastructure and is being rebuilt as a **BTC Trading System** for options and swing trading. The goal is a comprehensive trading dashboard with 12+ normalized indicators (-100 to +100 scale), multiple chart layouts, and options data integration.
+This BTC Trading System now features a mathematically rigorous **"Pilot & Radar" oscillator system** where users manually control oscillator sensitivity while an AI-powered Markov model provides objective market context.
 
 **What's Currently Available:**
 - ✅ Flask backend structure (app.py, caching, CORS, rate limiting)
@@ -15,17 +15,22 @@ This project has been stripped down to its core infrastructure and is being rebu
 - ✅ Disk caching system (data/cache_manager.py)
 - ✅ Time transformation utilities (data/time_transformer.py)
 - ✅ Complete frontend design (dark theme, styling, controls, UI)
-- ✅ Two chart containers (price chart + oscillators)
+- ✅ OHLCV candlestick price charts (static/js/chart.js)
+- ✅ **Pilot & Radar composite oscillator system** ⭐ NEW
+- ✅ Garman-Klass volatility estimation (data/volatility.py)
+- ✅ 2-state Markov regime detector (data/markov_regime.py)
+- ✅ User-tunable composite Z-score oscillator (data/composite_zscore.py)
+- ✅ 5 noise level controls (14, 30, 50, 100, 200 periods)
+- ✅ Regime-based background shading (blue=low-vol, red=high-vol)
+- ✅ Base oscillators: RSI, MACD, Volume, DXY
 - ✅ API communication layer (static/js/api.js)
-- ✅ UI controls system (static/js/ui.js)
+- ✅ Tab-based system (BTC, ETH, Gold)
 
-**What's Been Removed:**
-- ❌ All data plugins (will be added back one-by-one)
-- ❌ Chart rendering logic (static/js/chart.js deleted - needs complete rewrite)
-- ❌ Cached data files (clean slate)
-
-**Next Steps:**
-Data plugins and chart system will be rebuilt incrementally to support the new trading system requirements.
+**Key Features:**
+- **Pilot**: User manually tunes oscillator sensitivity via 5 noise levels
+- **Radar**: Markov model provides objective volatility regime context
+- **Composite Z-Score**: Weighted average of multiple oscillators normalized to standard deviations
+- **Regime Shading**: Visual indication of market volatility state
 
 ---
 
@@ -61,10 +66,182 @@ This test suite validates critical data quality fixes:
 ### Python Dependencies
 
 ```bash
-pip install Flask requests Flask-Cors numpy
+pip install Flask requests Flask-Cors numpy statsmodels
 ```
 
+**Required packages**:
+- `Flask` - Web server
+- `requests` - API calls
+- `Flask-Cors` - CORS handling
+- `numpy` - Mathematical calculations
+- `statsmodels` - Markov switching models for regime detection
+
 No `requirements.txt` file exists yet - dependencies must be installed manually.
+
+## Pilot & Radar Oscillator System
+
+The system implements an advanced composite oscillator with two independent components:
+
+### Component 1: The Pilot (User-Tunable Composite Z-Score)
+
+**Purpose**: User manually controls oscillator sensitivity to find the signal-to-noise ratio that works for their trading style.
+
+**How It Works**:
+1. Fetches multiple oscillators (RSI, MACD, Volume, DXY)
+2. Calculates rolling Z-score for each: `Z = (x - μ) / σ`
+   - `μ` = rolling mean over user-selected window
+   - `σ` = rolling standard deviation over window
+3. Computes weighted average (currently equal weights: 0.25 each)
+4. Returns composite Z-score time series
+
+**Noise Level Controls** (5 options):
+- **14 periods** - Max Noise: Fast response, very sensitive to recent changes
+- **30 periods** - Med-High Noise: Moderate sensitivity
+- **50 periods** - Default: Balanced signal-to-noise
+- **100 periods** - Med-Low Noise: Smoother, less reactive
+- **200 periods** - Min Noise: Very smooth, shows long-term trends
+
+**Interpretation**:
+- Z-score represents standard deviations from mean
+- ±2σ: Statistically significant divergence (95% confidence)
+- ±3σ: Extreme divergence (99.7% confidence)
+- Larger window → smoother line, less noise, slower response
+- Smaller window → noisier line, faster response to changes
+
+**Files**:
+- `data/composite_zscore.py` - Composite Z-score calculator
+- Backend logic in `app.py` (`mode='composite'`)
+- Frontend: `static/js/oscillator.js` (`renderCompositeOscillator()`)
+- UI controls: `index.html` (`.noise-btn` elements)
+
+### Component 2: The Radar (Markov Regime Detector)
+
+**Purpose**: Provides objective, model-based classification of market volatility independent of user settings.
+
+**How It Works**:
+1. **Volatility Estimation**: Uses Garman-Klass estimator from OHLC data
+   - `σ_GK = sqrt(0.5 * ln(H/L)² - (2*ln(2)-1) * ln(C/O)²)`
+   - More robust than close-to-close volatility
+   - Annualized to percentage (×sqrt(252))
+
+2. **Markov Switching Model**: Fits 2-state AR(1) model to volatility
+   - Uses `statsmodels.tsa.regime_switching.MarkovAutoregression`
+   - Two hidden states: Regime 0 (Low-Vol), Regime 1 (High-Vol)
+   - Bayesian inference determines most probable regime for each timestamp
+   - Model uses full time series for smoothed probabilities
+
+3. **Regime Classification**:
+   - **Regime 0 (Low Volatility)**: Stable, range-bound conditions → Blue background
+   - **Regime 1 (High Volatility)**: Unstable, trending conditions → Red background
+
+**Visual Representation**:
+- Background shading on oscillator chart
+- Blue: Low-volatility regime (typical: 70-85% of time)
+- Red: High-volatility regime (typical: 15-30% of time)
+- Regime transitions indicate structural changes in market dynamics
+
+**Key Feature**: Regime classification is **independent** of user's noise level selection. It provides objective context regardless of how the user tunes the oscillator.
+
+**Files**:
+- `data/volatility.py` - Garman-Klass volatility estimator
+- `data/markov_regime.py` - 2-state Markov switching model
+- Backend: Returns regime data alongside composite data
+- Frontend: `oscillator.js` (`renderRegimeBackground()`)
+
+### API Endpoint: `/api/oscillator-data`
+
+**Parameters**:
+- `asset`: 'btc' | 'eth' | 'gold'
+- `datasets`: Comma-separated list (e.g., 'rsi,macd,volume,dxy')
+- `days`: Number of days ('7' | '30' | '90' | '365')
+- `mode`: 'composite' | 'individual' (default: composite)
+- `noise_level`: 14 | 30 | 50 | 100 | 200 (default: 50)
+- `normalizer`: 'zscore' (only option currently)
+
+**Response (composite mode)**:
+```json
+{
+    "mode": "composite",
+    "asset": "btc",
+    "noise_level": 50,
+    "composite": {
+        "data": [[timestamp, zscore], ...],
+        "metadata": {
+            "label": "Composite Z-Score",
+            "window": 50,
+            "components": ["RSI", "MACD", "Volume", "DXY"],
+            "weights": [0.25, 0.25, 0.25, 0.25]
+        }
+    },
+    "regime": {
+        "data": [[timestamp, regime_int], ...],
+        "metadata": {
+            "states": {
+                "0": {"label": "Low Volatility", "color": "rgba(0, 122, 255, 0.1)"},
+                "1": {"label": "High Volatility", "color": "rgba(255, 59, 48, 0.1)"}
+            }
+        }
+    }
+}
+```
+
+### Frontend Implementation
+
+**Noise Level Controls** (`index.html`):
+- 5 buttons per asset tab (BTC, ETH, Gold)
+- Active button highlighted in cyan (#00D9FF)
+- Triggers reload of oscillator data with new window size
+
+**State Management** (`main.js`):
+- `appState.noiseLevel`: Stores current noise level per asset
+- `appState.compositeMode`: Boolean flag (default: true)
+- `setupNoiseLevelControls()`: Event handlers for button clicks
+- `loadOscillatorData()`: Fetches and renders data
+
+**Chart Rendering** (`oscillator.js`):
+- `renderCompositeOscillator()`: Main composite rendering function
+  1. Renders regime background (first, so it's behind)
+  2. Renders reference lines at ±2σ and ±3σ
+  3. Renders composite Z-score line (cyan)
+  4. Updates axes with symmetrical Y-domain around 0
+- `renderRegimeBackground()`: Groups consecutive regime timestamps and renders colored rectangles
+- `renderIndividualOscillator()`: Original multi-line rendering (when `mode='individual'`)
+
+### Mathematical Foundations
+
+**Z-Score Normalization**:
+- Standardizes oscillators to common scale (standard deviations)
+- Makes RSI (0-100), MACD (price-scaled), and Volume (count) directly comparable
+- Rolling window captures local context rather than global statistics
+
+**Markov Switching Models**:
+- Assumes market alternates between latent volatility states
+- AR(1) structure: `volatility_t = α + β·volatility_{t-1} + ε_t`
+- Each regime has different parameters (α, β, σ)
+- Transition probabilities govern regime switches
+
+**Garman-Klass Volatility**:
+- Uses full OHLC range, not just closing prices
+- Statistically more efficient (requires fewer observations for same precision)
+- Formula accounts for both intraday range and open-close movement
+
+### Design Philosophy
+
+**Separation of Concerns**:
+- **Pilot** (User): Subjective tuning for their strategy
+- **Radar** (Model): Objective market characterization
+- Neither component influences the other
+
+**Equal Weighting (Current)**:
+- All oscillators contribute equally to composite
+- Architecture supports custom weights (future enhancement)
+- Designed for extensibility (can add more oscillators)
+
+**Performance Considerations**:
+- Markov model fitted once per request (expensive)
+- Results cached for 5 minutes (configurable)
+- Regime classifications stored in memory
+- Composite Z-scores recalculated on-demand per noise level
 
 ## Architecture Overview
 

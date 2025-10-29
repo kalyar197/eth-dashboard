@@ -391,14 +391,28 @@
             margin-bottom: 20px;
         }
 
-        /* Oscillator containers (40% height) */
+        /* Main Oscillator containers */
         #btc-oscillator-container, #eth-oscillator-container, #gold-oscillator-container {
             background: #1a1a1a;
             border-radius: 12px;
             border: 1px solid #2a2a2a;
             width: 100%;
-            min-height: 300px;
-            height: 28vh;
+            min-height: 250px;
+            height: 23vh;
+            position: relative;
+            padding: 20px;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+
+        /* Breakdown Oscillator containers (smaller) */
+        #btc-breakdown-oscillator-container, #eth-breakdown-oscillator-container, #gold-breakdown-oscillator-container {
+            background: #1a1a1a;
+            border-radius: 12px;
+            border: 1px solid #2a2a2a;
+            width: 100%;
+            min-height: 200px;
+            height: 18vh;
             position: relative;
             padding: 20px;
             overflow: hidden;
@@ -443,6 +457,49 @@
         .dataset-checkbox-wrapper input[type="checkbox"]:checked + label {
             color: #fff;
             font-weight: 500;
+        }
+
+        /* Noise level controls */
+        .noise-level-controls {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #2a2a2a;
+        }
+
+        .noise-label {
+            font-size: 12px;
+            color: #888;
+            font-weight: 500;
+            margin-right: 8px;
+        }
+
+        .noise-btn {
+            padding: 6px 12px;
+            border: 1px solid #333;
+            border-radius: 6px;
+            background: #0a0a0a;
+            color: #888;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-weight: 500;
+            font-size: 11px;
+            white-space: nowrap;
+        }
+
+        .noise-btn:hover {
+            border-color: #555;
+            color: #fff;
+            background: #1a1a1a;
+        }
+
+        .noise-btn.active {
+            background: #00D9FF;
+            color: #0a0a0a;
+            border-color: #00D9FF;
+            font-weight: 600;
         }
     </style>
 </head>
@@ -500,6 +557,14 @@
                         <label for="dxy-btc">DXY</label>
                     </div>
                 </div>
+                <div class="noise-level-controls">
+                    <label class="noise-label">Noise Level:</label>
+                    <button class="noise-btn" data-asset="btc" data-level="14">Max</button>
+                    <button class="noise-btn" data-asset="btc" data-level="30">Med-High</button>
+                    <button class="noise-btn active" data-asset="btc" data-level="50">Default</button>
+                    <button class="noise-btn" data-asset="btc" data-level="100">Med-Low</button>
+                    <button class="noise-btn" data-asset="btc" data-level="200">Min</button>
+                </div>
             </div>
             <div id="btc-oscillator-container">
                 <div class="zoom-controls">
@@ -508,6 +573,16 @@
                     <button class="zoom-btn zoom-out" title="Zoom Out">−</button>
                 </div>
                 <div class="info-text">Oscillator: 0 line = BTC price • Synchronized zoom</div>
+            </div>
+
+            <!-- Breakdown Oscillator Chart -->
+            <div id="btc-breakdown-oscillator-container">
+                <div class="zoom-controls">
+                    <button class="zoom-btn reset-zoom" title="Reset Zoom">↺</button>
+                    <button class="zoom-btn zoom-in" title="Zoom In">+</button>
+                    <button class="zoom-btn zoom-out" title="Zoom Out">−</button>
+                </div>
+                <div class="info-text">Breakdown: Individual Normalized Oscillators • Synchronized zoom</div>
             </div>
         </div>
     </div>
@@ -556,6 +631,14 @@
                         <label for="dxy-eth">DXY</label>
                     </div>
                 </div>
+                <div class="noise-level-controls">
+                    <label class="noise-label">Noise Level:</label>
+                    <button class="noise-btn" data-asset="eth" data-level="14">Max</button>
+                    <button class="noise-btn" data-asset="eth" data-level="30">Med-High</button>
+                    <button class="noise-btn active" data-asset="eth" data-level="50">Default</button>
+                    <button class="noise-btn" data-asset="eth" data-level="100">Med-Low</button>
+                    <button class="noise-btn" data-asset="eth" data-level="200">Min</button>
+                </div>
             </div>
             <div id="eth-oscillator-container">
                 <div class="zoom-controls">
@@ -564,6 +647,16 @@
                     <button class="zoom-btn zoom-out" title="Zoom Out">−</button>
                 </div>
                 <div class="info-text">Oscillator: 0 line = ETH price • Synchronized zoom</div>
+            </div>
+
+            <!-- Breakdown Oscillator Chart -->
+            <div id="eth-breakdown-oscillator-container">
+                <div class="zoom-controls">
+                    <button class="zoom-btn reset-zoom" title="Reset Zoom">↺</button>
+                    <button class="zoom-btn zoom-in" title="Zoom In">+</button>
+                    <button class="zoom-btn zoom-out" title="Zoom Out">−</button>
+                </div>
+                <div class="info-text">Breakdown: Individual Normalized Oscillators • Synchronized zoom</div>
             </div>
         </div>
     </div>
@@ -612,6 +705,14 @@
                         <label for="dxy-gold">DXY</label>
                     </div>
                 </div>
+                <div class="noise-level-controls">
+                    <label class="noise-label">Noise Level:</label>
+                    <button class="noise-btn" data-asset="gold" data-level="14">Max</button>
+                    <button class="noise-btn" data-asset="gold" data-level="30">Med-High</button>
+                    <button class="noise-btn active" data-asset="gold" data-level="50">Default</button>
+                    <button class="noise-btn" data-asset="gold" data-level="100">Med-Low</button>
+                    <button class="noise-btn" data-asset="gold" data-level="200">Min</button>
+                </div>
             </div>
             <div id="gold-oscillator-container">
                 <div class="zoom-controls">
@@ -620,6 +721,16 @@
                     <button class="zoom-btn zoom-out" title="Zoom Out">−</button>
                 </div>
                 <div class="info-text">Oscillator: 0 line = Gold price • Synchronized zoom</div>
+            </div>
+
+            <!-- Breakdown Oscillator Chart -->
+            <div id="gold-breakdown-oscillator-container">
+                <div class="zoom-controls">
+                    <button class="zoom-btn reset-zoom" title="Reset Zoom">↺</button>
+                    <button class="zoom-btn zoom-in" title="Zoom In">+</button>
+                    <button class="zoom-btn zoom-out" title="Zoom Out">−</button>
+                </div>
+                <div class="info-text">Breakdown: Individual Normalized Oscillators • Synchronized zoom</div>
             </div>
         </div>
     </div>

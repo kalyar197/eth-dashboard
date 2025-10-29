@@ -6,7 +6,7 @@
 // Import functions from modules
 import { getDatasetData } from './api.js';
 import { initChart, renderChart } from './chart.js';
-import { initOscillatorChart, renderOscillatorChart } from './oscillator.js';
+import { initOscillatorChart, renderOscillatorChart, initBreakdownChart, renderBreakdownChart } from './oscillator.js';
 
 // Application state
 const appState = {
@@ -42,6 +42,11 @@ const appState = {
         eth: false,
         gold: false
     },
+    breakdownInitialized: {
+        btc: false,
+        eth: false,
+        gold: false
+    },
     selectedDatasets: {
         btc: ['rsi', 'macd', 'volume', 'dxy'],
         eth: ['rsi', 'macd', 'volume', 'dxy'],
@@ -52,7 +57,14 @@ const appState = {
         macd: '#2196F3',
         volume: '#9C27B0',
         dxy: '#4CAF50'
-    }
+    },
+    // Noise level state (for composite oscillator)
+    noiseLevel: {
+        btc: 50,    // Default noise level
+        eth: 50,
+        gold: 50
+    },
+    compositeMode: true  // Use composite oscillator mode by default
 };
 
 /**
@@ -84,6 +96,9 @@ async function initialize() {
 
         // Setup oscillator controls
         setupOscillatorControls();
+
+        // Setup noise level controls
+        setupNoiseLevelControls();
 
         // Initialize and load the default tab (BTC)
         await loadTab('btc');
@@ -181,6 +196,32 @@ function setupOscillatorControls() {
 }
 
 /**
+ * Setup noise level controls for composite oscillator
+ */
+function setupNoiseLevelControls() {
+    document.querySelectorAll('.noise-btn').forEach(button => {
+        button.addEventListener('click', async () => {
+            const asset = button.dataset.asset;
+            const level = parseInt(button.dataset.level);
+
+            // Update active button state for this asset
+            document.querySelectorAll(`.noise-btn[data-asset="${asset}"]`).forEach(btn => {
+                btn.classList.remove('active');
+            });
+            button.classList.add('active');
+
+            // Update state
+            appState.noiseLevel[asset] = level;
+
+            console.log(`Noise level changed for ${asset}: ${level}`);
+
+            // Reload oscillator data with new noise level
+            await loadOscillatorData(asset);
+        });
+    });
+}
+
+/**
  * Load a tab (initialize chart if needed, fetch and render data)
  * @param {string} dataset - Dataset name ('btc', 'eth', 'gold')
  */
@@ -258,6 +299,8 @@ async function loadChartData(dataset) {
 async function loadOscillatorData(asset) {
     const days = appState.days[asset];
     const datasets = appState.selectedDatasets[asset].join(',');
+    const mode = appState.compositeMode ? 'composite' : 'individual';
+    const noiseLevel = appState.noiseLevel[asset];
     const normalizer = 'zscore';  // Always use zscore (regression divergence) normalizer
 
     if (!datasets) {
@@ -265,11 +308,11 @@ async function loadOscillatorData(asset) {
         return;
     }
 
-    console.log(`Fetching oscillator data for ${asset}: datasets=${datasets}, normalizer=${normalizer}, days=${days}`);
+    console.log(`Fetching oscillator data for ${asset}: mode=${mode}, datasets=${datasets}, noise_level=${noiseLevel}, days=${days}`);
 
     try {
-        // Fetch from API
-        const url = `/api/oscillator-data?asset=${asset}&datasets=${datasets}&days=${days}&normalizer=${normalizer}`;
+        // Build URL with mode and noise_level parameters
+        const url = `/api/oscillator-data?asset=${asset}&datasets=${datasets}&days=${days}&normalizer=${normalizer}&mode=${mode}&noise_level=${noiseLevel}`;
         const response = await fetch(url);
 
         if (!response.ok) {
@@ -278,23 +321,60 @@ async function loadOscillatorData(asset) {
 
         const result = await response.json();
 
-        if (!result || !result.datasets) {
-            throw new Error('Invalid oscillator data received');
-        }
-
-        console.log(`Received oscillator data for ${asset}:`, Object.keys(result.datasets));
-
         // Store data in state
         appState.oscillatorData[asset] = result;
 
-        // Prepare data for rendering
-        const datasetsData = {};
-        Object.entries(result.datasets).forEach(([datasetName, datasetInfo]) => {
-            datasetsData[datasetName] = datasetInfo.data;
-        });
+        // Handle composite mode vs individual mode
+        if (mode === 'composite') {
+            if (!result || !result.composite || !result.regime) {
+                throw new Error('Invalid composite oscillator data received');
+            }
 
-        // Render oscillator chart
-        renderOscillatorChart(asset, datasetsData, appState.datasetColors);
+            console.log(`Received composite oscillator data for ${asset}`);
+            console.log(`  Composite points: ${result.composite.data.length}`);
+            console.log(`  Regime points: ${result.regime.data.length}`);
+            console.log(`  Breakdown oscillators:`, result.breakdown ? Object.keys(result.breakdown) : 'none');
+
+            // Render composite oscillator chart with regime background
+            renderOscillatorChart(asset, {
+                composite: result.composite.data,
+                regime: result.regime.data,
+                metadata: {
+                    composite: result.composite.metadata,
+                    regime: result.regime.metadata
+                }
+            }, appState.datasetColors, true);  // true = composite mode
+
+            // Render breakdown chart if data is available
+            if (result.breakdown && Object.keys(result.breakdown).length > 0) {
+                // Initialize breakdown chart if not already done
+                if (!appState.breakdownInitialized[asset]) {
+                    const containerId = `${asset}-breakdown-oscillator-container`;
+                    initBreakdownChart(containerId, asset);
+                    appState.breakdownInitialized[asset] = true;
+                }
+
+                // Render breakdown chart
+                renderBreakdownChart(asset, result.breakdown);
+            }
+
+        } else {
+            // Individual mode (existing logic)
+            if (!result || !result.datasets) {
+                throw new Error('Invalid oscillator data received');
+            }
+
+            console.log(`Received oscillator data for ${asset}:`, Object.keys(result.datasets));
+
+            // Prepare data for rendering
+            const datasetsData = {};
+            Object.entries(result.datasets).forEach(([datasetName, datasetInfo]) => {
+                datasetsData[datasetName] = datasetInfo.data;
+            });
+
+            // Render oscillator chart (individual mode)
+            renderOscillatorChart(asset, datasetsData, appState.datasetColors, false);  // false = individual mode
+        }
 
     } catch (error) {
         console.error(`Error loading oscillator data for ${asset}:`, error);

@@ -7,6 +7,7 @@ import os
 import time
 # Data plugins
 from data import eth_price, btc_price, gold_price, rsi, macd, volume, dxy
+from data import markov_regime
 from data.normalizers import zscore
 from config import CACHE_DURATION, RATE_LIMIT_DELAY
 
@@ -46,6 +47,81 @@ OSCILLATOR_PLUGINS = {
 NORMALIZERS = {
     'zscore': zscore
 }
+
+def align_timestamps(normalized_oscillators):
+    """
+    Align multiple normalized oscillator datasets to common timestamps.
+
+    Args:
+        normalized_oscillators: Dict of {oscillator_name: [[timestamp, value], ...]}
+
+    Returns:
+        Tuple of (common_timestamps, aligned_values)
+        where aligned_values is Dict of {oscillator_name: [values aligned to common timestamps]}
+    """
+    if not normalized_oscillators:
+        return [], {}
+
+    # Find common timestamps (intersection)
+    timestamp_sets = [set(item[0] for item in data) for data in normalized_oscillators.values()]
+    common_timestamps = sorted(set.intersection(*timestamp_sets))
+
+    if not common_timestamps:
+        print("[Composite] No common timestamps found across oscillators")
+        return [], {}
+
+    # Create lookup dictionaries for each oscillator
+    aligned = {}
+    for name, data in normalized_oscillators.items():
+        lookup = {item[0]: item[1] for item in data}
+        aligned[name] = [lookup[ts] for ts in common_timestamps]
+
+    print(f"[Composite] Aligned {len(normalized_oscillators)} oscillators to {len(common_timestamps)} common timestamps")
+
+    return common_timestamps, aligned
+
+def calculate_composite_average(common_timestamps, aligned_values, weights=None):
+    """
+    Calculate equally-weighted (or custom-weighted) average of aligned oscillator values.
+
+    Args:
+        common_timestamps: List of timestamps
+        aligned_values: Dict of {oscillator_name: [values]}
+        weights: Dict of {oscillator_name: weight} or None for equal weights
+
+    Returns:
+        List of [timestamp, composite_value] pairs
+    """
+    if not common_timestamps or not aligned_values:
+        return []
+
+    # Determine weights
+    oscillator_names = list(aligned_values.keys())
+    if weights is None:
+        # Equal weights
+        n = len(oscillator_names)
+        weights = {name: 1.0 / n for name in oscillator_names}
+        print(f"[Composite] Using equal weights: {weights}")
+    else:
+        # Normalize weights to sum to 1
+        total = sum(weights.values())
+        weights = {name: w / total for name, w in weights.items()}
+        print(f"[Composite] Using custom weights: {weights}")
+
+    # Calculate weighted average for each timestamp
+    composite_data = []
+    for i, timestamp in enumerate(common_timestamps):
+        weighted_sum = 0.0
+        for name, values in aligned_values.items():
+            weight = weights.get(name, 0.0)
+            value = values[i]
+            weighted_sum += weight * value
+
+        composite_data.append([timestamp, weighted_sum])
+
+    print(f"[Composite] Generated {len(composite_data)} composite points")
+
+    return composite_data
 
 def get_cache_key(dataset_name, days):
     """Generate a cache key for the dataset and days combination"""
@@ -132,17 +208,27 @@ def get_data():
 @app.route('/api/oscillator-data')
 def get_oscillator_data():
     """
-    Fetch multiple oscillator datasets with normalization.
+    Fetch oscillator data with optional composite mode and regime detection.
+
     Query parameters:
     - asset: 'btc' | 'eth' | 'gold'
     - datasets: comma-separated list (e.g., 'rsi,macd,volume,dxy')
     - days: '7' | '30' | '180' | '1095'
     - normalizer: 'zscore' (Regression Divergence - only normalizer available)
+    - mode: 'individual' | 'composite' (default: 'individual')
+    - noise_level: 14 | 30 | 50 | 100 | 200 (window size for composite Z-score, default: 50)
+
+    When mode='composite':
+    - Returns composite Z-score oscillator (weighted avg of all specified oscillators)
+    - Returns Markov regime data for background shading
+    - noise_level controls oscillator sensitivity
     """
     asset = request.args.get('asset')
     datasets_param = request.args.get('datasets', '')
     days = request.args.get('days', '30')
     normalizer_name = request.args.get('normalizer', 'zscore')
+    mode = request.args.get('mode', 'individual')
+    noise_level = int(request.args.get('noise_level', '50'))
 
     if not asset or asset not in DATA_PLUGINS:
         return jsonify({'error': 'Invalid or missing asset parameter'}), 400
@@ -156,12 +242,17 @@ def get_oscillator_data():
     if not dataset_names:
         return jsonify({'error': 'No valid datasets specified'}), 400
 
-    # Validate normalizer
-    if normalizer_name not in NORMALIZERS:
+    # Validate normalizer (only used in individual mode)
+    if mode == 'individual' and normalizer_name not in NORMALIZERS:
         return jsonify({'error': f'Invalid normalizer: {normalizer_name}'}), 400
 
-    # Generate cache key
-    cache_key = f"oscillator_{asset}_{datasets_param}_{days}_{normalizer_name}"
+    # Validate noise level
+    valid_noise_levels = [14, 30, 50, 100, 200]
+    if noise_level not in valid_noise_levels:
+        return jsonify({'error': f'Invalid noise_level. Must be one of: {valid_noise_levels}'}), 400
+
+    # Generate cache key (include mode and noise_level)
+    cache_key = f"oscillator_{mode}_{asset}_{datasets_param}_{days}_{normalizer_name}_{noise_level}"
 
     # Check cache
     if is_cache_valid(cache_key):
@@ -169,74 +260,248 @@ def get_oscillator_data():
         return jsonify(cache[cache_key]['data'])
 
     try:
-        # Fetch asset price data (needed for normalization)
-        asset_module = DATA_PLUGINS[asset]
-        asset_result = asset_module.get_data(days)
-        asset_ohlcv_data = asset_result['data']
+        # Handle composite mode
+        if mode == 'composite':
+            print(f"[Composite Mode] Generating composite oscillator for {asset} with window={noise_level}")
+            print(f"[Composite Mode] Oscillators: {dataset_names}")
 
-        if not asset_ohlcv_data:
-            raise ValueError(f"No {asset.upper()} price data available")
+            # Apply rate limiting
+            rate_limit_check(f"composite_{asset}")
 
-        # Fetch oscillator datasets
-        result = {
-            'asset': asset,
-            'normalizer': normalizer_name,
-            'datasets': {}
-        }
+            # Step 1: Fetch asset price data (OHLCV) for normalization
+            # Request extra days to ensure enough history for rolling window
+            if days == 'max':
+                price_days = 'max'
+            else:
+                price_days = str(int(days) + noise_level + 10)
 
-        normalizer_module = NORMALIZERS[normalizer_name]
+            asset_module = DATA_PLUGINS[asset]
+            asset_result = asset_module.get_data(price_days)
+            asset_ohlcv_data = asset_result['data']
 
-        for dataset_name in dataset_names:
-            if dataset_name not in OSCILLATOR_PLUGINS:
-                print(f"Warning: Unknown oscillator dataset '{dataset_name}', skipping...")
-                continue
+            if not asset_ohlcv_data:
+                raise ValueError(f"No {asset.upper()} price data available")
 
-            try:
-                # Apply rate limiting
-                rate_limit_check(f"{dataset_name}_{asset}")
+            print(f"[Composite Mode] Fetched {len(asset_ohlcv_data)} price points for {asset.upper()}")
 
-                # Fetch raw oscillator data
-                oscillator_module = OSCILLATOR_PLUGINS[dataset_name]
+            # Step 2: Normalize each oscillator using regression-based normalizer
+            normalized_oscillators = {}
+            oscillator_metadata = {}  # Store metadata for breakdown chart
 
-                # DXY doesn't need asset parameter
-                if dataset_name == 'dxy':
-                    oscillator_result = oscillator_module.get_data(days)
-                else:
-                    oscillator_result = oscillator_module.get_data(days, asset)
-
-                raw_data = oscillator_result['data']
-
-                if not raw_data:
-                    print(f"Warning: No data for {dataset_name}, skipping...")
+            for oscillator_name in dataset_names:
+                if oscillator_name not in OSCILLATOR_PLUGINS:
+                    print(f"[Composite Mode] Warning: Unknown oscillator '{oscillator_name}', skipping...")
                     continue
 
-                # Apply normalization
-                normalized_data = normalizer_module.normalize(raw_data, asset_ohlcv_data)
+                try:
+                    # Apply rate limiting
+                    rate_limit_check(f"{oscillator_name}_{asset}")
 
-                # Get metadata
-                metadata = oscillator_result['metadata']
+                    # Fetch raw oscillator data
+                    oscillator_module = OSCILLATOR_PLUGINS[oscillator_name]
 
-                result['datasets'][dataset_name] = {
-                    'data': normalized_data,
-                    'metadata': metadata
+                    # Request extra days to ensure enough history for rolling window
+                    # Add noise_level + 10 extra days as buffer
+                    if days == 'max':
+                        extra_days = 'max'
+                    else:
+                        extra_days = str(int(days) + noise_level + 10)
+
+                    # DXY doesn't need asset parameter
+                    if oscillator_name == 'dxy':
+                        oscillator_result = oscillator_module.get_data(extra_days)
+                    else:
+                        oscillator_result = oscillator_module.get_data(extra_days, asset)
+
+                    raw_oscillator_data = oscillator_result['data']
+
+                    if not raw_oscillator_data:
+                        print(f"[Composite Mode] Warning: No data for {oscillator_name}, skipping...")
+                        continue
+
+                    print(f"[Composite Mode] Fetched {len(raw_oscillator_data)} points for {oscillator_name}")
+
+                    # Normalize using Rolling OLS Regression Divergence
+                    normalized_data = zscore.normalize(
+                        dataset_data=raw_oscillator_data,
+                        asset_price_data=asset_ohlcv_data,
+                        window=noise_level
+                    )
+
+                    if not normalized_data:
+                        print(f"[Composite Mode] Warning: Normalization failed for {oscillator_name}, skipping...")
+                        continue
+
+                    # Store normalized data
+                    normalized_oscillators[oscillator_name] = normalized_data
+
+                    # Capture metadata for breakdown chart
+                    metadata = oscillator_result['metadata'].copy()
+                    metadata['normalizer'] = 'Rolling OLS Regression Divergence'
+                    metadata['window'] = noise_level
+                    oscillator_metadata[oscillator_name] = metadata
+
+                    print(f"[Composite Mode] Normalized {oscillator_name}: {len(normalized_data)} points")
+
+                except Exception as e:
+                    print(f"[Composite Mode] Error processing {oscillator_name}: {e}")
+                    import traceback
+                    traceback.print_exc()
+                    # Continue with other oscillators
+
+            if not normalized_oscillators:
+                raise ValueError("No oscillators could be normalized successfully")
+
+            # Step 3: Align all normalized oscillators to common timestamps
+            common_timestamps, aligned_values = align_timestamps(normalized_oscillators)
+
+            if not common_timestamps:
+                raise ValueError("No common timestamps found across normalized oscillators")
+
+            # Step 4: Calculate equally-weighted composite average
+            composite_data = calculate_composite_average(
+                common_timestamps=common_timestamps,
+                aligned_values=aligned_values,
+                weights=None  # Equal weights
+            )
+
+            # Step 4.5: Trim composite data to requested number of days
+            if composite_data and days != 'max':
+                cutoff_timestamp = composite_data[-1][0] - (int(days) * 24 * 60 * 60 * 1000)
+                composite_data = [d for d in composite_data if d[0] >= cutoff_timestamp]
+                print(f"[Composite Mode] Trimmed to {len(composite_data)} points for {days} days")
+
+            # Step 5: Get Markov regime data
+            regime_result = markov_regime.get_data(days=days, asset=asset)
+
+            # Step 5.5: Build breakdown data (individual normalized oscillators)
+            breakdown_data = {}
+
+            for oscillator_name, normalized_data in normalized_oscillators.items():
+                # Trim each oscillator's data to requested number of days
+                trimmed_data = normalized_data
+                if normalized_data and days != 'max':
+                    cutoff_timestamp = normalized_data[-1][0] - (int(days) * 24 * 60 * 60 * 1000)
+                    trimmed_data = [d for d in normalized_data if d[0] >= cutoff_timestamp]
+
+                breakdown_data[oscillator_name] = {
+                    'data': trimmed_data,
+                    'metadata': oscillator_metadata[oscillator_name]
                 }
 
-                print(f"Fetched and normalized {dataset_name} for {asset}: {len(normalized_data)} points")
+            print(f"[Composite Mode] Generated breakdown data for {len(breakdown_data)} oscillators")
 
-            except Exception as e:
-                print(f"Error fetching oscillator {dataset_name}: {e}")
-                # Continue with other datasets
+            # Step 6: Build result
+            result = {
+                'mode': 'composite',
+                'asset': asset,
+                'noise_level': noise_level,
+                'composite': {
+                    'data': composite_data,
+                    'metadata': {
+                        'label': 'Composite Regression Divergence',
+                        'yAxisId': 'zscore',
+                        'yAxisLabel': 'Standard Deviations',
+                        'unit': 'σ',
+                        'color': '#00D9FF',
+                        'chartType': 'line',
+                        'window': noise_level,
+                        'components': list(normalized_oscillators.keys()),
+                        'weights': {name: 1.0/len(normalized_oscillators) for name in normalized_oscillators.keys()},
+                        'normalizer': 'Rolling OLS Regression Divergence'
+                    }
+                },
+                'regime': {
+                    'data': regime_result['data'],
+                    'metadata': regime_result['metadata']
+                },
+                'breakdown': breakdown_data
+            }
 
-        # Store in cache
-        cache[cache_key] = {
-            'data': result,
-            'timestamp': time.time()
-        }
+            print(f"[Composite Mode] Generated {len(composite_data)} composite points")
+            print(f"[Composite Mode] Generated {len(regime_result['data'])} regime points")
 
-        return jsonify(result)
+            # Store in cache
+            cache[cache_key] = {
+                'data': result,
+                'timestamp': time.time()
+            }
+
+            return jsonify(result)
+
+        # Handle individual mode (existing logic)
+        else:
+            # Fetch asset price data (needed for normalization)
+            asset_module = DATA_PLUGINS[asset]
+            asset_result = asset_module.get_data(days)
+            asset_ohlcv_data = asset_result['data']
+
+            if not asset_ohlcv_data:
+                raise ValueError(f"No {asset.upper()} price data available")
+
+            # Fetch oscillator datasets
+            result = {
+                'mode': 'individual',
+                'asset': asset,
+                'normalizer': normalizer_name,
+                'datasets': {}
+            }
+
+            normalizer_module = NORMALIZERS[normalizer_name]
+
+            for dataset_name in dataset_names:
+                if dataset_name not in OSCILLATOR_PLUGINS:
+                    print(f"Warning: Unknown oscillator dataset '{dataset_name}', skipping...")
+                    continue
+
+                try:
+                    # Apply rate limiting
+                    rate_limit_check(f"{dataset_name}_{asset}")
+
+                    # Fetch raw oscillator data
+                    oscillator_module = OSCILLATOR_PLUGINS[dataset_name]
+
+                    # DXY doesn't need asset parameter
+                    if dataset_name == 'dxy':
+                        oscillator_result = oscillator_module.get_data(days)
+                    else:
+                        oscillator_result = oscillator_module.get_data(days, asset)
+
+                    raw_data = oscillator_result['data']
+
+                    if not raw_data:
+                        print(f"Warning: No data for {dataset_name}, skipping...")
+                        continue
+
+                    # Apply normalization
+                    normalized_data = normalizer_module.normalize(raw_data, asset_ohlcv_data)
+
+                    # Get metadata
+                    metadata = oscillator_result['metadata']
+
+                    result['datasets'][dataset_name] = {
+                        'data': normalized_data,
+                        'metadata': metadata
+                    }
+
+                    print(f"Fetched and normalized {dataset_name} for {asset}: {len(normalized_data)} points")
+
+                except Exception as e:
+                    print(f"Error fetching oscillator {dataset_name}: {e}")
+                    # Continue with other datasets
+
+            # Store in cache
+            cache[cache_key] = {
+                'data': result,
+                'timestamp': time.time()
+            }
+
+            return jsonify(result)
 
     except Exception as e:
         print(f"Error processing oscillator data: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': f'Server error processing oscillator data: {str(e)}'}), 500
 
 @app.route('/api/clear-cache')
