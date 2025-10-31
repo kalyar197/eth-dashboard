@@ -16,6 +16,7 @@ from . import rsi
 from . import macd_histogram
 from . import adx
 from . import gold_oscillator
+from . import eth_oscillator
 
 # Import overlay plugins
 from . import sma
@@ -33,6 +34,7 @@ __all__ = [
     'macd_histogram',
     'adx',
     'gold_oscillator',
+    'eth_oscillator',
     'sma',
     'parabolic_sar'
 ]

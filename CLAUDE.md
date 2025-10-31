@@ -23,6 +23,7 @@ This BTC Trading System now features a mathematically rigorous **"Pilot & Radar"
 - ✅ 5 noise level controls (14, 30, 50, 100, 200 periods)
 - ✅ Regime-based background shading (blue=low-vol, red=high-vol)
 - ✅ Base oscillators: RSI, MACD Histogram, ADX, Gold Price
+- ✅ BTC tab includes ETH Price oscillator (crypto alternative divergence)
 - ✅ API communication layer (static/js/api.js)
 - ✅ Tab-based system (BTC, ETH, Gold)
 
@@ -242,6 +243,34 @@ The system implements an advanced composite oscillator with two independent comp
 - Results cached for 5 minutes (configurable)
 - Regime classifications stored in memory
 - Composite Z-scores recalculated on-demand per noise level
+
+### Oscillator Plugins
+
+The system includes multiple oscillator plugins that can be normalized and combined into composite indicators:
+
+**Core Oscillators** (all tabs):
+- **RSI**: Relative Strength Index - momentum oscillator (0-100 scale)
+- **MACD Histogram**: Trend direction and strength indicator
+- **ADX**: Average Directional Index - trend strength (0-100 scale)
+
+**External Asset Oscillators**:
+- **Gold Price** (`data/gold_oscillator.py`): Available on BTC and ETH tabs
+  - Wraps `gold_price` module to extract closing prices
+  - Shows safe-haven vs crypto divergence
+  - Positive z-score: Gold expensive relative to crypto (risk-off)
+  - Negative z-score: Gold cheap relative to crypto (risk-on)
+
+- **ETH Price** (`data/eth_oscillator.py`): Available on BTC tab only
+  - Wraps `eth_price` module to extract closing prices
+  - Shows crypto alternative divergence (ETH vs BTC)
+  - Positive z-score: ETH outperforming BTC (alt season signal)
+  - Negative z-score: BTC outperforming ETH (flight to BTC)
+
+**Mathematical Treatment**:
+- All oscillators normalized via Rolling OLS Regression Divergence
+- External asset oscillators don't take asset parameter (like DXY before removal)
+- Returns simple format: `[[timestamp, close_price], ...]`
+- Normalized by regressing against target asset price (BTC or ETH)
 
 ## Architecture Overview
 
