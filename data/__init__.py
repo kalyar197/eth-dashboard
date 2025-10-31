@@ -13,9 +13,15 @@ from . import gold_price
 
 # Import oscillator plugins
 from . import rsi
-from . import macd
+from . import macd_histogram
 from . import volume
 from . import dxy
+from . import adx
+from . import atr
+
+# Import overlay plugins
+from . import sma
+from . import parabolic_sar
 
 # List of all available data modules
 __all__ = [
@@ -26,7 +32,11 @@ __all__ = [
     'btc_price',
     'gold_price',
     'rsi',
-    'macd',
+    'macd_histogram',
     'volume',
-    'dxy'
+    'dxy',
+    'adx',
+    'atr',
+    'sma',
+    'parabolic_sar'
 ]

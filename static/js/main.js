@@ -48,15 +48,17 @@ const appState = {
         gold: false
     },
     selectedDatasets: {
-        btc: ['rsi', 'macd', 'volume', 'dxy'],
-        eth: ['rsi', 'macd', 'volume', 'dxy'],
-        gold: ['rsi', 'macd', 'dxy']  // No volume for gold
+        btc: ['rsi', 'macd_histogram', 'volume', 'dxy'],
+        eth: ['rsi', 'macd_histogram', 'volume', 'dxy'],
+        gold: ['rsi', 'macd_histogram', 'dxy']  // No volume for gold
     },
     datasetColors: {
         rsi: '#FF9500',
-        macd: '#2196F3',
+        macd_histogram: '#2196F3',
         volume: '#9C27B0',
-        dxy: '#4CAF50'
+        dxy: '#4CAF50',
+        adx: '#673AB7',
+        atr: '#FF5722'
     },
     // Noise level state (for composite oscillator)
     noiseLevel: {
@@ -64,7 +66,13 @@ const appState = {
         eth: 50,
         gold: 50
     },
-    compositeMode: true  // Use composite oscillator mode by default
+    compositeMode: true,  // Use composite oscillator mode by default
+    // Overlay state (moving averages on price chart)
+    overlaySelections: {
+        btc: [],    // Selected overlays for BTC (e.g., ['sma_14_btc', 'sma_60_btc'])
+        eth: [],    // Selected overlays for ETH
+        gold: []    // Selected overlays for Gold
+    }
 };
 
 /**
@@ -99,6 +107,9 @@ async function initialize() {
 
         // Setup noise level controls
         setupNoiseLevelControls();
+
+        // Setup overlay controls (moving averages)
+        setupOverlayControls();
 
         // Initialize and load the default tab (BTC)
         await loadTab('btc');
@@ -222,6 +233,34 @@ function setupNoiseLevelControls() {
 }
 
 /**
+ * Setup overlay controls (moving averages on price chart)
+ */
+function setupOverlayControls() {
+    document.querySelectorAll('.overlay-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', async () => {
+            const asset = checkbox.dataset.asset;
+            const overlayName = checkbox.dataset.overlay;
+
+            // Update overlay selections
+            if (checkbox.checked) {
+                if (!appState.overlaySelections[asset].includes(overlayName)) {
+                    appState.overlaySelections[asset].push(overlayName);
+                }
+            } else {
+                appState.overlaySelections[asset] = appState.overlaySelections[asset].filter(
+                    o => o !== overlayName
+                );
+            }
+
+            console.log(`Overlay selection changed for ${asset}:`, appState.overlaySelections[asset]);
+
+            // Reload chart data with updated overlays
+            await loadChartData(asset);
+        });
+    });
+}
+
+/**
  * Load a tab (initialize chart if needed, fetch and render data)
  * @param {string} dataset - Dataset name ('btc', 'eth', 'gold')
  */
@@ -257,7 +296,7 @@ async function loadTab(dataset) {
 
 /**
  * Fetch data and render chart for a dataset
- * @param {string} dataset - Dataset name ('btc' or 'eth')
+ * @param {string} dataset - Dataset name ('btc', 'eth', or 'gold')
  */
 async function loadChartData(dataset) {
     const days = appState.days[dataset];
@@ -268,7 +307,7 @@ async function loadChartData(dataset) {
     showLoadingMessage(dataset);
 
     try {
-        // Fetch data from API
+        // Fetch price data from API
         const result = await getDatasetData(dataset, days);
 
         if (!result || !result.data || result.data.length === 0) {
@@ -280,8 +319,30 @@ async function loadChartData(dataset) {
         // Store data in state
         appState.chartData[dataset] = result.data;
 
-        // Render chart
-        renderChart(dataset, result.data);
+        // Fetch overlay data (moving averages) if any are selected
+        const overlays = [];
+        const selectedOverlays = appState.overlaySelections[dataset] || [];
+
+        for (const overlayName of selectedOverlays) {
+            try {
+                console.log(`Fetching overlay data: ${overlayName}`);
+                const overlayResult = await getDatasetData(overlayName, days);
+
+                if (overlayResult && overlayResult.data && overlayResult.data.length > 0) {
+                    overlays.push({
+                        data: overlayResult.data,
+                        metadata: overlayResult.metadata
+                    });
+                    console.log(`Loaded overlay ${overlayName}: ${overlayResult.data.length} points`);
+                }
+            } catch (overlayError) {
+                console.warn(`Failed to load overlay ${overlayName}:`, overlayError);
+                // Continue loading other overlays even if one fails
+            }
+        }
+
+        // Render chart with price data and overlays
+        renderChart(dataset, result.data, overlays);
 
         // Clear loading message
         clearMessages(dataset);

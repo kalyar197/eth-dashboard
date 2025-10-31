@@ -6,7 +6,7 @@ from flask_cors import CORS
 import os
 import time
 # Data plugins
-from data import eth_price, btc_price, gold_price, rsi, macd, volume, dxy
+from data import eth_price, btc_price, gold_price, rsi, macd_histogram, volume, dxy, adx, atr, sma, parabolic_sar
 from data import markov_regime
 from data.normalizers import zscore
 from config import CACHE_DURATION, RATE_LIMIT_DELAY
@@ -29,6 +29,7 @@ cache = {}
 last_api_call = {}
 
 # A dictionary mapping dataset names to their data-fetching modules
+# Note: OVERLAY_PLUGINS will be merged into this dictionary below
 DATA_PLUGINS = {
     'eth': eth_price,
     'btc': btc_price,
@@ -38,10 +39,32 @@ DATA_PLUGINS = {
 # Oscillator plugins (require asset parameter)
 OSCILLATOR_PLUGINS = {
     'rsi': rsi,
-    'macd': macd,
+    'macd_histogram': macd_histogram,
     'volume': volume,
-    'dxy': dxy
+    'dxy': dxy,
+    'adx': adx,
+    'atr': atr
 }
+
+# Overlay plugins (Moving Averages & Parabolic SAR - callable via /api/data)
+# These overlay on price charts rather than displaying in separate oscillator chart
+OVERLAY_PLUGINS = {
+    'sma_7_btc': lambda days: sma.get_data(days, 'btc', 7),
+    'sma_21_btc': lambda days: sma.get_data(days, 'btc', 21),
+    'sma_60_btc': lambda days: sma.get_data(days, 'btc', 60),
+    'sma_7_eth': lambda days: sma.get_data(days, 'eth', 7),
+    'sma_21_eth': lambda days: sma.get_data(days, 'eth', 21),
+    'sma_60_eth': lambda days: sma.get_data(days, 'eth', 60),
+    'sma_7_gold': lambda days: sma.get_data(days, 'gold', 7),
+    'sma_21_gold': lambda days: sma.get_data(days, 'gold', 21),
+    'sma_60_gold': lambda days: sma.get_data(days, 'gold', 60),
+    'psar_btc': lambda days: parabolic_sar.get_data(days, 'btc'),
+    'psar_eth': lambda days: parabolic_sar.get_data(days, 'eth'),
+    'psar_gold': lambda days: parabolic_sar.get_data(days, 'gold'),
+}
+
+# Merge overlay plugins into DATA_PLUGINS so they're accessible via /api/data
+DATA_PLUGINS.update(OVERLAY_PLUGINS)
 
 # Normalizer function (using only zscore - Regression Divergence)
 NORMALIZERS = {
@@ -183,10 +206,17 @@ def get_data():
     try:
         # Apply rate limiting before making API call
         rate_limit_check(dataset_name)
-        
-        # Dynamically call the get_data function from the appropriate module
-        data_module = DATA_PLUGINS[dataset_name]
-        data = data_module.get_data(days)
+
+        # Dynamically call the get_data function from the appropriate module or callable
+        data_plugin = DATA_PLUGINS[dataset_name]
+
+        # Check if it's a callable (lambda) or a module with get_data method
+        if callable(data_plugin) and not hasattr(data_plugin, 'get_data'):
+            # It's a lambda function - call it directly
+            data = data_plugin(days)
+        else:
+            # It's a module - call its get_data method
+            data = data_plugin.get_data(days)
         
         # Store in cache
         cache[cache_key] = {

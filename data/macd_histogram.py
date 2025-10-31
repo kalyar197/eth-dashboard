@@ -1,16 +1,17 @@
-# data/macd.py
+# data/macd_histogram.py
 """
-MACD (Moving Average Convergence Divergence) Indicator
+MACD Histogram (Moving Average Convergence Divergence Histogram) Indicator
 
-Calculates MACD from asset price data with incremental fetching.
-MACD shows the relationship between two moving averages of prices.
+Calculates MACD Histogram from asset price data with incremental fetching.
+MACD Histogram shows momentum acceleration/deceleration.
 
 Formula:
 - MACD Line = 12-period EMA - 26-period EMA
 - Signal Line = 9-period EMA of MACD Line
 - Histogram = MACD Line - Signal Line
 
-Returns the MACD Line (primary value) for divergence detection.
+Returns the Histogram (MACD - Signal) for momentum divergence detection.
+Histogram crossing zero indicates MACD/Signal crossover (potential trade signal).
 """
 
 import numpy as np
@@ -33,17 +34,17 @@ def get_metadata(asset='btc'):
     asset_name = asset_names.get(asset, asset.upper())
 
     return {
-        'label': f'MACD ({asset_name})',
+        'label': f'MACD Histogram ({asset_name})',
         'oscillator': True,
         'yAxisId': 'oscillator',
-        'yAxisLabel': 'MACD',
+        'yAxisLabel': 'MACD Histogram',
         'unit': '',
         'chartType': 'line',
         'color': '#2196F3',  # Blue color
         'strokeWidth': 2,
-        'description': f'Moving Average Convergence Divergence for {asset_name} (12,26,9)',
+        'description': f'MACD Histogram for {asset_name} (12,26,9) - Momentum acceleration indicator',
         'data_structure': 'simple',
-        'components': ['timestamp', 'macd_value'],
+        'components': ['timestamp', 'histogram_value'],
         'referenceLines': [
             {'value': 0, 'label': 'Zero Line', 'color': '#888'}
         ]
@@ -138,9 +139,9 @@ def calculate_macd(prices, fast_period=12, slow_period=26, signal_period=9):
     return macd_line, signal_line, histogram
 
 
-def calculate_macd_from_ohlcv(ohlcv_data, fast_period=12, slow_period=26, signal_period=9):
+def calculate_macd_histogram_from_ohlcv(ohlcv_data, fast_period=12, slow_period=26, signal_period=9):
     """
-    Calculate MACD from OHLCV data.
+    Calculate MACD Histogram from OHLCV data.
 
     Args:
         ohlcv_data (list): [[timestamp, open, high, low, close, volume], ...]
@@ -149,7 +150,7 @@ def calculate_macd_from_ohlcv(ohlcv_data, fast_period=12, slow_period=26, signal
         signal_period (int): Signal line period
 
     Returns:
-        list: [[timestamp, macd_value], ...] (returns MACD Line, skips None values)
+        list: [[timestamp, histogram_value], ...] (returns Histogram, skips None values)
     """
     if not ohlcv_data or len(ohlcv_data) < slow_period:
         return []
@@ -160,21 +161,21 @@ def calculate_macd_from_ohlcv(ohlcv_data, fast_period=12, slow_period=26, signal
     # Calculate MACD
     macd_line, signal_line, histogram = calculate_macd(close_prices, fast_period, slow_period, signal_period)
 
-    # Pair timestamps with MACD Line values, skip None values
+    # Pair timestamps with Histogram values, skip None values
     result = []
     for i, item in enumerate(ohlcv_data):
         timestamp = item[0]
-        macd_value = macd_line[i]
+        histogram_value = histogram[i]
 
-        if macd_value is not None:
-            result.append([timestamp, macd_value])
+        if histogram_value is not None:
+            result.append([timestamp, histogram_value])
 
     return result
 
 
 def get_data(days='365', asset='btc', fast_period=12, slow_period=26, signal_period=9):
     """
-    Fetches MACD data using incremental fetching strategy.
+    Fetches MACD Histogram data using incremental fetching strategy.
 
     Args:
         days (str): Number of days to return
@@ -186,12 +187,12 @@ def get_data(days='365', asset='btc', fast_period=12, slow_period=26, signal_per
     Returns:
         dict: {
             'metadata': metadata dict,
-            'data': [[timestamp, macd_value], ...],
+            'data': [[timestamp, histogram_value], ...],
             'structure': 'simple'
         }
     """
     metadata = get_metadata(asset)
-    dataset_name = f'macd_{asset}'
+    dataset_name = f'macd_histogram_{asset}'
 
     try:
         requested_days = int(days) if days != 'max' else 1095
@@ -199,7 +200,7 @@ def get_data(days='365', asset='btc', fast_period=12, slow_period=26, signal_per
         # Need extra days for MACD calculation
         fetch_days = requested_days + slow_period + signal_period + 10
 
-        # Load existing historical MACD data
+        # Load existing historical MACD Histogram data
         historical_data = load_historical_data(dataset_name)
 
         # Import the asset price module dynamically
@@ -213,34 +214,34 @@ def get_data(days='365', asset='btc', fast_period=12, slow_period=26, signal_per
             raise ValueError(f"Unsupported asset: {asset}")
 
         # Fetch asset OHLCV data
-        print(f"[MACD {asset.upper()}] Fetching {asset.upper()} price data for MACD calculation...")
+        print(f"[MACD Histogram {asset.upper()}] Fetching {asset.upper()} price data for MACD Histogram calculation...")
         asset_data_result = asset_module.get_data(str(fetch_days))
         asset_ohlcv_data = asset_data_result['data']
 
         if not asset_ohlcv_data:
-            raise ValueError(f"No {asset.upper()} price data available for MACD calculation")
+            raise ValueError(f"No {asset.upper()} price data available for MACD Histogram calculation")
 
-        print(f"[MACD {asset.upper()}] Calculating MACD from {len(asset_ohlcv_data)} price data points...")
+        print(f"[MACD Histogram {asset.upper()}] Calculating MACD Histogram from {len(asset_ohlcv_data)} price data points...")
 
-        # Calculate MACD from OHLCV data
-        calculated_macd = calculate_macd_from_ohlcv(asset_ohlcv_data, fast_period, slow_period, signal_period)
+        # Calculate MACD Histogram from OHLCV data
+        calculated_histogram = calculate_macd_histogram_from_ohlcv(asset_ohlcv_data, fast_period, slow_period, signal_period)
 
-        if not calculated_macd:
-            raise ValueError("MACD calculation returned no data")
+        if not calculated_histogram:
+            raise ValueError("MACD Histogram calculation returned no data")
 
-        print(f"[MACD {asset.upper()}] Calculated {len(calculated_macd)} MACD values")
+        print(f"[MACD Histogram {asset.upper()}] Calculated {len(calculated_histogram)} Histogram values")
 
         # Merge with historical data
         merged_data = merge_and_deduplicate(
             existing_data=historical_data,
-            new_data=calculated_macd,
+            new_data=calculated_histogram,
             overlap_days=fetch_days
         )
 
         # Validate data structure
         is_valid, structure_type, error_msg = validate_data_structure(merged_data)
         if not is_valid:
-            print(f"[MACD {asset.upper()}] Warning: Data validation failed: {error_msg}")
+            print(f"[MACD Histogram {asset.upper()}] Warning: Data validation failed: {error_msg}")
 
         # Save complete historical dataset
         save_historical_data(dataset_name, merged_data)
@@ -253,11 +254,11 @@ def get_data(days='365', asset='btc', fast_period=12, slow_period=26, signal_per
         else:
             filtered_data = merged_data
 
-        print(f"[MACD {asset.upper()}] Returning {len(filtered_data)} MACD data points")
+        print(f"[MACD Histogram {asset.upper()}] Returning {len(filtered_data)} Histogram data points")
         if filtered_data:
-            print(f"[MACD {asset.upper()}] Date range: {datetime.fromtimestamp(filtered_data[0][0]/1000, tz=timezone.utc).date()} to {datetime.fromtimestamp(filtered_data[-1][0]/1000, tz=timezone.utc).date()}")
+            print(f"[MACD Histogram {asset.upper()}] Date range: {datetime.fromtimestamp(filtered_data[0][0]/1000, tz=timezone.utc).date()} to {datetime.fromtimestamp(filtered_data[-1][0]/1000, tz=timezone.utc).date()}")
             values = [d[1] for d in filtered_data]
-            print(f"[MACD {asset.upper()}] MACD range: {min(values):.2f} to {max(values):.2f}")
+            print(f"[MACD Histogram {asset.upper()}] Histogram range: {min(values):.2f} to {max(values):.2f}")
 
         return {
             'metadata': metadata,
@@ -266,12 +267,12 @@ def get_data(days='365', asset='btc', fast_period=12, slow_period=26, signal_per
         }
 
     except Exception as e:
-        print(f"[MACD {asset.upper()}] Error in get_data: {e}")
+        print(f"[MACD Histogram {asset.upper()}] Error in get_data: {e}")
 
         # Fallback to historical data
         historical_data = load_historical_data(dataset_name)
         if historical_data:
-            print(f"[MACD {asset.upper()}] Falling back to historical data ({len(historical_data)} records)")
+            print(f"[MACD Histogram {asset.upper()}] Falling back to historical data ({len(historical_data)} records)")
 
             if days != 'max':
                 cutoff_date = datetime.now(tz=timezone.utc) - timedelta(days=int(days))
@@ -286,7 +287,7 @@ def get_data(days='365', asset='btc', fast_period=12, slow_period=26, signal_per
                 'structure': 'simple'
             }
 
-        print(f"[MACD {asset.upper()}] No historical data available for fallback")
+        print(f"[MACD Histogram {asset.upper()}] No historical data available for fallback")
         return {
             'metadata': metadata,
             'data': [],

@@ -50,6 +50,7 @@ export function initChart(containerId, dataset, color) {
     // Create groups for different elements
     const gridGroup = g.append('g').attr('class', 'grid');
     const candlesGroup = g.append('g').attr('class', 'candles').attr('clip-path', `url(#clip-${dataset})`);
+    const overlaysGroup = g.append('g').attr('class', 'overlays').attr('clip-path', `url(#clip-${dataset})`);
     const xAxisGroup = g.append('g').attr('class', 'x-axis').attr('transform', `translate(0,${height})`);
     const yAxisGroup = g.append('g').attr('class', 'y-axis');
 
@@ -68,24 +69,27 @@ export function initChart(containerId, dataset, color) {
         color,
         gridGroup,
         candlesGroup,
+        overlaysGroup,
         xAxisGroup,
         yAxisGroup,
         crosshairGroup,
         xScale: null,
         yScale: null,
         zoom: null,
-        currentTransform: d3.zoomIdentity
+        currentTransform: d3.zoomIdentity,
+        overlayData: []  // Store overlay data for zoom updates
     };
 
     console.log(`Chart initialized for ${dataset}`);
 }
 
 /**
- * Render candlestick chart with OHLCV data
- * @param {string} dataset - Dataset name ('btc' or 'eth')
+ * Render candlestick chart with OHLCV data and optional overlays
+ * @param {string} dataset - Dataset name ('btc', 'eth', or 'gold')
  * @param {Array} data - OHLCV data [[timestamp, open, high, low, close, volume], ...]
+ * @param {Array} overlays - Optional array of overlay datasets [{data: [[ts, value], ...], metadata: {...}}, ...]
  */
-export function renderChart(dataset, data) {
+export function renderChart(dataset, data, overlays = []) {
     const chart = chartInstances[dataset];
     if (!chart) {
         console.error(`Chart instance for ${dataset} not found`);
@@ -99,14 +103,31 @@ export function renderChart(dataset, data) {
     }
 
     console.log(`Rendering ${data.length} candles for ${dataset}`);
+    if (overlays && overlays.length > 0) {
+        console.log(`Rendering ${overlays.length} overlay(s) for ${dataset}`);
+    }
+
+    // Store overlay data for zoom updates
+    chart.overlayData = overlays || [];
 
     // Create scales
     chart.xScale = d3.scaleTime()
         .domain(d3.extent(data, d => new Date(d[0])))
         .range([0, chart.width]);
 
-    // Find price range (considering high/low)
+    // Find price range (considering high/low and overlay values)
     const prices = data.flatMap(d => [d[2], d[3]]); // high, low
+
+    // Include overlay values in Y-domain calculation
+    if (overlays && overlays.length > 0) {
+        overlays.forEach(overlay => {
+            if (overlay.data && overlay.data.length > 0) {
+                const overlayValues = overlay.data.map(d => d[1]);
+                prices.push(...overlayValues);
+            }
+        });
+    }
+
     chart.yScale = d3.scaleLinear()
         .domain([d3.min(prices) * 0.98, d3.max(prices) * 1.02])
         .range([chart.height, 0]);
@@ -197,11 +218,88 @@ export function renderChart(dataset, data) {
     chart.xAxisGroup.selectAll('path, line').style('stroke', '#333');
     chart.yAxisGroup.selectAll('path, line').style('stroke', '#333');
 
+    // Render overlays (moving averages, etc.)
+    if (overlays && overlays.length > 0) {
+        renderOverlays(dataset, overlays);
+    }
+
     // Add zoom behavior
     setupZoom(dataset, data);
 
     // Add hover behavior
     setupCrosshair(dataset, data);
+}
+
+/**
+ * Render overlay lines (moving averages, etc.) or dots (Parabolic SAR)
+ * @param {string} dataset - Dataset name
+ * @param {Array} overlays - Array of overlay datasets [{data: [[ts, value], ...], metadata: {...}}, ...]
+ */
+function renderOverlays(dataset, overlays) {
+    const chart = chartInstances[dataset];
+    if (!chart || !overlays || overlays.length === 0) {
+        return;
+    }
+
+    // Clear existing overlays
+    chart.overlaysGroup.selectAll('*').remove();
+
+    // Render each overlay
+    overlays.forEach((overlay, index) => {
+        if (!overlay.data || overlay.data.length === 0) {
+            return;
+        }
+
+        const metadata = overlay.metadata || {};
+        const renderType = metadata.renderType || 'line';
+        const label = metadata.label || `Overlay ${index + 1}`;
+
+        if (renderType === 'dots') {
+            // Render as dots (e.g., Parabolic SAR)
+            const dotRadius = metadata.dotRadius || 3;
+            const dotColors = metadata.dotColors || { bullish: '#00D9FF', bearish: '#FF1493' };
+
+            chart.overlaysGroup.selectAll(`.sar-dot-${index}`)
+                .data(overlay.data)
+                .enter()
+                .append('circle')
+                .attr('class', `sar-dot sar-dot-${index}`)
+                .attr('cx', d => chart.xScale(new Date(d[0])))
+                .attr('cy', d => chart.yScale(d[1]))
+                .attr('r', dotRadius)
+                .style('fill', d => {
+                    // d[2] is trend: 1 = bullish (below price), -1 = bearish (above price)
+                    const trend = d[2] || 1;
+                    return trend === 1 ? dotColors.bullish : dotColors.bearish;
+                })
+                .style('stroke', 'none')
+                .style('opacity', 0.85);
+
+            console.log(`Rendered overlay dots: ${label} with ${overlay.data.length} points`);
+        } else {
+            // Render as line (default for SMA, etc.)
+            const color = metadata.color || '#888';
+            const strokeWidth = metadata.strokeWidth || 2;
+
+            // Create line generator
+            const line = d3.line()
+                .x(d => chart.xScale(new Date(d[0])))
+                .y(d => chart.yScale(d[1]))
+                .curve(d3.curveLinear);
+
+            // Draw the line
+            chart.overlaysGroup.append('path')
+                .datum(overlay.data)
+                .attr('class', `overlay-line overlay-${index}`)
+                .attr('d', line)
+                .style('fill', 'none')
+                .style('stroke', color)
+                .style('stroke-width', strokeWidth)
+                .style('opacity', 0.85);
+
+            console.log(`Rendered overlay line: ${label} with ${overlay.data.length} points`);
+        }
+    });
 }
 
 /**
@@ -273,6 +371,34 @@ function updateZoom(dataset, data, transform) {
     chart.candlesGroup.selectAll('.candle')
         .attr('x', d => newXScale(new Date(d[0])) - candleWidth / 2)
         .attr('width', candleWidth);
+
+    // Update overlay lines and dots position
+    if (chart.overlayData && chart.overlayData.length > 0) {
+        chart.overlayData.forEach((overlay, index) => {
+            if (!overlay.data || overlay.data.length === 0) {
+                return;
+            }
+
+            const metadata = overlay.metadata || {};
+            const renderType = metadata.renderType || 'line';
+
+            if (renderType === 'dots') {
+                // Update dot positions (keep radius fixed at 3px)
+                chart.overlaysGroup.selectAll(`.sar-dot-${index}`)
+                    .attr('cx', d => newXScale(new Date(d[0])));
+            } else {
+                // Update line path
+                const line = d3.line()
+                    .x(d => newXScale(new Date(d[0])))
+                    .y(d => chart.yScale(d[1]))
+                    .curve(d3.curveLinear);
+
+                chart.overlaysGroup.select(`.overlay-${index}`)
+                    .datum(overlay.data)
+                    .attr('d', line);
+            }
+        });
+    }
 }
 
 /**

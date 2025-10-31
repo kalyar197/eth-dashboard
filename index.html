@@ -40,11 +40,28 @@
             border: 1px solid #2a2a2a;
         }
         
-        .control-group { 
-            display: flex; 
-            gap: 10px; 
+        .control-group {
+            display: flex;
+            gap: 10px;
         }
-        
+
+        .overlay-controls {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 8px 15px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 8px;
+            border: 1px solid #333;
+        }
+
+        .control-label {
+            color: #888;
+            font-size: 13px;
+            font-weight: 500;
+            margin-right: 5px;
+        }
+
         .button-container button, .plugins-container label {
             padding: 10px 20px;
             border: 1px solid #333;
@@ -522,6 +539,25 @@
                 <button class="time-btn" data-dataset="btc" data-days="180">6M</button>
                 <button class="time-btn" data-dataset="btc" data-days="1095">3Y</button>
             </div>
+            <div class="button-container control-group overlay-controls">
+                <label class="control-label">Moving Averages:</label>
+                <div class="dataset-checkbox-wrapper">
+                    <input type="checkbox" id="sma-7-btc" class="overlay-checkbox" data-asset="btc" data-overlay="sma_7_btc">
+                    <label for="sma-7-btc" style="color: #FF6B6B;">SMA-7</label>
+                </div>
+                <div class="dataset-checkbox-wrapper">
+                    <input type="checkbox" id="sma-21-btc" class="overlay-checkbox" data-asset="btc" data-overlay="sma_21_btc">
+                    <label for="sma-21-btc" style="color: #FFA500;">SMA-21</label>
+                </div>
+                <div class="dataset-checkbox-wrapper">
+                    <input type="checkbox" id="sma-60-btc" class="overlay-checkbox" data-asset="btc" data-overlay="sma_60_btc">
+                    <label for="sma-60-btc" style="color: #4ECDC4;">SMA-60</label>
+                </div>
+                <div class="dataset-checkbox-wrapper">
+                    <input type="checkbox" id="psar-btc" class="overlay-checkbox" data-asset="btc" data-overlay="psar_btc">
+                    <label for="psar-btc" style="color: #888;">PSAR</label>
+                </div>
+            </div>
         </div>
 
         <!-- Price Chart Section (60%) -->
@@ -545,8 +581,8 @@
                         <label for="rsi-btc">RSI</label>
                     </div>
                     <div class="dataset-checkbox-wrapper">
-                        <input type="checkbox" id="macd-btc" class="dataset-checkbox" data-asset="btc" data-dataset="macd" checked>
-                        <label for="macd-btc">MACD</label>
+                        <input type="checkbox" id="macd-histogram-btc" class="dataset-checkbox" data-asset="btc" data-dataset="macd_histogram" checked>
+                        <label for="macd-histogram-btc">MACD Histogram</label>
                     </div>
                     <div class="dataset-checkbox-wrapper">
                         <input type="checkbox" id="volume-btc" class="dataset-checkbox" data-asset="btc" data-dataset="volume" checked>
@@ -555,6 +591,14 @@
                     <div class="dataset-checkbox-wrapper">
                         <input type="checkbox" id="dxy-btc" class="dataset-checkbox" data-asset="btc" data-dataset="dxy" checked>
                         <label for="dxy-btc">DXY</label>
+                    </div>
+                    <div class="dataset-checkbox-wrapper">
+                        <input type="checkbox" id="adx-btc" class="dataset-checkbox" data-asset="btc" data-dataset="adx">
+                        <label for="adx-btc">ADX</label>
+                    </div>
+                    <div class="dataset-checkbox-wrapper">
+                        <input type="checkbox" id="atr-btc" class="dataset-checkbox" data-asset="btc" data-dataset="atr">
+                        <label for="atr-btc">ATR</label>
                     </div>
                 </div>
                 <div class="noise-level-controls">
@@ -596,6 +640,25 @@
                 <button class="time-btn" data-dataset="eth" data-days="180">6M</button>
                 <button class="time-btn" data-dataset="eth" data-days="1095">3Y</button>
             </div>
+            <div class="button-container control-group overlay-controls">
+                <label class="control-label">Moving Averages:</label>
+                <div class="dataset-checkbox-wrapper">
+                    <input type="checkbox" id="sma-7-eth" class="overlay-checkbox" data-asset="eth" data-overlay="sma_7_eth">
+                    <label for="sma-7-eth" style="color: #FF6B6B;">SMA-7</label>
+                </div>
+                <div class="dataset-checkbox-wrapper">
+                    <input type="checkbox" id="sma-21-eth" class="overlay-checkbox" data-asset="eth" data-overlay="sma_21_eth">
+                    <label for="sma-21-eth" style="color: #FFA500;">SMA-21</label>
+                </div>
+                <div class="dataset-checkbox-wrapper">
+                    <input type="checkbox" id="sma-60-eth" class="overlay-checkbox" data-asset="eth" data-overlay="sma_60_eth">
+                    <label for="sma-60-eth" style="color: #4ECDC4;">SMA-60</label>
+                </div>
+                <div class="dataset-checkbox-wrapper">
+                    <input type="checkbox" id="psar-eth" class="overlay-checkbox" data-asset="eth" data-overlay="psar_eth">
+                    <label for="psar-eth" style="color: #888;">PSAR</label>
+                </div>
+            </div>
         </div>
 
         <!-- Price Chart Section (60%) -->
@@ -619,8 +682,8 @@
                         <label for="rsi-eth">RSI</label>
                     </div>
                     <div class="dataset-checkbox-wrapper">
-                        <input type="checkbox" id="macd-eth" class="dataset-checkbox" data-asset="eth" data-dataset="macd" checked>
-                        <label for="macd-eth">MACD</label>
+                        <input type="checkbox" id="macd-histogram-eth" class="dataset-checkbox" data-asset="eth" data-dataset="macd_histogram" checked>
+                        <label for="macd-histogram-eth">MACD Histogram</label>
                     </div>
                     <div class="dataset-checkbox-wrapper">
                         <input type="checkbox" id="volume-eth" class="dataset-checkbox" data-asset="eth" data-dataset="volume" checked>
@@ -629,6 +692,14 @@
                     <div class="dataset-checkbox-wrapper">
                         <input type="checkbox" id="dxy-eth" class="dataset-checkbox" data-asset="eth" data-dataset="dxy" checked>
                         <label for="dxy-eth">DXY</label>
+                    </div>
+                    <div class="dataset-checkbox-wrapper">
+                        <input type="checkbox" id="adx-eth" class="dataset-checkbox" data-asset="eth" data-dataset="adx">
+                        <label for="adx-eth">ADX</label>
+                    </div>
+                    <div class="dataset-checkbox-wrapper">
+                        <input type="checkbox" id="atr-eth" class="dataset-checkbox" data-asset="eth" data-dataset="atr">
+                        <label for="atr-eth">ATR</label>
                     </div>
                 </div>
                 <div class="noise-level-controls">
@@ -670,6 +741,25 @@
                 <button class="time-btn" data-dataset="gold" data-days="180">6M</button>
                 <button class="time-btn" data-dataset="gold" data-days="1095">3Y</button>
             </div>
+            <div class="button-container control-group overlay-controls">
+                <label class="control-label">Moving Averages:</label>
+                <div class="dataset-checkbox-wrapper">
+                    <input type="checkbox" id="sma-7-gold" class="overlay-checkbox" data-asset="gold" data-overlay="sma_7_gold">
+                    <label for="sma-7-gold" style="color: #FF6B6B;">SMA-7</label>
+                </div>
+                <div class="dataset-checkbox-wrapper">
+                    <input type="checkbox" id="sma-21-gold" class="overlay-checkbox" data-asset="gold" data-overlay="sma_21_gold">
+                    <label for="sma-21-gold" style="color: #FFA500;">SMA-21</label>
+                </div>
+                <div class="dataset-checkbox-wrapper">
+                    <input type="checkbox" id="sma-60-gold" class="overlay-checkbox" data-asset="gold" data-overlay="sma_60_gold">
+                    <label for="sma-60-gold" style="color: #4ECDC4;">SMA-60</label>
+                </div>
+                <div class="dataset-checkbox-wrapper">
+                    <input type="checkbox" id="psar-gold" class="overlay-checkbox" data-asset="gold" data-overlay="psar_gold">
+                    <label for="psar-gold" style="color: #888;">PSAR</label>
+                </div>
+            </div>
         </div>
 
         <!-- Price Chart Section (60%) -->
@@ -693,8 +783,8 @@
                         <label for="rsi-gold">RSI</label>
                     </div>
                     <div class="dataset-checkbox-wrapper">
-                        <input type="checkbox" id="macd-gold" class="dataset-checkbox" data-asset="gold" data-dataset="macd" checked>
-                        <label for="macd-gold">MACD</label>
+                        <input type="checkbox" id="macd-histogram-gold" class="dataset-checkbox" data-asset="gold" data-dataset="macd_histogram" checked>
+                        <label for="macd-histogram-gold">MACD Histogram</label>
                     </div>
                     <div class="dataset-checkbox-wrapper">
                         <input type="checkbox" id="volume-gold" class="dataset-checkbox" data-asset="gold" data-dataset="volume" disabled>
@@ -703,6 +793,14 @@
                     <div class="dataset-checkbox-wrapper">
                         <input type="checkbox" id="dxy-gold" class="dataset-checkbox" data-asset="gold" data-dataset="dxy" checked>
                         <label for="dxy-gold">DXY</label>
+                    </div>
+                    <div class="dataset-checkbox-wrapper">
+                        <input type="checkbox" id="adx-gold" class="dataset-checkbox" data-asset="gold" data-dataset="adx">
+                        <label for="adx-gold">ADX</label>
+                    </div>
+                    <div class="dataset-checkbox-wrapper">
+                        <input type="checkbox" id="atr-gold" class="dataset-checkbox" data-asset="gold" data-dataset="atr">
+                        <label for="atr-gold">ATR</label>
                     </div>
                 </div>
                 <div class="noise-level-controls">
