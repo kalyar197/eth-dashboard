@@ -22,7 +22,7 @@ This BTC Trading System now features a mathematically rigorous **"Pilot & Radar"
 - ✅ User-tunable composite Z-score oscillator (data/composite_zscore.py)
 - ✅ 5 noise level controls (14, 30, 50, 100, 200 periods)
 - ✅ Regime-based background shading (blue=low-vol, red=high-vol)
-- ✅ Base oscillators: RSI, MACD, Volume, DXY
+- ✅ Base oscillators: RSI, MACD Histogram, ADX, Gold Price
 - ✅ API communication layer (static/js/api.js)
 - ✅ Tab-based system (BTC, ETH, Gold)
 
@@ -87,7 +87,7 @@ The system implements an advanced composite oscillator with two independent comp
 **Purpose**: User manually controls oscillator sensitivity to find the signal-to-noise ratio that works for their trading style.
 
 **How It Works**:
-1. Fetches multiple oscillators (RSI, MACD, Volume, DXY)
+1. Fetches multiple oscillators (RSI, MACD Histogram, ADX, Gold Price)
 2. Calculates rolling Z-score for each: `Z = (x - μ) / σ`
    - `μ` = rolling mean over user-selected window
    - `σ` = rolling standard deviation over window
@@ -152,7 +152,7 @@ The system implements an advanced composite oscillator with two independent comp
 
 **Parameters**:
 - `asset`: 'btc' | 'eth' | 'gold'
-- `datasets`: Comma-separated list (e.g., 'rsi,macd,volume,dxy')
+- `datasets`: Comma-separated list (e.g., 'rsi,macd_histogram,adx,gold')
 - `days`: Number of days ('7' | '30' | '90' | '365')
 - `mode`: 'composite' | 'individual' (default: composite)
 - `noise_level`: 14 | 30 | 50 | 100 | 200 (default: 50)
@@ -169,7 +169,7 @@ The system implements an advanced composite oscillator with two independent comp
         "metadata": {
             "label": "Composite Z-Score",
             "window": 50,
-            "components": ["RSI", "MACD", "Volume", "DXY"],
+            "components": ["RSI", "MACD Histogram", "ADX", "Gold Price"],
             "weights": [0.25, 0.25, 0.25, 0.25]
         }
     },

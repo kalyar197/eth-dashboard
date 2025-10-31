@@ -6,7 +6,7 @@ from flask_cors import CORS
 import os
 import time
 # Data plugins
-from data import eth_price, btc_price, gold_price, rsi, macd_histogram, volume, dxy, adx, atr, sma, parabolic_sar
+from data import eth_price, btc_price, gold_price, rsi, macd_histogram, adx, sma, parabolic_sar, gold_oscillator
 from data import markov_regime
 from data.normalizers import zscore
 from config import CACHE_DURATION, RATE_LIMIT_DELAY
@@ -36,14 +36,12 @@ DATA_PLUGINS = {
     'gold': gold_price
 }
 
-# Oscillator plugins (require asset parameter)
+# Oscillator plugins (require asset parameter, except 'gold')
 OSCILLATOR_PLUGINS = {
     'rsi': rsi,
     'macd_histogram': macd_histogram,
-    'volume': volume,
-    'dxy': dxy,
     'adx': adx,
-    'atr': atr
+    'gold': gold_oscillator
 }
 
 # Overlay plugins (Moving Averages & Parabolic SAR - callable via /api/data)
@@ -337,8 +335,8 @@ def get_oscillator_data():
                     else:
                         extra_days = str(int(days) + noise_level + 10)
 
-                    # DXY doesn't need asset parameter
-                    if oscillator_name == 'dxy':
+                    # Gold oscillator doesn't need asset parameter (it's an external asset)
+                    if oscillator_name == 'gold':
                         oscillator_result = oscillator_module.get_data(extra_days)
                     else:
                         oscillator_result = oscillator_module.get_data(extra_days, asset)
@@ -491,8 +489,8 @@ def get_oscillator_data():
                     # Fetch raw oscillator data
                     oscillator_module = OSCILLATOR_PLUGINS[dataset_name]
 
-                    # DXY doesn't need asset parameter
-                    if dataset_name == 'dxy':
+                    # Gold oscillator doesn't need asset parameter (it's an external asset)
+                    if dataset_name == 'gold':
                         oscillator_result = oscillator_module.get_data(days)
                     else:
                         oscillator_result = oscillator_module.get_data(days, asset)
