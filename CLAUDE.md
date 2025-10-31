@@ -254,11 +254,11 @@ The system includes multiple oscillator plugins that can be normalized and combi
 - **ADX**: Average Directional Index - trend strength (0-100 scale)
 
 **External Asset Oscillators**:
-- **Gold Price** (`data/gold_oscillator.py`): Available on BTC and ETH tabs
+- **Gold Price** (`data/gold_oscillator.py`): Available on BTC, ETH, and Gold tabs
   - Wraps `gold_price` module to extract closing prices
   - Shows safe-haven vs crypto divergence
-  - Positive z-score: Gold expensive relative to crypto (risk-off)
-  - Negative z-score: Gold cheap relative to crypto (risk-on)
+  - Positive z-score: Gold expensive relative to asset (risk-off sentiment)
+  - Negative z-score: Gold cheap relative to asset (risk-on sentiment)
 
 - **ETH Price** (`data/eth_oscillator.py`): Available on BTC tab only
   - Wraps `eth_price` module to extract closing prices
@@ -266,11 +266,22 @@ The system includes multiple oscillator plugins that can be normalized and combi
   - Positive z-score: ETH outperforming BTC (alt season signal)
   - Negative z-score: BTC outperforming ETH (flight to BTC)
 
+- **SPX (S&P 500)** (`data/spx_oscillator.py`): Available on all tabs
+  - Wraps `spx_price` module to extract closing prices
+  - Shows traditional equity vs crypto/gold divergence
+  - Positive z-score: Stocks outperforming crypto/gold (rotation to traditional markets)
+  - Negative z-score: Crypto/gold outperforming stocks (alternative asset strength)
+  - Classic risk indicator: stocks up + gold down = risk-on; stocks down + gold up = risk-off
+
 **Mathematical Treatment**:
 - All oscillators normalized via Rolling OLS Regression Divergence
-- External asset oscillators don't take asset parameter (like DXY before removal)
+- External asset oscillators don't take asset parameter
 - Returns simple format: `[[timestamp, close_price], ...]`
-- Normalized by regressing against target asset price (BTC or ETH)
+- Normalized by regressing against target asset price (BTC, ETH, or Gold)
+- **Dynamic 0 line**: Represents expected relationship with tab's main asset price
+  - BTC tab: all oscillators regressed against BTC price
+  - ETH tab: all oscillators regressed against ETH price
+  - Gold tab: all oscillators regressed against Gold price
 
 ## Architecture Overview
 

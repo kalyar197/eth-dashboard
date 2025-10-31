@@ -6,7 +6,7 @@ from flask_cors import CORS
 import os
 import time
 # Data plugins
-from data import eth_price, btc_price, gold_price, rsi, macd_histogram, adx, sma, parabolic_sar, gold_oscillator, eth_oscillator
+from data import eth_price, btc_price, gold_price, spx_price, rsi, macd_histogram, adx, sma, parabolic_sar, gold_oscillator, eth_oscillator, spx_oscillator
 from data import markov_regime
 from data.normalizers import zscore
 from config import CACHE_DURATION, RATE_LIMIT_DELAY
@@ -36,13 +36,14 @@ DATA_PLUGINS = {
     'gold': gold_price
 }
 
-# Oscillator plugins (require asset parameter, except 'gold' and 'eth')
+# Oscillator plugins (require asset parameter, except 'gold', 'eth', and 'spx')
 OSCILLATOR_PLUGINS = {
     'rsi': rsi,
     'macd_histogram': macd_histogram,
     'adx': adx,
     'gold': gold_oscillator,
-    'eth': eth_oscillator
+    'eth': eth_oscillator,
+    'spx': spx_oscillator
 }
 
 # Overlay plugins (Moving Averages & Parabolic SAR - callable via /api/data)
@@ -336,8 +337,8 @@ def get_oscillator_data():
                     else:
                         extra_days = str(int(days) + noise_level + 10)
 
-                    # Gold and ETH oscillators don't need asset parameter (external assets)
-                    if oscillator_name in ['gold', 'eth']:
+                    # Gold, ETH, and SPX oscillators don't need asset parameter (external assets)
+                    if oscillator_name in ['gold', 'eth', 'spx']:
                         oscillator_result = oscillator_module.get_data(extra_days)
                     else:
                         oscillator_result = oscillator_module.get_data(extra_days, asset)
@@ -490,8 +491,8 @@ def get_oscillator_data():
                     # Fetch raw oscillator data
                     oscillator_module = OSCILLATOR_PLUGINS[dataset_name]
 
-                    # Gold and ETH oscillators don't need asset parameter (external assets)
-                    if dataset_name in ['gold', 'eth']:
+                    # Gold, ETH, and SPX oscillators don't need asset parameter (external assets)
+                    if dataset_name in ['gold', 'eth', 'spx']:
                         oscillator_result = oscillator_module.get_data(days)
                     else:
                         oscillator_result = oscillator_module.get_data(days, asset)
