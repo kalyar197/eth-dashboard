@@ -14,10 +14,8 @@ from . import gold_price
 # Import oscillator plugins
 from . import rsi
 from . import macd_histogram
-from . import volume
-from . import dxy
 from . import adx
-from . import atr
+from . import gold_oscillator
 
 # Import overlay plugins
 from . import sma
@@ -33,10 +31,8 @@ __all__ = [
     'gold_price',
     'rsi',
     'macd_histogram',
-    'volume',
-    'dxy',
     'adx',
-    'atr',
+    'gold_oscillator',
     'sma',
     'parabolic_sar'
 ]
