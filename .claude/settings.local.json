@@ -20,7 +20,12 @@
       "Bash(gh run view:*)",
       "Bash(gh pr list:*)",
       "Bash(gh pr view:*)",
-      "Bash(gh workflow:*)"
+      "Bash(gh workflow:*)",
+      "Bash(cat:*)",
+      "Bash(git rm:*)",
+      "Bash(find:*)",
+      "Bash(xargs:*)",
+      "Bash(timeout 5 bash:*)"
     ],
     "deny": [],
     "ask": []
