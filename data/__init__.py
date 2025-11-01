@@ -10,12 +10,15 @@ from . import incremental_data_manager
 from . import eth_price
 from . import btc_price
 from . import gold_price
+from . import spx_price
 
 # Import oscillator plugins
 from . import rsi
 from . import macd_histogram
 from . import adx
 from . import gold_oscillator
+from . import eth_oscillator
+from . import spx_oscillator
 
 # Import overlay plugins
 from . import sma
@@ -29,10 +32,13 @@ __all__ = [
     'eth_price',
     'btc_price',
     'gold_price',
+    'spx_price',
     'rsi',
     'macd_histogram',
     'adx',
     'gold_oscillator',
+    'eth_oscillator',
+    'spx_oscillator',
     'sma',
     'parabolic_sar'
 ]
