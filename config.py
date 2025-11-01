@@ -25,6 +25,12 @@ ALPHA_VANTAGE_API_KEY = '5EK27ZM3JQC594PO'  # Legacy - not used
 CRYPTOCOMPARE_API_KEY = ''  # Optional - not used
 COINGECKO_API_KEY = ''  # Optional - not used
 
+# CoinAPI Settings (Startup Tier: $79/month)
+COINAPI_BASE_URL = 'https://rest.coinapi.io/v1'
+COINAPI_RATE_LIMIT = 1000  # Requests per day
+COINAPI_CACHE_TTL = 3600 * 12  # 12 hours (aggressive caching to conserve API calls)
+COINAPI_OPTIONS_EXCHANGES = ['DERIBIT', 'BINANCE', 'OKX']  # Priority order
+
 # Cache Settings
 CACHE_DURATION = 300  # 5 minutes in seconds
 RATE_LIMIT_DELAY = 2  # Seconds between API calls

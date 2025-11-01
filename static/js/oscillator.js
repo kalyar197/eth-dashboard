@@ -1049,3 +1049,595 @@ export function getOscillatorChart(asset) {
 export function getBreakdownChart(asset) {
     return breakdownInstances[asset];
 }
+
+// ============================================================================
+// VOLATILITY OSCILLATOR CHARTS
+// ============================================================================
+
+// Store volatility oscillator chart instances
+const volatilityOscillatorInstances = {};
+const volatilityBreakdownInstances = {};
+
+/**
+ * Initialize a volatility oscillator chart (identical logic to initOscillatorChart)
+ * @param {string} containerId - ID of the container element
+ * @param {string} asset - Asset name (btc, eth, gold)
+ * @param {string} assetColor - Color for the zero line
+ */
+export function initVolatilityOscillatorChart(containerId, asset, assetColor) {
+    const container = document.getElementById(containerId);
+    if (!container) {
+        console.error(`Container ${containerId} not found`);
+        return;
+    }
+
+    // Clear any existing content
+    container.innerHTML = '';
+
+    // Get container dimensions
+    const containerRect = container.getBoundingClientRect();
+    const margin = { top: 20, right: 50, bottom: 40, left: 60 };
+    const width = containerRect.width - margin.left - margin.right;
+    const height = containerRect.height - margin.top - margin.bottom;
+
+    // Create SVG
+    const svg = d3.select(`#${containerId}`)
+        .append('svg')
+        .attr('width', containerRect.width)
+        .attr('height', containerRect.height);
+
+    // Create main group
+    const g = svg.append('g')
+        .attr('transform', `translate(${margin.left},${margin.top})`);
+
+    // Create scales
+    const xScale = d3.scaleTime().range([0, width]);
+    const yScale = d3.scaleLinear().range([height, 0]);
+
+    // Create axes
+    const xAxis = d3.axisBottom(xScale)
+        .ticks(8)
+        .tickFormat(d3.timeFormat('%b %d'));
+
+    const yAxis = d3.axisLeft(yScale)
+        .ticks(6);
+
+    // Append axis groups
+    const xAxisGroup = g.append('g')
+        .attr('class', 'axis x-axis')
+        .attr('transform', `translate(0,${height})`);
+
+    const yAxisGroup = g.append('g')
+        .attr('class', 'axis y-axis');
+
+    // Create grid
+    const xGrid = g.append('g')
+        .attr('class', 'grid x-grid');
+
+    const yGrid = g.append('g')
+        .attr('class', 'grid y-grid');
+
+    // Create clip path
+    const clipPath = svg.append('defs')
+        .append('clipPath')
+        .attr('id', `clip-${asset}-volatility-oscillator`)
+        .append('rect')
+        .attr('width', width)
+        .attr('height', height);
+
+    // Create lines group (clipped)
+    const linesGroup = g.append('g')
+        .attr('clip-path', `url(#clip-${asset}-volatility-oscillator)`)
+        .attr('class', 'lines-group');
+
+    // Create zero line (represents asset price)
+    const zeroLine = g.append('line')
+        .attr('class', 'reference-line')
+        .attr('x1', 0)
+        .attr('x2', width)
+        .style('stroke', assetColor)
+        .style('stroke-width', 2)
+        .style('stroke-dasharray', '5,5')
+        .style('opacity', 0.5);
+
+    // Create zero line label
+    const zeroLabel = g.append('text')
+        .attr('class', 'reference-label')
+        .attr('x', width + 5)
+        .attr('text-anchor', 'start')
+        .style('fill', assetColor)
+        .style('font-size', '11px')
+        .text('0 (Price)');
+
+    // Create crosshair elements
+    const crosshairGroup = g.append('g')
+        .attr('class', 'crosshair-group')
+        .style('display', 'none');
+
+    const crosshairLineX = crosshairGroup.append('line')
+        .attr('class', 'crosshair-line')
+        .attr('y1', 0)
+        .attr('y2', height);
+
+    const crosshairLineY = crosshairGroup.append('line')
+        .attr('class', 'crosshair-line')
+        .attr('x1', 0)
+        .attr('x2', width);
+
+    // Create overlay for mouse events
+    const overlay = g.append('rect')
+        .attr('class', 'zoom-overlay')
+        .attr('width', width)
+        .attr('height', height);
+
+    // Store chart instance
+    volatilityOscillatorInstances[asset] = {
+        svg,
+        g,
+        margin,
+        width,
+        height,
+        xScale,
+        yScale,
+        xAxis,
+        yAxis,
+        xAxisGroup,
+        yAxisGroup,
+        xGrid,
+        yGrid,
+        linesGroup,
+        zeroLine,
+        zeroLabel,
+        crosshairGroup,
+        crosshairLineX,
+        crosshairLineY,
+        overlay,
+        zoom: null,
+        currentTransform: d3.zoomIdentity,
+        data: {}
+    };
+
+    console.log(`Volatility oscillator chart initialized for ${asset}`);
+}
+
+/**
+ * Initialize a volatility breakdown chart
+ * @param {string} containerId - ID of the container element
+ * @param {string} asset - Asset name (btc, eth, gold)
+ */
+export function initVolatilityBreakdownChart(containerId, asset) {
+    const container = document.getElementById(containerId);
+    if (!container) {
+        console.error(`Container ${containerId} not found`);
+        return;
+    }
+
+    // Clear any existing content (keep zoom controls and info text)
+    const existingZoomControls = container.querySelector('.zoom-controls');
+    const existingInfoText = container.querySelector('.info-text');
+
+    // Remove all children except zoom controls and info text
+    Array.from(container.children).forEach(child => {
+        if (!child.classList.contains('zoom-controls') && !child.classList.contains('info-text')) {
+            child.remove();
+        }
+    });
+
+    // Get container dimensions
+    const containerRect = container.getBoundingClientRect();
+    const margin = { top: 30, right: 50, bottom: 40, left: 60 };
+    const width = containerRect.width - margin.left - margin.right;
+    const height = containerRect.height - margin.top - margin.bottom;
+
+    // Create SVG
+    const svg = d3.select(`#${containerId}`)
+        .append('svg')
+        .attr('width', containerRect.width)
+        .attr('height', containerRect.height);
+
+    // Create main group
+    const g = svg.append('g')
+        .attr('transform', `translate(${margin.left},${margin.top})`);
+
+    // Create scales
+    const xScale = d3.scaleTime().range([0, width]);
+    const yScale = d3.scaleLinear().range([height, 0]);
+
+    // Create axes
+    const xAxis = d3.axisBottom(xScale)
+        .ticks(8)
+        .tickFormat(d3.timeFormat('%b %d'));
+
+    const yAxis = d3.axisLeft(yScale)
+        .ticks(6);
+
+    // Append axis groups
+    const xAxisGroup = g.append('g')
+        .attr('class', 'axis x-axis')
+        .attr('transform', `translate(0,${height})`);
+
+    const yAxisGroup = g.append('g')
+        .attr('class', 'axis y-axis');
+
+    // Create grid
+    const xGrid = g.append('g')
+        .attr('class', 'grid x-grid');
+
+    const yGrid = g.append('g')
+        .attr('class', 'grid y-grid');
+
+    // Create clip path
+    const clipPath = svg.append('defs')
+        .append('clipPath')
+        .attr('id', `clip-${asset}-volatility-breakdown`)
+        .append('rect')
+        .attr('width', width)
+        .attr('height', height);
+
+    // Create lines group (clipped)
+    const linesGroup = g.append('g')
+        .attr('clip-path', `url(#clip-${asset}-volatility-breakdown)`)
+        .attr('class', 'lines-group');
+
+    // Create zero line
+    const zeroLine = g.append('line')
+        .attr('class', 'reference-line')
+        .attr('x1', 0)
+        .attr('x2', width)
+        .style('stroke', '#666')
+        .style('stroke-width', 1)
+        .style('stroke-dasharray', '3,3')
+        .style('opacity', 0.3);
+
+    // Create legend group (top-left)
+    const legendGroup = svg.append('g')
+        .attr('class', 'legend-group')
+        .attr('transform', `translate(${margin.left + 10}, 10)`);
+
+    // Create crosshair elements
+    const crosshairGroup = g.append('g')
+        .attr('class', 'crosshair-group')
+        .style('display', 'none');
+
+    const crosshairLineX = crosshairGroup.append('line')
+        .attr('class', 'crosshair-line')
+        .attr('y1', 0)
+        .attr('y2', height);
+
+    const crosshairLineY = crosshairGroup.append('line')
+        .attr('class', 'crosshair-line')
+        .attr('x1', 0)
+        .attr('x2', width);
+
+    // Create overlay for mouse events
+    const overlay = g.append('rect')
+        .attr('class', 'zoom-overlay')
+        .attr('width', width)
+        .attr('height', height);
+
+    // Store chart instance
+    volatilityBreakdownInstances[asset] = {
+        svg,
+        g,
+        margin,
+        width,
+        height,
+        xScale,
+        yScale,
+        xAxis,
+        yAxis,
+        xAxisGroup,
+        yAxisGroup,
+        xGrid,
+        yGrid,
+        linesGroup,
+        zeroLine,
+        legendGroup,
+        crosshairGroup,
+        crosshairLineX,
+        crosshairLineY,
+        overlay,
+        zoom: null,
+        currentTransform: d3.zoomIdentity,
+        lines: {}
+    };
+
+    console.log(`Volatility breakdown chart initialized for ${asset}`);
+}
+
+/**
+ * Render volatility oscillator chart (uses same logic as momentum oscillators)
+ * @param {string} asset - Asset name
+ * @param {Object} datasetsData - Object with dataset names as keys and data arrays as values
+ * @param {Object} colors - Object mapping dataset names to colors
+ */
+export function renderVolatilityOscillatorChart(asset, datasetsData, colors, compositeMode = false) {
+    const chart = volatilityOscillatorInstances[asset];
+    if (!chart) {
+        console.error(`Volatility oscillator chart not initialized for ${asset}`);
+        return;
+    }
+
+    if (compositeMode) {
+        console.log(`Rendering COMPOSITE volatility oscillator chart for ${asset}`);
+        renderCompositeVolatilityOscillator(asset, datasetsData, colors);
+    } else {
+        console.log(`Rendering INDIVIDUAL volatility oscillator chart for ${asset}`);
+        // Can add individual mode later if needed
+    }
+
+    console.log(`Volatility oscillator chart rendered for ${asset}`);
+}
+
+/**
+ * Render composite volatility oscillator with regime background
+ */
+function renderCompositeVolatilityOscillator(asset, data, colors) {
+    const chart = volatilityOscillatorInstances[asset];
+    const compositeData = data.composite;
+    const regimeData = data.regime;
+    const metadata = data.metadata;
+
+    if (!compositeData || !regimeData) {
+        console.error('Missing composite or regime data for volatility oscillator');
+        return;
+    }
+
+    // Store data
+    chart.data = data;
+    chart.colors = colors;
+
+    // Find data extent
+    const allTimestamps = compositeData.map(d => new Date(d[0]));
+    const allValues = compositeData.map(d => d[1]);
+
+    // Update scales
+    const xExtent = d3.extent(allTimestamps);
+    const yExtent = d3.extent(allValues);
+
+    // Symmetrical y-domain around 0 for Z-scores
+    const yMax = Math.max(Math.abs(yExtent[0]), Math.abs(yExtent[1]), 3.5);
+    chart.xScale.domain(xExtent);
+    chart.yScale.domain([-yMax, yMax]);
+
+    // Update axes
+    chart.xAxisGroup.call(chart.xAxis.scale(chart.xScale));
+    chart.yAxisGroup.call(chart.yAxis.scale(chart.yScale));
+
+    // Update grids
+    chart.xGrid
+        .attr('transform', `translate(0,${chart.height})`)
+        .call(d3.axisBottom(chart.xScale)
+            .ticks(8)
+            .tickSize(-chart.height)
+            .tickFormat(''));
+
+    chart.yGrid
+        .call(d3.axisLeft(chart.yScale)
+            .ticks(8)
+            .tickSize(-chart.width)
+            .tickFormat(''));
+
+    // Clear existing content
+    chart.linesGroup.selectAll('*').remove();
+
+    // 1. RENDER REGIME BACKGROUND
+    renderVolatilityRegimeBackground(chart, regimeData, metadata.regime);
+
+    // 2. RENDER REFERENCE LINES
+    const referenceLines = [
+        { value: 3, label: '+3σ', color: 'rgba(255, 59, 48, 0.5)' },
+        { value: 2, label: '+2σ', color: 'rgba(255, 149, 0, 0.5)' },
+        { value: -2, label: '-2σ', color: 'rgba(48, 209, 88, 0.5)' },
+        { value: -3, label: '-3σ', color: 'rgba(50, 215, 75, 0.5)' }
+    ];
+
+    referenceLines.forEach(ref => {
+        const y = chart.yScale(ref.value);
+        chart.linesGroup.append('line')
+            .attr('class', 'reference-line')
+            .attr('x1', 0)
+            .attr('x2', chart.width)
+            .attr('y1', y)
+            .attr('y2', y)
+            .style('stroke', ref.color)
+            .style('stroke-width', 1)
+            .style('stroke-dasharray', '5,5')
+            .style('opacity', 0.6);
+
+        chart.linesGroup.append('text')
+            .attr('class', 'reference-label')
+            .attr('x', chart.width - 5)
+            .attr('y', y - 3)
+            .attr('text-anchor', 'end')
+            .style('fill', ref.color)
+            .style('font-size', '10px')
+            .text(ref.label);
+    });
+
+    // Update zero line position
+    const zeroY = chart.yScale(0);
+    chart.zeroLine.attr('y1', zeroY).attr('y2', zeroY);
+    chart.zeroLabel.attr('y', zeroY);
+
+    // 3. RENDER COMPOSITE LINE
+    const line = d3.line()
+        .x(d => chart.xScale(new Date(d[0])))
+        .y(d => chart.yScale(d[1]))
+        .defined(d => d[1] !== null && d[1] !== undefined && !isNaN(d[1]))
+        .curve(d3.curveMonotoneX);
+
+    chart.linesGroup.append('path')
+        .datum(compositeData)
+        .attr('class', 'line line-composite-volatility')
+        .attr('d', line)
+        .style('stroke', '#FF6B6B')  // Red for volatility
+        .style('stroke-width', 2.5)
+        .style('fill', 'none');
+}
+
+/**
+ * Render volatility regime background shading
+ */
+function renderVolatilityRegimeBackground(chart, regimeData, metadata) {
+    if (!regimeData || regimeData.length === 0) return;
+
+    const states = metadata.states;
+
+    // Group consecutive timestamps with same regime
+    const regimeSegments = [];
+    let currentSegment = null;
+
+    regimeData.forEach((d, i) => {
+        const timestamp = d[0];
+        const regime = d[1];
+
+        if (!currentSegment || currentSegment.regime !== regime) {
+            if (currentSegment) {
+                regimeSegments.push(currentSegment);
+            }
+            currentSegment = {
+                regime: regime,
+                startTime: timestamp,
+                endTime: timestamp
+            };
+        } else {
+            currentSegment.endTime = timestamp;
+        }
+    });
+
+    if (currentSegment) {
+        regimeSegments.push(currentSegment);
+    }
+
+    // Render background rectangles
+    regimeSegments.forEach(segment => {
+        const state = states[segment.regime];
+        if (!state) return;
+
+        const x1 = chart.xScale(new Date(segment.startTime));
+        const x2 = chart.xScale(new Date(segment.endTime));
+        const width = x2 - x1 || 2;
+
+        chart.linesGroup.insert('rect', ':first-child')
+            .attr('class', `regime-background regime-${segment.regime}`)
+            .attr('x', x1)
+            .attr('y', 0)
+            .attr('width', width)
+            .attr('height', chart.height)
+            .style('fill', state.color)
+            .style('opacity', 1);
+    });
+}
+
+/**
+ * Render volatility breakdown chart
+ */
+export function renderVolatilityBreakdownChart(asset, breakdownData) {
+    const chart = volatilityBreakdownInstances[asset];
+    if (!chart) {
+        console.error(`Volatility breakdown chart not initialized for ${asset}`);
+        return;
+    }
+
+    console.log(`Rendering volatility breakdown chart for ${asset}:`, Object.keys(breakdownData));
+
+    // Use the same rendering logic as momentum breakdown chart
+    // Since the logic is identical, we can call the same helper function
+    renderBreakdownChartHelper(chart, breakdownData);
+}
+
+/**
+ * Helper function to render breakdown chart (shared logic)
+ */
+function renderBreakdownChartHelper(chart, breakdownData) {
+    // Extract all data points to find time extent
+    const allTimestamps = [];
+    const allValues = [];
+
+    Object.values(breakdownData).forEach(datasetInfo => {
+        datasetInfo.data.forEach(d => {
+            allTimestamps.push(new Date(d[0]));
+            if (d[1] !== null && d[1] !== undefined && !isNaN(d[1])) {
+                allValues.push(d[1]);
+            }
+        });
+    });
+
+    if (allTimestamps.length === 0) {
+        console.warn('No data to render in breakdown chart');
+        return;
+    }
+
+    // Update scales
+    const xExtent = d3.extent(allTimestamps);
+    const yExtent = d3.extent(allValues);
+    const yMax = Math.max(Math.abs(yExtent[0]), Math.abs(yExtent[1]), 3.5);
+
+    chart.xScale.domain(xExtent);
+    chart.yScale.domain([-yMax, yMax]);
+
+    // Update axes
+    chart.xAxisGroup.call(chart.xAxis.scale(chart.xScale));
+    chart.yAxisGroup.call(chart.yAxis.scale(chart.yScale));
+
+    // Update grids
+    chart.xGrid
+        .attr('transform', `translate(0,${chart.height})`)
+        .call(d3.axisBottom(chart.xScale).ticks(8).tickSize(-chart.height).tickFormat(''));
+
+    chart.yGrid
+        .call(d3.axisLeft(chart.yScale).ticks(8).tickSize(-chart.width).tickFormat(''));
+
+    // Clear existing lines
+    chart.linesGroup.selectAll('*').remove();
+    chart.legendGroup.selectAll('*').remove();
+
+    // Update zero line
+    const zeroY = chart.yScale(0);
+    chart.zeroLine.attr('y1', zeroY).attr('y2', zeroY);
+
+    // Render each oscillator line
+    const line = d3.line()
+        .x(d => chart.xScale(new Date(d[0])))
+        .y(d => chart.yScale(d[1]))
+        .defined(d => d[1] !== null && d[1] !== undefined && !isNaN(d[1]))
+        .curve(d3.curveMonotoneX);
+
+    let legendY = 0;
+
+    Object.entries(breakdownData).forEach(([datasetName, datasetInfo]) => {
+        const data = datasetInfo.data;
+        const metadata = datasetInfo.metadata;
+
+        // Render line
+        chart.linesGroup.append('path')
+            .datum(data)
+            .attr('class', `line line-${datasetName}`)
+            .attr('d', line)
+            .style('stroke', metadata.color)
+            .style('stroke-width', 1.5)
+            .style('fill', 'none');
+
+        // Add legend entry
+        const legendEntry = chart.legendGroup.append('g')
+            .attr('transform', `translate(0, ${legendY})`);
+
+        legendEntry.append('line')
+            .attr('x1', 0)
+            .attr('x2', 20)
+            .attr('y1', 0)
+            .attr('y2', 0)
+            .style('stroke', metadata.color)
+            .style('stroke-width', 2);
+
+        legendEntry.append('text')
+            .attr('x', 25)
+            .attr('y', 4)
+            .style('fill', '#aaa')
+            .style('font-size', '11px')
+            .text(metadata.label);
+
+        legendY += 18;
+    });
+}

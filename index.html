@@ -425,6 +425,32 @@
             overflow: hidden;
         }
 
+        /* Volatility Oscillator containers */
+        #btc-volatility-oscillator-container {
+            background: #1a1a1a;
+            border-radius: 12px;
+            border: 1px solid #2a2a2a;
+            width: 100%;
+            min-height: 250px;
+            height: 23vh;
+            position: relative;
+            padding: 20px;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+
+        #btc-breakdown-volatility-oscillator-container {
+            background: #1a1a1a;
+            border-radius: 12px;
+            border: 1px solid #2a2a2a;
+            width: 100%;
+            min-height: 200px;
+            height: 18vh;
+            position: relative;
+            padding: 20px;
+            overflow: hidden;
+        }
+
         /* Oscillator controls */
         .oscillator-controls {
             display: flex;
@@ -607,6 +633,57 @@
                     <button class="zoom-btn zoom-out" title="Zoom Out">−</button>
                 </div>
                 <div class="info-text">Breakdown: Individual Normalized Oscillators • Synchronized zoom</div>
+            </div>
+        </div>
+
+        <!-- Volatility Oscillator Section (40%) -->
+        <div class="chart-section">
+            <h2 style="border-left-color: #FF6B6B;">Volatility Oscillators</h2>
+            <div class="oscillator-controls">
+                <div class="dataset-checkboxes">
+                    <div class="dataset-checkbox-wrapper">
+                        <input type="checkbox" id="realized-volatility-btc" class="volatility-dataset-checkbox" data-asset="btc" data-dataset="realized_volatility" checked>
+                        <label for="realized-volatility-btc">Realized Vol</label>
+                    </div>
+                    <div class="dataset-checkbox-wrapper">
+                        <input type="checkbox" id="dvol-btc" class="volatility-dataset-checkbox" data-asset="btc" data-dataset="dvol" checked>
+                        <label for="dvol-btc">DVOL</label>
+                    </div>
+                    <div class="dataset-checkbox-wrapper">
+                        <input type="checkbox" id="implied-volatility-btc" class="volatility-dataset-checkbox" data-asset="btc" data-dataset="implied_volatility" checked>
+                        <label for="implied-volatility-btc">Implied Vol</label>
+                    </div>
+                    <div class="dataset-checkbox-wrapper">
+                        <input type="checkbox" id="iv-rank-btc" class="volatility-dataset-checkbox" data-asset="btc" data-dataset="iv_rank" checked>
+                        <label for="iv-rank-btc">IV Rank</label>
+                    </div>
+                </div>
+                <div class="noise-level-controls">
+                    <label class="noise-label">Noise Level:</label>
+                    <button class="noise-btn volatility-noise-btn" data-asset="btc" data-level="14">Max</button>
+                    <button class="noise-btn volatility-noise-btn" data-asset="btc" data-level="30">Med-High</button>
+                    <button class="noise-btn volatility-noise-btn active" data-asset="btc" data-level="50">Default</button>
+                    <button class="noise-btn volatility-noise-btn" data-asset="btc" data-level="100">Med-Low</button>
+                    <button class="noise-btn volatility-noise-btn" data-asset="btc" data-level="200">Min</button>
+                </div>
+            </div>
+            <div id="btc-volatility-oscillator-container">
+                <div class="zoom-controls">
+                    <button class="zoom-btn reset-zoom" title="Reset Zoom">↺</button>
+                    <button class="zoom-btn zoom-in" title="Zoom In">+</button>
+                    <button class="zoom-btn zoom-out" title="Zoom Out">−</button>
+                </div>
+                <div class="info-text">Volatility Oscillator: 0 line = BTC price • Synchronized zoom</div>
+            </div>
+
+            <!-- Breakdown Volatility Oscillator Chart -->
+            <div id="btc-breakdown-volatility-oscillator-container">
+                <div class="zoom-controls">
+                    <button class="zoom-btn reset-zoom" title="Reset Zoom">↺</button>
+                    <button class="zoom-btn zoom-in" title="Zoom In">+</button>
+                    <button class="zoom-btn zoom-out" title="Zoom Out">−</button>
+                </div>
+                <div class="info-text">Breakdown: Individual Normalized Volatility • Synchronized zoom</div>
             </div>
         </div>
     </div>

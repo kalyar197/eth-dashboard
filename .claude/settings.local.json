@@ -30,7 +30,8 @@
       "Bash(taskkill:*)",
       "Bash(NUL)",
       "Bash(timeout /t 2 /nobreak)",
-      "Bash(del:*)"
+      "Bash(del:*)",
+      "WebSearch"
     ],
     "deny": [],
     "ask": []

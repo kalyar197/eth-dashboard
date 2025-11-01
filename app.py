@@ -9,6 +9,8 @@ import time
 from data import eth_price, btc_price, gold_price, spx_price, rsi, macd_histogram, adx, atr, sma, parabolic_sar
 from data import markov_regime
 from data.normalizers import zscore
+# Volatility oscillator plugins
+from data import realized_volatility, dvol_index, implied_volatility, iv_rank
 from config import CACHE_DURATION, RATE_LIMIT_DELAY
 
 # Initialize Sentry SDK for error monitoring
@@ -35,12 +37,20 @@ DATA_PLUGINS = {
     'btc': btc_price
 }
 
-# Oscillator plugins (all require asset parameter for momentum oscillator)
+# Momentum Oscillator plugins (all require asset parameter)
 OSCILLATOR_PLUGINS = {
     'rsi': rsi,
     'macd_histogram': macd_histogram,
     'adx': adx,
     'atr': atr
+}
+
+# Volatility Oscillator plugins (all require asset parameter)
+VOLATILITY_OSCILLATOR_PLUGINS = {
+    'realized_volatility': realized_volatility,
+    'dvol': dvol_index,
+    'implied_volatility': implied_volatility,
+    'iv_rank': iv_rank
 }
 
 # Overlay plugins (Moving Averages & Parabolic SAR - callable via /api/data)
@@ -309,16 +319,18 @@ def get_oscillator_data():
             oscillator_metadata = {}  # Store metadata for breakdown chart
 
             for oscillator_name in dataset_names:
-                if oscillator_name not in OSCILLATOR_PLUGINS:
+                # Check both momentum and volatility oscillator plugins
+                if oscillator_name in OSCILLATOR_PLUGINS:
+                    oscillator_module = OSCILLATOR_PLUGINS[oscillator_name]
+                elif oscillator_name in VOLATILITY_OSCILLATOR_PLUGINS:
+                    oscillator_module = VOLATILITY_OSCILLATOR_PLUGINS[oscillator_name]
+                else:
                     print(f"[Composite Mode] Warning: Unknown oscillator '{oscillator_name}', skipping...")
                     continue
 
                 try:
                     # Apply rate limiting
                     rate_limit_check(f"{oscillator_name}_{asset}")
-
-                    # Fetch raw oscillator data
-                    oscillator_module = OSCILLATOR_PLUGINS[oscillator_name]
 
                     # Request extra days to ensure enough history for rolling window
                     # Add noise_level + 10 extra days as buffer
