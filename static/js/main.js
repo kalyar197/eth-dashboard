@@ -48,17 +48,15 @@ const appState = {
         gold: false
     },
     selectedDatasets: {
-        btc: ['rsi', 'macd_histogram', 'volume', 'dxy'],
-        eth: ['rsi', 'macd_histogram', 'volume', 'dxy'],
-        gold: ['rsi', 'macd_histogram', 'dxy']  // No volume for gold
+        btc: ['rsi', 'macd_histogram', 'adx', 'atr'],
+        eth: ['rsi', 'macd_histogram', 'adx', 'atr'],
+        gold: ['rsi', 'macd_histogram', 'adx', 'atr']
     },
     datasetColors: {
-        rsi: '#FF9500',
-        macd_histogram: '#2196F3',
-        volume: '#9C27B0',
-        dxy: '#4CAF50',
-        adx: '#673AB7',
-        atr: '#FF5722'
+        rsi: '#FF9500',           // Orange
+        macd_histogram: '#2196F3', // Blue
+        adx: '#673AB7',           // Purple
+        atr: '#FF5722'            // Orange-red
     },
     // Noise level state (for composite oscillator)
     noiseLevel: {

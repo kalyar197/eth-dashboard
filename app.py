@@ -6,7 +6,7 @@ from flask_cors import CORS
 import os
 import time
 # Data plugins
-from data import eth_price, btc_price, gold_price, spx_price, rsi, macd_histogram, adx, sma, parabolic_sar, gold_oscillator, eth_oscillator, spx_oscillator
+from data import eth_price, btc_price, gold_price, spx_price, rsi, macd_histogram, adx, atr, sma, parabolic_sar
 from data import markov_regime
 from data.normalizers import zscore
 from config import CACHE_DURATION, RATE_LIMIT_DELAY
@@ -36,14 +36,12 @@ DATA_PLUGINS = {
     'gold': gold_price
 }
 
-# Oscillator plugins (require asset parameter, except 'gold', 'eth', and 'spx')
+# Oscillator plugins (all require asset parameter for momentum oscillator)
 OSCILLATOR_PLUGINS = {
     'rsi': rsi,
     'macd_histogram': macd_histogram,
     'adx': adx,
-    'gold': gold_oscillator,
-    'eth': eth_oscillator,
-    'spx': spx_oscillator
+    'atr': atr
 }
 
 # Overlay plugins (Moving Averages & Parabolic SAR - callable via /api/data)
@@ -337,11 +335,8 @@ def get_oscillator_data():
                     else:
                         extra_days = str(int(days) + noise_level + 10)
 
-                    # Gold, ETH, and SPX oscillators don't need asset parameter (external assets)
-                    if oscillator_name in ['gold', 'eth', 'spx']:
-                        oscillator_result = oscillator_module.get_data(extra_days)
-                    else:
-                        oscillator_result = oscillator_module.get_data(extra_days, asset)
+                    # All momentum oscillators require asset parameter
+                    oscillator_result = oscillator_module.get_data(extra_days, asset)
 
                     raw_oscillator_data = oscillator_result['data']
 
@@ -405,21 +400,26 @@ def get_oscillator_data():
             regime_result = markov_regime.get_data(days=days, asset=asset)
 
             # Step 5.5: Build breakdown data (individual normalized oscillators)
+            # Use aligned common timestamps to ensure all oscillators have same time range
             breakdown_data = {}
 
-            for oscillator_name, normalized_data in normalized_oscillators.items():
-                # Trim each oscillator's data to requested number of days
-                trimmed_data = normalized_data
-                if normalized_data and days != 'max':
-                    cutoff_timestamp = normalized_data[-1][0] - (int(days) * 24 * 60 * 60 * 1000)
-                    trimmed_data = [d for d in normalized_data if d[0] >= cutoff_timestamp]
+            for oscillator_name in aligned_values.keys():
+                # Reconstruct aligned data using common timestamps
+                aligned_data = [[common_timestamps[i], aligned_values[oscillator_name][i]]
+                               for i in range(len(common_timestamps))]
+
+                # Trim to requested number of days
+                trimmed_data = aligned_data
+                if aligned_data and days != 'max':
+                    cutoff_timestamp = aligned_data[-1][0] - (int(days) * 24 * 60 * 60 * 1000)
+                    trimmed_data = [d for d in aligned_data if d[0] >= cutoff_timestamp]
 
                 breakdown_data[oscillator_name] = {
                     'data': trimmed_data,
                     'metadata': oscillator_metadata[oscillator_name]
                 }
 
-            print(f"[Composite Mode] Generated breakdown data for {len(breakdown_data)} oscillators")
+            print(f"[Composite Mode] Generated breakdown data for {len(breakdown_data)} oscillators with aligned timestamps")
 
             # Step 6: Build result
             result = {
@@ -491,11 +491,8 @@ def get_oscillator_data():
                     # Fetch raw oscillator data
                     oscillator_module = OSCILLATOR_PLUGINS[dataset_name]
 
-                    # Gold, ETH, and SPX oscillators don't need asset parameter (external assets)
-                    if dataset_name in ['gold', 'eth', 'spx']:
-                        oscillator_result = oscillator_module.get_data(days)
-                    else:
-                        oscillator_result = oscillator_module.get_data(days, asset)
+                    # All momentum oscillators require asset parameter
+                    oscillator_result = oscillator_module.get_data(days, asset)
 
                     raw_data = oscillator_result['data']
 
