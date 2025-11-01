@@ -10,47 +10,31 @@ import { initOscillatorChart, renderOscillatorChart, initBreakdownChart, renderB
 
 // Application state
 const appState = {
-    activeTab: 'btc',              // Current active tab
+    activeTab: 'btc',              // Current active tab (BTC only)
     days: {
-        btc: 30,                    // Default 1M for BTC
-        eth: 30,                    // Default 1M for ETH
-        gold: 30                    // Default 1M for Gold
+        btc: 30                     // Default 1M for BTC
     },
     chartData: {
-        btc: null,
-        eth: null,
-        gold: null
+        btc: null
     },
     chartsInitialized: {
-        btc: false,
-        eth: false,
-        gold: false
+        btc: false
     },
     colors: {
-        btc: '#F7931A',             // Bitcoin orange
-        eth: '#627EEA',             // Ethereum blue
-        gold: '#FFD700'             // Gold yellow
+        btc: '#F7931A'              // Bitcoin orange
     },
     // Oscillator state
     oscillatorData: {
-        btc: {},
-        eth: {},
-        gold: {}
+        btc: {}
     },
     oscillatorsInitialized: {
-        btc: false,
-        eth: false,
-        gold: false
+        btc: false
     },
     breakdownInitialized: {
-        btc: false,
-        eth: false,
-        gold: false
+        btc: false
     },
     selectedDatasets: {
-        btc: ['rsi', 'macd_histogram', 'adx', 'atr'],
-        eth: ['rsi', 'macd_histogram', 'adx', 'atr'],
-        gold: ['rsi', 'macd_histogram', 'adx', 'atr']
+        btc: ['rsi', 'macd_histogram', 'adx', 'atr']
     },
     datasetColors: {
         rsi: '#FF9500',           // Orange
@@ -60,16 +44,12 @@ const appState = {
     },
     // Noise level state (for composite oscillator)
     noiseLevel: {
-        btc: 50,    // Default noise level
-        eth: 50,
-        gold: 50
+        btc: 50                     // Default noise level
     },
     compositeMode: true,  // Use composite oscillator mode by default
     // Overlay state (moving averages on price chart)
     overlaySelections: {
-        btc: [],    // Selected overlays for BTC (e.g., ['sma_14_btc', 'sma_60_btc'])
-        eth: [],    // Selected overlays for ETH
-        gold: []    // Selected overlays for Gold
+        btc: []                     // Selected overlays for BTC (e.g., ['sma_14_btc', 'sma_60_btc'])
     }
 };
 

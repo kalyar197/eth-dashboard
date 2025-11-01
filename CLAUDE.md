@@ -22,10 +22,10 @@ This BTC Trading System now features a mathematically rigorous **"Pilot & Radar"
 - ✅ User-tunable composite Z-score oscillator (data/composite_zscore.py)
 - ✅ 5 noise level controls (14, 30, 50, 100, 200 periods)
 - ✅ Regime-based background shading (blue=low-vol, red=high-vol)
-- ✅ Base oscillators: RSI, MACD Histogram, ADX, Gold Price
-- ✅ BTC tab includes ETH Price oscillator (crypto alternative divergence)
+- ✅ Base oscillators: RSI, MACD Histogram, ADX, ATR
 - ✅ API communication layer (static/js/api.js)
-- ✅ Tab-based system (BTC, ETH, Gold)
+- ✅ Single-tab BTC system (ETH/Gold tabs removed)
+- ✅ ETH/Gold/SPX price modules preserved for future BTC oscillators
 
 **Key Features:**
 - **Pilot**: User manually tunes oscillator sensitivity via 5 noise levels
@@ -248,40 +248,31 @@ The system implements an advanced composite oscillator with two independent comp
 
 The system includes multiple oscillator plugins that can be normalized and combined into composite indicators:
 
-**Core Oscillators** (all tabs):
+**Core Oscillators** (BTC tab only):
 - **RSI**: Relative Strength Index - momentum oscillator (0-100 scale)
 - **MACD Histogram**: Trend direction and strength indicator
 - **ADX**: Average Directional Index - trend strength (0-100 scale)
+- **ATR**: Average True Range - volatility indicator
 
-**External Asset Oscillators**:
-- **Gold Price** (`data/gold_oscillator.py`): Available on BTC, ETH, and Gold tabs
-  - Wraps `gold_price` module to extract closing prices
-  - Shows safe-haven vs crypto divergence
-  - Positive z-score: Gold expensive relative to asset (risk-off sentiment)
-  - Negative z-score: Gold cheap relative to asset (risk-on sentiment)
+**Price Data Modules** (preserved for future BTC oscillators):
+- **ETH Price** (`data/eth_price.py`): Ethereum price data from CoinAPI
+  - Currently not used as an oscillator
+  - Reserved for future BTC oscillator: crypto alternative divergence (ETH vs BTC)
 
-- **ETH Price** (`data/eth_oscillator.py`): Available on BTC tab only
-  - Wraps `eth_price` module to extract closing prices
-  - Shows crypto alternative divergence (ETH vs BTC)
-  - Positive z-score: ETH outperforming BTC (alt season signal)
-  - Negative z-score: BTC outperforming ETH (flight to BTC)
+- **Gold Price** (`data/gold_price.py`): Gold (XAU/USD) price data from FMP
+  - Currently not used as an oscillator
+  - Reserved for future BTC oscillator: safe-haven vs crypto divergence
 
-- **SPX (S&P 500)** (`data/spx_oscillator.py`): Available on all tabs
-  - Wraps `spx_price` module to extract closing prices
-  - Shows traditional equity vs crypto/gold divergence
-  - Positive z-score: Stocks outperforming crypto/gold (rotation to traditional markets)
-  - Negative z-score: Crypto/gold outperforming stocks (alternative asset strength)
-  - Classic risk indicator: stocks up + gold down = risk-on; stocks down + gold up = risk-off
+- **SPX Price** (`data/spx_price.py`): S&P 500 index data
+  - Currently not used as an oscillator
+  - Reserved for future BTC oscillator: traditional equity vs crypto divergence
 
 **Mathematical Treatment**:
 - All oscillators normalized via Rolling OLS Regression Divergence
-- External asset oscillators don't take asset parameter
-- Returns simple format: `[[timestamp, close_price], ...]`
-- Normalized by regressing against target asset price (BTC, ETH, or Gold)
-- **Dynamic 0 line**: Represents expected relationship with tab's main asset price
-  - BTC tab: all oscillators regressed against BTC price
-  - ETH tab: all oscillators regressed against ETH price
-  - Gold tab: all oscillators regressed against Gold price
+- All oscillators take asset parameter (currently 'btc')
+- Returns simple format: `[[timestamp, value], ...]`
+- Normalized by regressing against BTC price
+- **Dynamic 0 line**: Represents expected relationship with BTC price
 
 ## Architecture Overview
 

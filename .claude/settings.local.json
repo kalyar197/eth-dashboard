@@ -25,7 +25,12 @@
       "Bash(git rm:*)",
       "Bash(find:*)",
       "Bash(xargs:*)",
-      "Bash(timeout 5 bash:*)"
+      "Bash(timeout 5 bash:*)",
+      "WebFetch(domain:jam.dev)",
+      "Bash(taskkill:*)",
+      "Bash(NUL)",
+      "Bash(timeout /t 2 /nobreak)",
+      "Bash(del:*)"
     ],
     "deny": [],
     "ask": []

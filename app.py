@@ -30,10 +30,9 @@ last_api_call = {}
 
 # A dictionary mapping dataset names to their data-fetching modules
 # Note: OVERLAY_PLUGINS will be merged into this dictionary below
+# Note: eth_price, gold_price, spx_price are kept as imports for future BTC oscillators
 DATA_PLUGINS = {
-    'eth': eth_price,
-    'btc': btc_price,
-    'gold': gold_price
+    'btc': btc_price
 }
 
 # Oscillator plugins (all require asset parameter for momentum oscillator)
@@ -46,19 +45,12 @@ OSCILLATOR_PLUGINS = {
 
 # Overlay plugins (Moving Averages & Parabolic SAR - callable via /api/data)
 # These overlay on price charts rather than displaying in separate oscillator chart
+# Only BTC overlays - ETH and Gold tabs removed
 OVERLAY_PLUGINS = {
     'sma_7_btc': lambda days: sma.get_data(days, 'btc', 7),
     'sma_21_btc': lambda days: sma.get_data(days, 'btc', 21),
     'sma_60_btc': lambda days: sma.get_data(days, 'btc', 60),
-    'sma_7_eth': lambda days: sma.get_data(days, 'eth', 7),
-    'sma_21_eth': lambda days: sma.get_data(days, 'eth', 21),
-    'sma_60_eth': lambda days: sma.get_data(days, 'eth', 60),
-    'sma_7_gold': lambda days: sma.get_data(days, 'gold', 7),
-    'sma_21_gold': lambda days: sma.get_data(days, 'gold', 21),
-    'sma_60_gold': lambda days: sma.get_data(days, 'gold', 60),
     'psar_btc': lambda days: parabolic_sar.get_data(days, 'btc'),
-    'psar_eth': lambda days: parabolic_sar.get_data(days, 'eth'),
-    'psar_gold': lambda days: parabolic_sar.get_data(days, 'gold'),
 }
 
 # Merge overlay plugins into DATA_PLUGINS so they're accessible via /api/data

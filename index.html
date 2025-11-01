@@ -313,9 +313,7 @@
         }
         
         /* Plugin specific colors */
-        .eth_btc-label { --plugin-color: #627EEA; --plugin-color-dark: rgba(98, 126, 234, 0.2); }
 	.btc-label { --plugin-color: #F7931A; --plugin-color-dark: rgba(247, 147, 26, 0.2); }
-	.gold-label { --plugin-color: #FFD700; --plugin-color-dark: rgba(255, 215, 0, 0.2); }
 	.rsi-label { --plugin-color: #FF9500; --plugin-color-dark: rgba(255, 149, 0, 0.2); }
 	.bollinger_bands-label { --plugin-color: #9C27B0; --plugin-color-dark: rgba(156, 39, 176, 0.2); }
 	.vwap-label { --plugin-color: #00BCD4; --plugin-color-dark: rgba(0, 188, 212, 0.2); }
@@ -375,14 +373,6 @@
             border-top: 3px solid #F7931A;
         }
 
-        .tab-btn.active[data-tab="eth"] {
-            border-top: 3px solid #627EEA;
-        }
-
-        .tab-btn.active[data-tab="gold"] {
-            border-top: 3px solid #FFD700;
-        }
-
         /* Tab Content */
         .tab-content {
             display: none;
@@ -395,7 +385,7 @@
         }
 
         /* Chart containers specific - Price charts (60% height) */
-        #btc-chart-container, #eth-chart-container, #gold-chart-container {
+        #btc-chart-container {
             background: #1a1a1a;
             border-radius: 12px;
             border: 1px solid #2a2a2a;
@@ -409,7 +399,7 @@
         }
 
         /* Main Oscillator containers */
-        #btc-oscillator-container, #eth-oscillator-container, #gold-oscillator-container {
+        #btc-oscillator-container {
             background: #1a1a1a;
             border-radius: 12px;
             border: 1px solid #2a2a2a;
@@ -423,7 +413,7 @@
         }
 
         /* Breakdown Oscillator containers (smaller) */
-        #btc-breakdown-oscillator-container, #eth-breakdown-oscillator-container, #gold-breakdown-oscillator-container {
+        #btc-breakdown-oscillator-container {
             background: #1a1a1a;
             border-radius: 12px;
             border: 1px solid #2a2a2a;
@@ -526,8 +516,6 @@
     <!-- Tab Navigation -->
     <div class="tabs">
         <button class="tab-btn active" data-tab="btc">Bitcoin (BTC)</button>
-        <button class="tab-btn" data-tab="eth">Ethereum (ETH)</button>
-        <button class="tab-btn" data-tab="gold">Gold (XAU/USD)</button>
     </div>
 
     <!-- BTC Tab Content -->
@@ -613,192 +601,6 @@
 
             <!-- Breakdown Oscillator Chart -->
             <div id="btc-breakdown-oscillator-container">
-                <div class="zoom-controls">
-                    <button class="zoom-btn reset-zoom" title="Reset Zoom">↺</button>
-                    <button class="zoom-btn zoom-in" title="Zoom In">+</button>
-                    <button class="zoom-btn zoom-out" title="Zoom Out">−</button>
-                </div>
-                <div class="info-text">Breakdown: Individual Normalized Oscillators • Synchronized zoom</div>
-            </div>
-        </div>
-    </div>
-
-    <!-- ETH Tab Content -->
-    <div class="tab-content" id="eth-tab">
-        <div class="controls">
-            <div class="button-container control-group">
-                <button class="time-btn" data-dataset="eth" data-days="7">1W</button>
-                <button class="time-btn active" data-dataset="eth" data-days="30">1M</button>
-                <button class="time-btn" data-dataset="eth" data-days="180">6M</button>
-                <button class="time-btn" data-dataset="eth" data-days="1095">3Y</button>
-            </div>
-            <div class="button-container control-group overlay-controls">
-                <label class="control-label">Moving Averages:</label>
-                <div class="dataset-checkbox-wrapper">
-                    <input type="checkbox" id="sma-7-eth" class="overlay-checkbox" data-asset="eth" data-overlay="sma_7_eth">
-                    <label for="sma-7-eth" style="color: #FF6B6B;">SMA-7</label>
-                </div>
-                <div class="dataset-checkbox-wrapper">
-                    <input type="checkbox" id="sma-21-eth" class="overlay-checkbox" data-asset="eth" data-overlay="sma_21_eth">
-                    <label for="sma-21-eth" style="color: #FFA500;">SMA-21</label>
-                </div>
-                <div class="dataset-checkbox-wrapper">
-                    <input type="checkbox" id="sma-60-eth" class="overlay-checkbox" data-asset="eth" data-overlay="sma_60_eth">
-                    <label for="sma-60-eth" style="color: #4ECDC4;">SMA-60</label>
-                </div>
-                <div class="dataset-checkbox-wrapper">
-                    <input type="checkbox" id="psar-eth" class="overlay-checkbox" data-asset="eth" data-overlay="psar_eth">
-                    <label for="psar-eth" style="color: #888;">PSAR</label>
-                </div>
-            </div>
-        </div>
-
-        <!-- Price Chart Section (60%) -->
-        <div class="chart-section">
-            <div id="eth-chart-container">
-                <div class="zoom-controls">
-                    <button class="zoom-btn reset-zoom" title="Reset Zoom">↺</button>
-                    <button class="zoom-btn zoom-in" title="Zoom In">+</button>
-                    <button class="zoom-btn zoom-out" title="Zoom Out">−</button>
-                </div>
-                <div class="info-text">Click and drag to zoom • Hover for OHLCV details</div>
-            </div>
-        </div>
-
-        <!-- Oscillator Section (40%) -->
-        <div class="chart-section">
-            <div class="oscillator-controls">
-                <div class="dataset-checkboxes">
-                    <div class="dataset-checkbox-wrapper">
-                        <input type="checkbox" id="rsi-eth" class="dataset-checkbox" data-asset="eth" data-dataset="rsi" checked>
-                        <label for="rsi-eth">RSI</label>
-                    </div>
-                    <div class="dataset-checkbox-wrapper">
-                        <input type="checkbox" id="macd-histogram-eth" class="dataset-checkbox" data-asset="eth" data-dataset="macd_histogram" checked>
-                        <label for="macd-histogram-eth">MACD Histogram</label>
-                    </div>
-                    <div class="dataset-checkbox-wrapper">
-                        <input type="checkbox" id="adx-eth" class="dataset-checkbox" data-asset="eth" data-dataset="adx" checked>
-                        <label for="adx-eth">ADX</label>
-                    </div>
-                    <div class="dataset-checkbox-wrapper">
-                        <input type="checkbox" id="atr-eth" class="dataset-checkbox" data-asset="eth" data-dataset="atr" checked>
-                        <label for="atr-eth">ATR</label>
-                    </div>
-                </div>
-                <div class="noise-level-controls">
-                    <label class="noise-label">Noise Level:</label>
-                    <button class="noise-btn" data-asset="eth" data-level="14">Max</button>
-                    <button class="noise-btn" data-asset="eth" data-level="30">Med-High</button>
-                    <button class="noise-btn active" data-asset="eth" data-level="50">Default</button>
-                    <button class="noise-btn" data-asset="eth" data-level="100">Med-Low</button>
-                    <button class="noise-btn" data-asset="eth" data-level="200">Min</button>
-                </div>
-            </div>
-            <div id="eth-oscillator-container">
-                <div class="zoom-controls">
-                    <button class="zoom-btn reset-zoom" title="Reset Zoom">↺</button>
-                    <button class="zoom-btn zoom-in" title="Zoom In">+</button>
-                    <button class="zoom-btn zoom-out" title="Zoom Out">−</button>
-                </div>
-                <div class="info-text">Oscillator: 0 line = ETH price • Synchronized zoom</div>
-            </div>
-
-            <!-- Breakdown Oscillator Chart -->
-            <div id="eth-breakdown-oscillator-container">
-                <div class="zoom-controls">
-                    <button class="zoom-btn reset-zoom" title="Reset Zoom">↺</button>
-                    <button class="zoom-btn zoom-in" title="Zoom In">+</button>
-                    <button class="zoom-btn zoom-out" title="Zoom Out">−</button>
-                </div>
-                <div class="info-text">Breakdown: Individual Normalized Oscillators • Synchronized zoom</div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Gold Tab Content -->
-    <div class="tab-content" id="gold-tab">
-        <div class="controls">
-            <div class="button-container control-group">
-                <button class="time-btn" data-dataset="gold" data-days="7">1W</button>
-                <button class="time-btn active" data-dataset="gold" data-days="30">1M</button>
-                <button class="time-btn" data-dataset="gold" data-days="180">6M</button>
-                <button class="time-btn" data-dataset="gold" data-days="1095">3Y</button>
-            </div>
-            <div class="button-container control-group overlay-controls">
-                <label class="control-label">Moving Averages:</label>
-                <div class="dataset-checkbox-wrapper">
-                    <input type="checkbox" id="sma-7-gold" class="overlay-checkbox" data-asset="gold" data-overlay="sma_7_gold">
-                    <label for="sma-7-gold" style="color: #FF6B6B;">SMA-7</label>
-                </div>
-                <div class="dataset-checkbox-wrapper">
-                    <input type="checkbox" id="sma-21-gold" class="overlay-checkbox" data-asset="gold" data-overlay="sma_21_gold">
-                    <label for="sma-21-gold" style="color: #FFA500;">SMA-21</label>
-                </div>
-                <div class="dataset-checkbox-wrapper">
-                    <input type="checkbox" id="sma-60-gold" class="overlay-checkbox" data-asset="gold" data-overlay="sma_60_gold">
-                    <label for="sma-60-gold" style="color: #4ECDC4;">SMA-60</label>
-                </div>
-                <div class="dataset-checkbox-wrapper">
-                    <input type="checkbox" id="psar-gold" class="overlay-checkbox" data-asset="gold" data-overlay="psar_gold">
-                    <label for="psar-gold" style="color: #888;">PSAR</label>
-                </div>
-            </div>
-        </div>
-
-        <!-- Price Chart Section (60%) -->
-        <div class="chart-section">
-            <div id="gold-chart-container">
-                <div class="zoom-controls">
-                    <button class="zoom-btn reset-zoom" title="Reset Zoom">↺</button>
-                    <button class="zoom-btn zoom-in" title="Zoom In">+</button>
-                    <button class="zoom-btn zoom-out" title="Zoom Out">−</button>
-                </div>
-                <div class="info-text">Click and drag to zoom • Hover for OHLCV details</div>
-            </div>
-        </div>
-
-        <!-- Oscillator Section (40%) -->
-        <div class="chart-section">
-            <div class="oscillator-controls">
-                <div class="dataset-checkboxes">
-                    <div class="dataset-checkbox-wrapper">
-                        <input type="checkbox" id="rsi-gold" class="dataset-checkbox" data-asset="gold" data-dataset="rsi" checked>
-                        <label for="rsi-gold">RSI</label>
-                    </div>
-                    <div class="dataset-checkbox-wrapper">
-                        <input type="checkbox" id="macd-histogram-gold" class="dataset-checkbox" data-asset="gold" data-dataset="macd_histogram" checked>
-                        <label for="macd-histogram-gold">MACD Histogram</label>
-                    </div>
-                    <div class="dataset-checkbox-wrapper">
-                        <input type="checkbox" id="adx-gold" class="dataset-checkbox" data-asset="gold" data-dataset="adx" checked>
-                        <label for="adx-gold">ADX</label>
-                    </div>
-                    <div class="dataset-checkbox-wrapper">
-                        <input type="checkbox" id="atr-gold" class="dataset-checkbox" data-asset="gold" data-dataset="atr" checked>
-                        <label for="atr-gold">ATR</label>
-                    </div>
-                </div>
-                <div class="noise-level-controls">
-                    <label class="noise-label">Noise Level:</label>
-                    <button class="noise-btn" data-asset="gold" data-level="14">Max</button>
-                    <button class="noise-btn" data-asset="gold" data-level="30">Med-High</button>
-                    <button class="noise-btn active" data-asset="gold" data-level="50">Default</button>
-                    <button class="noise-btn" data-asset="gold" data-level="100">Med-Low</button>
-                    <button class="noise-btn" data-asset="gold" data-level="200">Min</button>
-                </div>
-            </div>
-            <div id="gold-oscillator-container">
-                <div class="zoom-controls">
-                    <button class="zoom-btn reset-zoom" title="Reset Zoom">↺</button>
-                    <button class="zoom-btn zoom-in" title="Zoom In">+</button>
-                    <button class="zoom-btn zoom-out" title="Zoom Out">−</button>
-                </div>
-                <div class="info-text">Oscillator: 0 line = Gold price • Synchronized zoom</div>
-            </div>
-
-            <!-- Breakdown Oscillator Chart -->
-            <div id="gold-breakdown-oscillator-container">
                 <div class="zoom-controls">
                     <button class="zoom-btn reset-zoom" title="Reset Zoom">↺</button>
                     <button class="zoom-btn zoom-in" title="Zoom In">+</button>
