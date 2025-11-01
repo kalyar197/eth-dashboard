@@ -825,6 +825,12 @@ export function renderBreakdownChart(asset, breakdownData) {
     // Render legend
     renderBreakdownLegend(chart, chart.lines);
 
+    // Setup zoom and crosshair if not already setup
+    if (!chart.zoom) {
+        setupBreakdownZoom(asset);
+        setupBreakdownCrosshair(asset);
+    }
+
     console.log(`[Breakdown] Breakdown chart rendered for ${asset}`);
 }
 
@@ -844,25 +850,35 @@ function renderBreakdownLegend(chart, lines) {
         label: info.label
     }));
 
-    const itemWidth = 120;
-    const itemHeight = 16;
+    // Layout configuration
+    const itemSpacing = 10;        // Space between items
+    const rowHeight = 18;          // Height of each row
+    const maxItemsPerRow = 3;      // Maximum items per row
 
+    // Arrange items in grid layout
     legendItems.forEach((item, i) => {
+        const row = Math.floor(i / maxItemsPerRow);
+        const col = i % maxItemsPerRow;
+
+        // Calculate position
+        const x = col * 150;  // 150px spacing for each column
+        const y = row * rowHeight;
+
         const legendItem = chart.legendGroup.append('g')
             .attr('class', 'legend-item')
-            .attr('transform', `translate(${i * itemWidth}, 0)`);
+            .attr('transform', `translate(${x}, ${y})`);
 
         // Color square
         legendItem.append('rect')
-            .attr('width', 12)
-            .attr('height', 12)
+            .attr('width', 10)
+            .attr('height', 10)
             .attr('fill', item.color);
 
         // Label
         legendItem.append('text')
-            .attr('x', 16)
-            .attr('y', 10)
-            .attr('font-size', '11px')
+            .attr('x', 14)
+            .attr('y', 9)
+            .attr('font-size', '10px')
             .attr('fill', '#ccc')
             .text(item.label);
     });
@@ -877,6 +893,138 @@ export function resetOscillatorZoom(asset) {
     if (!chart) return;
 
     chart.overlay.call(chart.zoom.transform, d3.zoomIdentity);
+}
+
+/**
+ * Setup zoom behavior for breakdown chart
+ * @param {string} asset - Asset name
+ */
+function setupBreakdownZoom(asset) {
+    const chart = breakdownInstances[asset];
+    if (!chart) return;
+
+    chart.zoom = d3.zoom()
+        .scaleExtent([0.5, 10])
+        .translateExtent([[0, 0], [chart.width, chart.height]])
+        .extent([[0, 0], [chart.width, chart.height]])
+        .on('zoom', (event) => updateBreakdownZoom(asset, event.transform));
+
+    chart.overlay.call(chart.zoom);
+}
+
+/**
+ * Update breakdown chart with zoom transform
+ * @param {string} asset - Asset name
+ * @param {Object} transform - D3 zoom transform
+ */
+function updateBreakdownZoom(asset, transform) {
+    const chart = breakdownInstances[asset];
+    if (!chart) return;
+
+    chart.currentTransform = transform;
+
+    // Create new scales with transform
+    const newXScale = transform.rescaleX(chart.xScale);
+    const newYScale = transform.rescaleY(chart.yScale);
+
+    // Update axes
+    chart.xAxisGroup.call(chart.xAxis.scale(newXScale));
+    chart.yAxisGroup.call(chart.yAxis.scale(newYScale));
+
+    // Update grids
+    chart.xGrid.call(d3.axisBottom(newXScale)
+        .ticks(8)
+        .tickSize(-chart.height)
+        .tickFormat(''));
+
+    chart.yGrid.call(d3.axisLeft(newYScale)
+        .ticks(6)
+        .tickSize(-chart.width)
+        .tickFormat(''));
+
+    // Update zero line
+    const zeroY = newYScale(0);
+    chart.zeroLine.attr('y1', zeroY).attr('y2', zeroY);
+
+    // Update lines
+    const line = d3.line()
+        .x(d => newXScale(new Date(d[0])))
+        .y(d => newYScale(d[1]))
+        .curve(d3.curveMonotoneX);
+
+    Object.entries(chart.lines).forEach(([name, lineInfo]) => {
+        chart.linesGroup.select(`.line-${name}`)
+            .datum(lineInfo.data)
+            .attr('d', line);
+    });
+}
+
+/**
+ * Setup crosshair for breakdown chart
+ * @param {string} asset - Asset name
+ */
+function setupBreakdownCrosshair(asset) {
+    const chart = breakdownInstances[asset];
+    if (!chart) return;
+
+    const tooltip = d3.select('#tooltip');
+
+    chart.overlay
+        .on('mousemove', function(event) {
+            const [mouseX, mouseY] = d3.pointer(event);
+
+            // Use current transform for scales
+            const newXScale = chart.currentTransform.rescaleX(chart.xScale);
+            const newYScale = chart.currentTransform.rescaleY(chart.yScale);
+
+            // Show crosshair
+            chart.crosshairGroup.style('display', null);
+            chart.crosshairLineX.attr('x1', mouseX).attr('x2', mouseX);
+            chart.crosshairLineY.attr('y1', mouseY).attr('y2', mouseY);
+
+            // Get date at mouse position
+            const date = newXScale.invert(mouseX);
+
+            // Find closest data points for all oscillators
+            let tooltipHTML = `<div class="tooltip-header">${d3.timeFormat('%Y-%m-%d')(date)}</div>`;
+
+            Object.entries(chart.lines).forEach(([name, lineInfo]) => {
+                const data = lineInfo.data;
+                if (!data || data.length === 0) return;
+
+                // Binary search for closest point
+                const bisect = d3.bisector(d => d[0]).left;
+                const idx = bisect(data, date.getTime());
+
+                if (idx > 0 && idx < data.length) {
+                    const d0 = data[idx - 1];
+                    const d1 = data[idx];
+                    const closest = date.getTime() - d0[0] > d1[0] - date.getTime() ? d1 : d0;
+
+                    const value = closest[1];
+
+                    tooltipHTML += `
+                        <div class="tooltip-row">
+                            <span class="tooltip-color" style="background: ${lineInfo.color}"></span>
+                            <span>${lineInfo.label}</span>
+                            <span class="tooltip-value">${value.toFixed(2)}</span>
+                        </div>
+                    `;
+                }
+            });
+
+            // Position and show tooltip
+            const containerRect = chart.svg.node().getBoundingClientRect();
+            tooltip
+                .style('left', (containerRect.left + mouseX + chart.margin.left + 10) + 'px')
+                .style('top', (containerRect.top + mouseY + chart.margin.top + 10) + 'px')
+                .classed('show', true)
+                .html(tooltipHTML);
+        })
+        .on('mouseleave', function() {
+            chart.crosshairGroup.style('display', 'none');
+            tooltip.classed('show', false);
+        });
 }
 
 /**
