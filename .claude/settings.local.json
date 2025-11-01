@@ -7,7 +7,20 @@
       "Bash(git push)",
       "Bash(curl:*)",
       "Bash(del test_incremental_fetch.py)",
-      "Bash(del \"data\\normalizers\\percentage_diff.py\")"
+      "Bash(del \"data\\normalizers\\percentage_diff.py\")",
+      "Bash(pip install:*)",
+      "Bash(timeout 3 bash -c \"while ! curl -s http://127.0.0.1:5000/api/status > /dev/null 2>&1; do sleep 0.5; done; echo ''Server ready''\")",
+      "Bash(for level in 14 50 200)",
+      "Bash(do echo \"=== Noise Level: $level ===\")",
+      "Bash(done)",
+      "Bash(del \"data\\composite_zscore.py\")",
+      "Bash(rm:*)",
+      "Bash(git log:*)",
+      "Bash(gh run list:*)",
+      "Bash(gh run view:*)",
+      "Bash(gh pr list:*)",
+      "Bash(gh pr view:*)",
+      "Bash(gh workflow:*)"
     ],
     "deny": [],
     "ask": []
