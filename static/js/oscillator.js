@@ -421,6 +421,7 @@ function renderCompositeOscillator(asset, data, colors) {
     const line = d3.line()
         .x(d => chart.xScale(new Date(d[0])))
         .y(d => chart.yScale(d[1]))
+        .defined(d => d[1] !== null && d[1] !== undefined && !isNaN(d[1]))
         .curve(d3.curveMonotoneX);
 
     chart.linesGroup.append('path')
@@ -556,6 +557,7 @@ function renderIndividualOscillator(asset, datasetsData, colors) {
     const line = d3.line()
         .x(d => chart.xScale(new Date(d[0])))
         .y(d => chart.yScale(d[1]))
+        .defined(d => d[1] !== null && d[1] !== undefined && !isNaN(d[1]))
         .curve(d3.curveMonotoneX);
 
     // Draw lines for each dataset
@@ -630,6 +632,7 @@ function updateOscillatorZoom(asset, transform) {
     const line = d3.line()
         .x(d => newXScale(new Date(d[0])))
         .y(d => newYScale(d[1]))
+        .defined(d => d[1] !== null && d[1] !== undefined && !isNaN(d[1]))
         .curve(d3.curveMonotoneX);
 
     Object.entries(chart.data).forEach(([datasetName, data]) => {
@@ -791,6 +794,7 @@ export function renderBreakdownChart(asset, breakdownData) {
     const lineGenerator = d3.line()
         .x(d => chart.xScale(new Date(d[0])))
         .y(d => chart.yScale(d[1]))
+        .defined(d => d[1] !== null && d[1] !== undefined && !isNaN(d[1]))
         .curve(d3.curveMonotoneX);
 
     // Clear existing lines
@@ -950,6 +954,7 @@ function updateBreakdownZoom(asset, transform) {
     const line = d3.line()
         .x(d => newXScale(new Date(d[0])))
         .y(d => newYScale(d[1]))
+        .defined(d => d[1] !== null && d[1] !== undefined && !isNaN(d[1]))
         .curve(d3.curveMonotoneX);
 
     Object.entries(chart.lines).forEach(([name, lineInfo]) => {

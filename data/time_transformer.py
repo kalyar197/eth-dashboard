@@ -4,6 +4,11 @@ Time standardization module for OHLCV data
 Handles both 2-element [timestamp, value] and 6-element [timestamp, O, H, L, C, V] structures
 Ensures all timestamps are normalized to daily UTC boundaries
 PRESERVES ALL DATA COMPONENTS - No data loss
+
+CRITICAL POLICY: NO MOCK VALUES OR ESTIMATES
+- Missing days are included in the timeline with NaN (null in JSON) values
+- Frontend visualization renders gaps, NOT interpolated/estimated lines
+- This ensures data integrity and prevents misleading visualizations
 """
 
 from datetime import datetime, timezone, timedelta
@@ -128,113 +133,67 @@ def standardize_to_daily_utc(raw_data):
     
     # Sort by timestamp to ensure chronological order
     standardized_data.sort(key=lambda x: x[0])
-    
-    # Fill gaps in data (optional - ensures continuous daily data)
+
+    # Create continuous daily index with NaN for missing data (NO MOCK VALUES)
+    # This ensures visualization shows gaps instead of interpolated/estimated data
     if len(standardized_data) > 1:
-        if data_structure == 2:
-            filled_data = fill_daily_gaps_simple(standardized_data)
-        elif data_structure == 6:
-            filled_data = fill_daily_gaps_ohlcv(standardized_data)
-        else:
-            filled_data = standardized_data
-        return filled_data
-    
+        continuous_data = create_continuous_index_with_nan(standardized_data, data_structure)
+        return continuous_data
+
     return standardized_data
 
-def fill_daily_gaps_simple(data):
+def create_continuous_index_with_nan(data, data_structure):
     """
-    Fill gaps in simple [timestamp, value] daily data with interpolated values.
-    """
-    if len(data) < 2:
-        return data
-    
-    filled_data = []
-    
-    for i in range(len(data) - 1):
-        current_point = data[i]
-        next_point = data[i + 1]
-        
-        filled_data.append(current_point)
-        
-        # Check for gap
-        current_date = datetime.fromtimestamp(current_point[0] / 1000, tz=timezone.utc)
-        next_date = datetime.fromtimestamp(next_point[0] / 1000, tz=timezone.utc)
-        
-        days_diff = (next_date - current_date).days
-        
-        # If there's a gap of more than 1 day, fill it
-        if days_diff > 1:
-            # Linear interpolation for missing days
-            value_diff = next_point[1] - current_point[1]
-            value_step = value_diff / days_diff
-            
-            for j in range(1, days_diff):
-                gap_date = current_date + timedelta(days=j)
-                gap_timestamp = int(gap_date.timestamp() * 1000)
-                interpolated_value = current_point[1] + (value_step * j)
-                
-                filled_data.append([gap_timestamp, interpolated_value])
-                
-            if days_diff > 2:  # Only log significant gaps
-                print(f"Info: Filled {days_diff - 1} day gap between {current_date.date()} and {next_date.date()}")
-    
-    # Add the last point
-    filled_data.append(data[-1])
-    
-    return filled_data
+    Create a continuous daily index with NaN values for missing days.
 
-def fill_daily_gaps_ohlcv(data):
-    """
-    Fill gaps in OHLCV data.
-    For gap days, use interpolated close as all OHLC values, zero volume.
-    This maintains data integrity while filling gaps.
+    CRITICAL: NO MOCK VALUES OR ESTIMATES - missing days contain NaN (null in JSON)
+    to ensure the frontend visualization renders gaps, not interpolated lines.
+
+    Args:
+        data: Sorted list of data points (either 2-element or 6-element)
+        data_structure: 2 for [timestamp, value], 6 for OHLCV
+
+    Returns:
+        List with continuous daily timestamps, NaN for missing data
     """
     if len(data) < 2:
         return data
-    
-    filled_data = []
-    
-    for i in range(len(data) - 1):
-        current_point = data[i]
-        next_point = data[i + 1]
-        
-        filled_data.append(current_point)
-        
-        # Check for gap
-        current_date = datetime.fromtimestamp(current_point[0] / 1000, tz=timezone.utc)
-        next_date = datetime.fromtimestamp(next_point[0] / 1000, tz=timezone.utc)
-        
-        days_diff = (next_date - current_date).days
-        
-        # If there's a gap of more than 1 day, fill it
-        if days_diff > 1:
-            # Interpolate using close prices
-            close_diff = next_point[4] - current_point[4]
-            close_step = close_diff / days_diff
-            
-            for j in range(1, days_diff):
-                gap_date = current_date + timedelta(days=j)
-                gap_timestamp = int(gap_date.timestamp() * 1000)
-                
-                # Use interpolated close for all OHLC values on gap days
-                interpolated_close = current_point[4] + (close_step * j)
-                
-                filled_data.append([
-                    gap_timestamp,
-                    interpolated_close,  # open
-                    interpolated_close,  # high
-                    interpolated_close,  # low
-                    interpolated_close,  # close
-                    0.0                  # volume (0 for gap days)
-                ])
-            
-            if days_diff > 2:  # Only log significant gaps
-                print(f"Info: Filled {days_diff - 1} day OHLCV gap between {current_date.date()} and {next_date.date()}")
-    
-    # Add the last point
-    filled_data.append(data[-1])
-    
-    return filled_data
+
+    # Get date range
+    start_date = datetime.fromtimestamp(data[0][0] / 1000, tz=timezone.utc)
+    end_date = datetime.fromtimestamp(data[-1][0] / 1000, tz=timezone.utc)
+
+    # Create lookup dictionary for existing data
+    data_dict = {point[0]: point for point in data}
+
+    # Generate continuous daily range
+    continuous_data = []
+    current_date = start_date
+    gap_count = 0
+
+    while current_date <= end_date:
+        current_timestamp = int(current_date.timestamp() * 1000)
+
+        if current_timestamp in data_dict:
+            # Real data exists for this day
+            continuous_data.append(data_dict[current_timestamp])
+        else:
+            # Missing data - insert NaN values (NO MOCK VALUES)
+            gap_count += 1
+            if data_structure == 2:
+                # Simple structure: [timestamp, NaN]
+                continuous_data.append([current_timestamp, None])
+            elif data_structure == 6:
+                # OHLCV structure: [timestamp, NaN, NaN, NaN, NaN, NaN]
+                continuous_data.append([current_timestamp, None, None, None, None, None])
+
+        # Move to next day
+        current_date += timedelta(days=1)
+
+    if gap_count > 0:
+        print(f"Info: Created continuous index with {gap_count} gap days (NaN values) between {start_date.date()} and {end_date.date()}")
+
+    return continuous_data
 
 def validate_daily_alignment(data):
     """

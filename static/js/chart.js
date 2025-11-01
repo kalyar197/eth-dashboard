@@ -285,6 +285,7 @@ function renderOverlays(dataset, overlays) {
             const line = d3.line()
                 .x(d => chart.xScale(new Date(d[0])))
                 .y(d => chart.yScale(d[1]))
+                .defined(d => d[1] !== null && d[1] !== undefined && !isNaN(d[1]))
                 .curve(d3.curveLinear);
 
             // Draw the line
@@ -391,6 +392,7 @@ function updateZoom(dataset, data, transform) {
                 const line = d3.line()
                     .x(d => newXScale(new Date(d[0])))
                     .y(d => chart.yScale(d[1]))
+                    .defined(d => d[1] !== null && d[1] !== undefined && !isNaN(d[1]))
                     .curve(d3.curveLinear);
 
                 chart.overlaysGroup.select(`.overlay-${index}`)
