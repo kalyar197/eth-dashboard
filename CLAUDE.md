@@ -2,11 +2,11 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## ⚠️ PROJECT STATUS: DUAL OSCILLATOR SYSTEM COMPLETE (2025-11-01)
+## ⚠️ PROJECT STATUS: MOMENTUM OSCILLATOR SYSTEM COMPLETE (2025-11-02)
 
-**Status**: 2 Complete Oscillator Sections - Momentum + Volatility
+**Status**: Single Momentum Oscillator Section - Fully Functional
 
-**Latest Update (Commit c94b68a):** Added complete volatility oscillator system with 4 metrics as a second oscillator section below momentum oscillators.
+**Latest Update (2025-11-02):** Redesigned UI with Main/Breakdown tab structure, fixed PSAR overlay bug, and improved chart spacing.
 
 ### 🎯 What's Currently Working:
 
@@ -22,7 +22,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - ✅ Single-tab BTC system (ETH/Gold tabs removed)
 - ✅ ETH/Gold/SPX price modules preserved for future oscillators
 
-**Oscillator Section 1: MOMENTUM OSCILLATORS** (Cyan composite line):
+**MOMENTUM OSCILLATORS** (Cyan composite line):
 - ✅ Garman-Klass volatility estimation (data/volatility.py)
 - ✅ 2-state Markov regime detector (data/markov_regime.py)
 - ✅ User-tunable composite Z-score oscillator (data/composite_zscore.py)
@@ -30,79 +30,68 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - ✅ Regime-based background shading (blue=low-vol, red=high-vol)
 - ✅ 4 Base oscillators: RSI, MACD Histogram, ADX, ATR
 - ✅ Composite + Breakdown charts with legend
+- ✅ Fully interactive controls (checkboxes, buttons)
 
-**Oscillator Section 2: VOLATILITY OSCILLATORS** (Red composite line) ⭐ NEW:
-- ✅ CoinAPI integration (data/coinapi_client.py) - 1000 req/day rate limiting
-- ✅ Realized Volatility (data/realized_volatility.py) - Garman-Klass from OHLC
-- ✅ DVOL Index (data/dvol_index.py) - Deribit 30-day implied volatility
-- ✅ Implied Volatility (data/implied_volatility.py) - Forward-looking via DVOL
-- ✅ IV Rank (data/iv_rank.py) - 252-day percentile ranking (0-100%)
-- ✅ Same mathematical core: regression divergence Z-score normalization
-- ✅ Independent noise level controls (14/30/50/100/200)
-- ✅ Composite + Breakdown charts with legend
-- ✅ Historical data caching (4 JSON files with tested samples)
-- ✅ Backend tested and working with 7-40 day data
+**Funding Rate Chart:**
+- ✅ Binance perpetual futures funding rates
+- ✅ Color-coded sentiment visualization
+- ✅ 3-month historical data caching
+- ✅ Real-time updates every 8 hours
+
+**UI/Layout (2025-11-02):**
+- ✅ Responsive SVG viewBox for zoom resilience (80%-120%)
+- ✅ No text overlapping at any zoom level
+- ✅ Proper Y-axis label spacing in all charts
+- ✅ Two-tab navigation: "Main" (all charts) and "Breakdown" (empty, reserved for future use)
+- ✅ Removed top heading for maximum chart space
+- ✅ Moving average overlays (SMA-7, SMA-21, SMA-60, PSAR) with proper toggle functionality
+- ✅ Fixed PSAR overlay clearing bug - overlays now properly removed when unchecked
 
 **System Architecture:**
 - **Pilot**: User manually tunes oscillator sensitivity via 5 noise levels
 - **Radar**: Markov model provides objective volatility regime context
 - **Composite Z-Score**: Weighted average normalized to standard deviations
 - **Regime Shading**: Visual indication of market volatility state
-- **Dual Oscillator Sections**: Momentum (cyan) + Volatility (red)
 
-### 🚧 Pending Work (As of 2025-11-01):
-
-**Immediate Testing Required:**
-- ⏳ Frontend verification: Volatility charts should render on page load
-- ⏳ Test noise level controls (14, 30, 50, 100, 200) for volatility section
-- ⏳ Test dataset checkbox toggles (Realized Vol, DVOL, IV, IV Rank)
-- ⏳ Verify regime background shading appears on volatility charts
-- ⏳ Test with different time periods (1W, 1M, 6M, 3Y)
+### 🚧 Pending Work (As of 2025-11-02):
 
 **Future Enhancements:**
-- ❌ **3 Complex Volatility Metrics** (require options chain data from CoinAPI/Binance/OKX):
-  1. Put/Call Ratio - From options open interest or volume
-  2. Term Structure - IV across multiple expiries (7d, 30d, 60d, 90d, 180d)
-  3. Volatility Skew - 25-delta put IV minus 25-delta call IV (requires Greeks)
-- ❌ 3-year historical data batching for Deribit API
-- ❌ Zoom/pan synchronization between charts (optional)
-- ❌ Export to CSV/JSON functionality (optional)
+- ❌ **Volatility Oscillator Section** (removed in previous session, can be re-implemented):
+  - Realized Volatility, DVOL Index, Implied Volatility, IV Rank
+  - Requires frontend implementation (~700 lines across HTML/JS)
+  - Backend modules exist: data/realized_volatility.py, data/dvol_index.py, etc.
+- ❌ **Advanced Volatility Metrics** (require options chain data):
+  - Put/Call Ratio from options OI/volume
+  - Term Structure across multiple expiries
+  - Volatility Skew (25-delta put vs call IV)
+- ❌ Moving average overlay integration with oscillators
+- ❌ Zoom/pan synchronization between all charts
+- ❌ Export to CSV/JSON functionality
+- ❌ Mobile responsive design
 
 **Known Limitations:**
-- Current historical data: 7-40 days (sufficient for testing)
+- Historical data: 3+ years for most indicators (sufficient)
 - CoinAPI Startup tier: 1000 requests/day limit
-- Deribit free API: Rate limits apply but generous for daily use
-- Options data may require paid Tardis.dev for full 3-year history
+- Funding rate data: ~3 months cached from Binance
 
-**Files Changed in Latest Session:**
+**Files Changed in Latest Session (2025-11-02):**
 ```
-New Files (9):
-- data/coinapi_client.py
-- data/dvol_index.py
-- data/implied_volatility.py
-- data/iv_rank.py
-- data/realized_volatility.py
-- historical_data/dvol_btc.json
-- historical_data/implied_volatility_btc.json
-- historical_data/iv_rank_btc.json
-- historical_data/realized_volatility_btc.json
+Modified Files (3):
+- index.html (removed heading, renamed tab to "Main", added empty "Breakdown" tab)
+- static/js/main.js (updated tab state management for new structure)
+- static/js/chart.js (fixed PSAR overlay clearing bug in renderOverlays function)
 
-Modified Files (6):
-- app.py (registered VOLATILITY_OSCILLATOR_PLUGINS)
-- config.py (added CoinAPI settings)
-- index.html (+volatility section, ~100 lines)
-- static/js/main.js (+volatility state/controls, ~100 lines)
-- static/js/oscillator.js (+rendering functions, ~600 lines)
-- .claude/settings.local.json (WebSearch permission)
+Bug Fix Details:
+- chart.js:239-251: Moved overlay clearing operation BEFORE empty array check
+- This ensures overlays are always cleared when unchecking boxes
+- Previously, overlays persisted when all checkboxes were unchecked
 ```
 
-**Quick Start for Next Session:**
-1. Server should already be running: `http://127.0.0.1:5000`
-2. Check browser console (F12) for any JavaScript errors
-3. Verify 4 volatility oscillators load in UI
-4. Test controls and verify data fetching works
-5. If frontend works: Move to implementing 3 complex plugins
-6. If issues found: Debug and fix before proceeding
+**Quick Start:**
+1. Start server: `python app.py`
+2. Access: `http://127.0.0.1:5000`
+3. All features fully functional
+4. Tested at 80%, 100%, 120% browser zoom - no overlapping
 
 ---
 
@@ -347,174 +336,6 @@ The system includes multiple oscillator plugins that can be normalized and combi
 
 ---
 
-## Volatility Oscillator System (NEW - 2025-11-01)
-
-The volatility oscillator section implements the same "Pilot & Radar" architecture as momentum oscillators but focuses on volatility-based metrics rather than momentum. This provides a complementary view of market conditions.
-
-### System Architecture (Same as Momentum)
-
-**Component 1: The Pilot** - User controls sensitivity via 5 noise levels (14/30/50/100/200)
-**Component 2: The Radar** - Markov regime detector provides objective volatility context
-
-### Volatility Metrics (4 Currently Implemented)
-
-**1. Realized Volatility** (`data/realized_volatility.py`)
-- **Purpose**: Backward-looking volatility from actual BTC price movements
-- **Calculation**: Garman-Klass estimator from OHLC data
-- **Formula**: `σ_GK = sqrt(0.5 * ln(H/L)² - (2*ln(2)-1) * ln(C/O)²)`
-- **Advantage**: More efficient than close-to-close volatility
-- **Output**: Annualized percentage (e.g., 45.2% annual volatility)
-- **Color**: Purple (#9C27B0)
-
-**2. DVOL Index** (`data/dvol_index.py`)
-- **Purpose**: Deribit's 30-day implied volatility index (like VIX for BTC)
-- **Data Source**: Deribit free API (no auth required)
-- **Endpoint**: `/public/get_volatility_index_data?currency=BTC&resolution=1D`
-- **Historical Range**: Available since 2019 (6+ years)
-- **Output**: 30-day annualized implied volatility percentage
-- **Color**: Cyan (#00D9FF)
-- **Note**: Forward-looking metric derived from options prices
-
-**3. Implied Volatility** (`data/implied_volatility.py`)
-- **Purpose**: Market's expectation of future volatility
-- **Current Implementation**: Uses DVOL as proxy for 30-day IV
-- **Future Enhancement**: Can aggregate IV across multiple exchanges via CoinAPI
-- **Output**: Forward-looking volatility percentage
-- **Color**: Red (#FF6B6B)
-- **Distinction**: IV (forward) vs RV (backward) shows market sentiment
-
-**4. IV Rank** (`data/iv_rank.py`)
-- **Purpose**: Percentile ranking of current IV over 252-day lookback
-- **Formula**: `IVR = (Current IV - Min IV) / (Max IV - Min IV) × 100`
-- **Lookback**: 252 trading days (1 year)
-- **Output**: 0-100% ranking
-- **Interpretation**:
-  - IVR > 75%: High IV, expensive options → potential premium selling
-  - IVR < 25%: Low IV, cheap options → potential premium buying
-  - IVR = 50%: IV at median of range
-- **Color**: Teal (#4ECDC4)
-- **Reference Lines**: At 25%, 50%, 75%
-
-### Pending Volatility Metrics (Require Options Data)
-
-**5. Put/Call Ratio** (Not yet implemented)
-- **Purpose**: Sentiment indicator from options open interest or volume
-- **Formula**: Put OI / Call OI (or Put Volume / Call Volume)
-- **Data Source**: CoinAPI, Binance, or OKX options data
-- **Interpretation**: >1 = bearish, <1 = bullish
-
-**6. Term Structure** (Not yet implemented)
-- **Purpose**: IV across multiple expiration dates
-- **Typical Expiries**: 7d, 30d, 60d, 90d, 180d
-- **Normal**: Upward sloping (longer = higher IV)
-- **Inverted**: Downward sloping (market stress indicator)
-- **Data Source**: Deribit options chain
-
-**7. Volatility Skew** (Not yet implemented)
-- **Purpose**: Asymmetry in IV between puts and calls
-- **Formula**: IV(25-delta put) - IV(25-delta call)
-- **Interpretation**: Positive skew = puts more expensive (fear premium)
-- **Requirement**: Greeks calculation to identify 25-delta strikes
-- **Data Source**: Options chain with Greeks
-
-### CoinAPI Integration
-
-**Client Module**: `data/coinapi_client.py`
-
-**Configuration** (`config.py`):
-```python
-COINAPI_BASE_URL = 'https://rest.coinapi.io/v1'
-COINAPI_RATE_LIMIT = 1000  # Requests per day (Startup tier)
-COINAPI_CACHE_TTL = 3600 * 12  # 12 hours aggressive caching
-COINAPI_OPTIONS_EXCHANGES = ['DERIBIT', 'BINANCE', 'OKX']
-```
-
-**Features**:
-- Rate limiting: 1000 requests/day credit system
-- Minimum 100ms between requests
-- Daily reset at midnight UTC
-- Aggressive caching to conserve API calls
-- Batch fetching for historical data
-
-### Frontend Implementation (Same Pattern as Momentum)
-
-**HTML Structure** (`index.html`):
-- "Volatility Oscillators" section with red accent header
-- 4 dataset checkboxes (Realized Vol, DVOL, IV, IV Rank)
-- 5 noise level buttons (14/30/50/100/200)
-- 2 chart containers: composite + breakdown
-
-**State Management** (`main.js`):
-```javascript
-volatilityOscillatorData: { btc: {} },
-selectedVolatilityDatasets: { btc: ['realized_volatility', 'dvol', 'implied_volatility', 'iv_rank'] },
-volatilityDatasetColors: { /* Purple, Cyan, Red, Teal */ },
-volatilityNoiseLevel: { btc: 50 }
-```
-
-**Rendering** (`oscillator.js`):
-- `initVolatilityOscillatorChart()` - Initialize composite chart
-- `renderVolatilityOscillatorChart()` - Render with regime background
-- `renderVolatilityBreakdownChart()` - Render individual lines
-- ~600 lines of rendering logic (separate instances from momentum)
-
-### API Endpoint (Shared)
-
-Volatility oscillators use the same `/api/oscillator-data` endpoint as momentum:
-
-```bash
-GET /api/oscillator-data?asset=btc&datasets=realized_volatility,dvol,implied_volatility,iv_rank&days=30&mode=composite&noise_level=50&normalizer=zscore
-```
-
-**Backend Logic** (`app.py`):
-```python
-VOLATILITY_OSCILLATOR_PLUGINS = {
-    'realized_volatility': realized_volatility,
-    'dvol': dvol_index,
-    'implied_volatility': implied_volatility,
-    'iv_rank': iv_rank
-}
-```
-
-The oscillator endpoint checks both `OSCILLATOR_PLUGINS` and `VOLATILITY_OSCILLATOR_PLUGINS` dictionaries.
-
-### Historical Data Caching
-
-**Cache Files** (`historical_data/`):
-- `dvol_btc.json` - DVOL index data (18 records tested)
-- `implied_volatility_btc.json` - IV proxy data
-- `iv_rank_btc.json` - Percentile rankings
-- `realized_volatility_btc.json` - Garman-Klass volatility
-
-**Incremental Fetching**:
-- Loads existing historical data from disk
-- Fetches fresh data from APIs
-- Merges and deduplicates based on timestamps
-- Saves updated dataset to disk
-- Returns filtered data for requested time range
-
-### Visual Design
-
-**Composite Chart** (Red line):
-- Red composite line (#FF6B6B) vs cyan for momentum (#00D9FF)
-- Same ±2σ and ±3σ reference lines
-- Same regime background shading (blue/red)
-- Dynamic 0 line represents expected relationship with BTC price
-
-**Breakdown Chart** (4 colored lines):
-- Purple: Realized Volatility
-- Cyan: DVOL Index
-- Red: Implied Volatility
-- Teal: IV Rank
-- Legend in top-left corner
-
-### Mathematical Core (Identical to Momentum)
-
-**Normalization**: Rolling OLS Regression Divergence Z-score
-**Regime Detection**: 2-state Markov switching model on BTC volatility
-**Composite**: Weighted average of normalized metrics (equal weights: 0.25 each)
-**Dynamic Zero**: Residuals from regression represent deviation from expected relationship
-
 ## Architecture Overview
 
 ### Backend Structure
@@ -666,3 +487,4 @@ The codebase references implementation phases:
 - **Phase 4**: Added VWAP and ADX indicators
 
 Phase comments in code indicate feature evolution and can guide understanding of system complexity layers.
+- the volatilty oscillators were removed in another session whihc wasnt compacted into progress

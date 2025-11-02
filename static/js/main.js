@@ -5,16 +5,14 @@
 
 // Import functions from modules
 import { getDatasetData } from './api.js';
-import { initChart, renderChart } from './chart.js';
+import { initChart, renderChart, initFundingRateChart, renderFundingRateChart } from './chart.js';
 import {
-    initOscillatorChart, renderOscillatorChart, initBreakdownChart, renderBreakdownChart,
-    initVolatilityOscillatorChart, renderVolatilityOscillatorChart,
-    initVolatilityBreakdownChart, renderVolatilityBreakdownChart
+    initOscillatorChart, renderOscillatorChart, initBreakdownChart, renderBreakdownChart
 } from './oscillator.js';
 
 // Application state
 const appState = {
-    activeTab: 'btc',              // Current active tab (BTC only)
+    activeTab: 'main',              // Current active tab (main or breakdown)
     days: {
         btc: 30                     // Default 1M for BTC
     },
@@ -51,32 +49,16 @@ const appState = {
         btc: 50                     // Default noise level
     },
     compositeMode: true,  // Use composite oscillator mode by default
-    // Volatility Oscillator state
-    volatilityOscillatorData: {
-        btc: {}
-    },
-    volatilityOscillatorsInitialized: {
-        btc: false
-    },
-    volatilityBreakdownInitialized: {
-        btc: false
-    },
-    selectedVolatilityDatasets: {
-        btc: ['realized_volatility', 'dvol', 'implied_volatility', 'iv_rank']
-    },
-    volatilityDatasetColors: {
-        realized_volatility: '#9C27B0',  // Purple
-        dvol: '#00D9FF',                 // Cyan
-        implied_volatility: '#FF6B6B',   // Red
-        iv_rank: '#4ECDC4'               // Teal
-    },
-    // Noise level state for volatility oscillator
-    volatilityNoiseLevel: {
-        btc: 50                     // Default noise level
-    },
     // Overlay state (moving averages on price chart)
     overlaySelections: {
         btc: []                     // Selected overlays for BTC (e.g., ['sma_14_btc', 'sma_60_btc'])
+    },
+    // Funding rate state
+    fundingRateData: {
+        btc: null
+    },
+    fundingRateInitialized: {
+        btc: false
     }
 };
 
@@ -112,12 +94,6 @@ async function initialize() {
 
         // Setup noise level controls
         setupNoiseLevelControls();
-
-        // Setup volatility oscillator controls
-        setupVolatilityOscillatorControls();
-
-        // Setup volatility noise level controls
-        setupVolatilityNoiseLevelControls();
 
         // Setup overlay controls (moving averages)
         setupOverlayControls();
@@ -159,8 +135,8 @@ function setupTabs() {
             // Update state
             appState.activeTab = tabName;
 
-            // Load tab data
-            await loadTab(tabName);
+            // Both main and breakdown tabs show BTC data, no need to reload
+            // Data is already loaded during initialization
         });
     });
 }
@@ -244,59 +220,6 @@ function setupNoiseLevelControls() {
 }
 
 /**
- * Setup volatility oscillator control event handlers
- */
-function setupVolatilityOscillatorControls() {
-    // Setup volatility dataset checkboxes
-    document.querySelectorAll('.volatility-dataset-checkbox').forEach(checkbox => {
-        checkbox.addEventListener('change', async () => {
-            const asset = checkbox.dataset.asset;
-            const datasetName = checkbox.dataset.dataset;
-
-            // Update selected volatility datasets
-            if (checkbox.checked) {
-                if (!appState.selectedVolatilityDatasets[asset].includes(datasetName)) {
-                    appState.selectedVolatilityDatasets[asset].push(datasetName);
-                }
-            } else {
-                appState.selectedVolatilityDatasets[asset] = appState.selectedVolatilityDatasets[asset].filter(
-                    d => d !== datasetName
-                );
-            }
-
-            // Reload volatility oscillator data
-            await loadVolatilityOscillatorData(asset);
-        });
-    });
-}
-
-/**
- * Setup noise level controls for volatility composite oscillator
- */
-function setupVolatilityNoiseLevelControls() {
-    document.querySelectorAll('.volatility-noise-btn').forEach(button => {
-        button.addEventListener('click', async () => {
-            const asset = button.dataset.asset;
-            const level = parseInt(button.dataset.level);
-
-            // Update active button state for this asset
-            document.querySelectorAll(`.volatility-noise-btn[data-asset="${asset}"]`).forEach(btn => {
-                btn.classList.remove('active');
-            });
-            button.classList.add('active');
-
-            // Update state
-            appState.volatilityNoiseLevel[asset] = level;
-
-            console.log(`Volatility noise level changed for ${asset}: ${level}`);
-
-            // Reload volatility oscillator data with new noise level
-            await loadVolatilityOscillatorData(asset);
-        });
-    });
-}
-
-/**
  * Setup overlay controls (moving averages on price chart)
  */
 function setupOverlayControls() {
@@ -351,14 +274,13 @@ async function loadTab(dataset) {
         appState.oscillatorsInitialized[dataset] = true;
     }
 
-    // Initialize volatility oscillator chart if not already initialized
-    if (!appState.volatilityOscillatorsInitialized[dataset]) {
-        const containerId = `${dataset}-volatility-oscillator-container`;
-        const color = appState.colors[dataset];
+    // Initialize funding rate chart if not already initialized
+    if (!appState.fundingRateInitialized[dataset]) {
+        const containerId = `${dataset}-funding-rate-container`;
 
-        console.log(`Initializing volatility oscillator chart for ${dataset}`);
-        initVolatilityOscillatorChart(containerId, dataset, color);
-        appState.volatilityOscillatorsInitialized[dataset] = true;
+        console.log(`Initializing funding rate chart for ${dataset}`);
+        initFundingRateChart(containerId, dataset);
+        appState.fundingRateInitialized[dataset] = true;
     }
 
     // Load price chart data
@@ -367,8 +289,8 @@ async function loadTab(dataset) {
     // Load oscillator data
     await loadOscillatorData(dataset);
 
-    // Load volatility oscillator data
-    await loadVolatilityOscillatorData(dataset);
+    // Load funding rate data
+    await loadFundingRateData(dataset);
 }
 
 /**
@@ -520,95 +442,6 @@ async function loadOscillatorData(asset) {
 }
 
 /**
- * Fetch volatility oscillator data and render volatility oscillator chart
- * @param {string} asset - Asset name ('btc', 'eth', 'gold')
- */
-async function loadVolatilityOscillatorData(asset) {
-    const days = appState.days[asset];
-    const datasets = appState.selectedVolatilityDatasets[asset].join(',');
-    const mode = appState.compositeMode ? 'composite' : 'individual';
-    const noiseLevel = appState.volatilityNoiseLevel[asset];
-    const normalizer = 'zscore';  // Always use zscore (regression divergence) normalizer
-
-    if (!datasets) {
-        console.log(`No volatility datasets selected for ${asset} oscillator`);
-        return;
-    }
-
-    console.log(`Fetching volatility oscillator data for ${asset}: mode=${mode}, datasets=${datasets}, noise_level=${noiseLevel}, days=${days}`);
-
-    try {
-        // Build URL with mode and noise_level parameters
-        const url = `/api/oscillator-data?asset=${asset}&datasets=${datasets}&days=${days}&normalizer=${normalizer}&mode=${mode}&noise_level=${noiseLevel}`;
-        const response = await fetch(url);
-
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const result = await response.json();
-
-        // Store data in state
-        appState.volatilityOscillatorData[asset] = result;
-
-        // Handle composite mode vs individual mode
-        if (mode === 'composite') {
-            if (!result || !result.composite || !result.regime) {
-                throw new Error('Invalid composite volatility oscillator data received');
-            }
-
-            console.log(`Received composite volatility oscillator data for ${asset}`);
-            console.log(`  Composite points: ${result.composite.data.length}`);
-            console.log(`  Regime points: ${result.regime.data.length}`);
-            console.log(`  Breakdown oscillators:`, result.breakdown ? Object.keys(result.breakdown) : 'none');
-
-            // Render composite volatility oscillator chart with regime background
-            renderVolatilityOscillatorChart(asset, {
-                composite: result.composite.data,
-                regime: result.regime.data,
-                metadata: {
-                    composite: result.composite.metadata,
-                    regime: result.regime.metadata
-                }
-            }, appState.volatilityDatasetColors, true);  // true = composite mode
-
-            // Render breakdown chart if data is available
-            if (result.breakdown && Object.keys(result.breakdown).length > 0) {
-                // Initialize breakdown chart if not already done
-                if (!appState.volatilityBreakdownInitialized[asset]) {
-                    const containerId = `${asset}-breakdown-volatility-oscillator-container`;
-                    initVolatilityBreakdownChart(containerId, asset);
-                    appState.volatilityBreakdownInitialized[asset] = true;
-                }
-
-                // Render breakdown chart
-                renderVolatilityBreakdownChart(asset, result.breakdown);
-            }
-
-        } else {
-            // Individual mode (existing logic)
-            if (!result || !result.datasets) {
-                throw new Error('Invalid volatility oscillator data received');
-            }
-
-            console.log(`Received volatility oscillator data for ${asset}:`, Object.keys(result.datasets));
-
-            // Prepare data for rendering
-            const datasetsData = {};
-            Object.entries(result.datasets).forEach(([datasetName, datasetInfo]) => {
-                datasetsData[datasetName] = datasetInfo.data;
-            });
-
-            // Render volatility oscillator chart (individual mode)
-            renderVolatilityOscillatorChart(asset, datasetsData, appState.volatilityDatasetColors, false);  // false = individual mode
-        }
-
-    } catch (error) {
-        console.error(`Error loading volatility oscillator data for ${asset}:`, error);
-    }
-}
-
-/**
  * Show loading message in chart container
  * @param {string} dataset - Dataset name
  */
@@ -656,6 +489,37 @@ function clearMessages(dataset) {
     // Remove loading and error messages
     const messages = container.querySelectorAll('.loading, .error');
     messages.forEach(msg => msg.remove());
+}
+
+/**
+ * Fetch funding rate data and render chart
+ * @param {string} asset - Asset name ('btc', 'eth', etc.)
+ */
+async function loadFundingRateData(asset) {
+    const days = appState.days[asset];
+
+    console.log(`Fetching funding rate data for ${asset}: ${days} days`);
+
+    try {
+        // Fetch funding rate data from API
+        const result = await getDatasetData(`funding_rate_${asset}`, days);
+
+        if (!result || !result.data || result.data.length === 0) {
+            console.warn(`No funding rate data available for ${asset}`);
+            return;
+        }
+
+        console.log(`Received ${result.data.length} funding rate data points for ${asset}`);
+
+        // Store data in state
+        appState.fundingRateData[asset] = result.data;
+
+        // Render funding rate chart
+        renderFundingRateChart(asset, result.data);
+
+    } catch (error) {
+        console.error(`Error loading funding rate data for ${asset}:`, error);
+    }
 }
 
 // Start the application

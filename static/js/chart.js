@@ -30,11 +30,13 @@ export function initChart(containerId, dataset, color) {
     const width = containerRect.width - margin.left - margin.right;
     const height = containerRect.height - margin.top - margin.bottom;
 
-    // Create SVG
+    // Create SVG with viewBox for responsive scaling
     const svg = d3.select(`#${containerId}`)
         .append('svg')
         .attr('width', containerRect.width)
-        .attr('height', containerRect.height);
+        .attr('height', containerRect.height)
+        .attr('viewBox', `0 0 ${containerRect.width} ${containerRect.height}`)
+        .attr('preserveAspectRatio', 'xMidYMid meet');
 
     // Create main group
     const g = svg.append('g')
@@ -219,9 +221,8 @@ export function renderChart(dataset, data, overlays = []) {
     chart.yAxisGroup.selectAll('path, line').style('stroke', '#333');
 
     // Render overlays (moving averages, etc.)
-    if (overlays && overlays.length > 0) {
-        renderOverlays(dataset, overlays);
-    }
+    // Always call renderOverlays to clear old overlays even if array is empty
+    renderOverlays(dataset, overlays);
 
     // Add zoom behavior
     setupZoom(dataset, data);
@@ -237,12 +238,17 @@ export function renderChart(dataset, data, overlays = []) {
  */
 function renderOverlays(dataset, overlays) {
     const chart = chartInstances[dataset];
-    if (!chart || !overlays || overlays.length === 0) {
+    if (!chart) {
         return;
     }
 
-    // Clear existing overlays
+    // Always clear existing overlays first
     chart.overlaysGroup.selectAll('*').remove();
+
+    // If no overlays to render, we're done (already cleared)
+    if (!overlays || overlays.length === 0) {
+        return;
+    }
 
     // Render each overlay
     overlays.forEach((overlay, index) => {
@@ -516,4 +522,357 @@ function showChartMessage(dataset, message) {
     messageDiv.className = 'loading';
     messageDiv.textContent = message;
     container.appendChild(messageDiv);
+}
+
+// ============================================================================
+// FUNDING RATE CHART
+// ============================================================================
+
+// Funding rate chart instances
+const fundingRateChartInstances = {};
+
+/**
+ * Initialize funding rate chart
+ * @param {string} containerId - Container DOM ID
+ * @param {string} dataset - Dataset name ('btc', 'eth', etc.)
+ */
+export function initFundingRateChart(containerId, dataset) {
+    console.log(`Initializing funding rate chart: ${containerId}`);
+
+    const container = d3.select(`#${containerId}`);
+    const containerNode = container.node();
+
+    if (!containerNode) {
+        console.error(`Container not found: ${containerId}`);
+        return;
+    }
+
+    // Chart dimensions
+    const margin = { top: 30, right: 60, bottom: 50, left: 60 };
+    const width = containerNode.offsetWidth - margin.left - margin.right;
+    const height = containerNode.offsetHeight - margin.top - margin.bottom;
+
+    // Clear any existing content
+    container.selectAll('*').remove();
+
+    // Create SVG with viewBox for responsive scaling
+    const svg = container.append('svg')
+        .attr('width', containerNode.offsetWidth)
+        .attr('height', containerNode.offsetHeight)
+        .attr('viewBox', `0 0 ${containerNode.offsetWidth} ${containerNode.offsetHeight}`)
+        .attr('preserveAspectRatio', 'xMidYMid meet');
+
+    // Create main group with margins
+    const g = svg.append('g')
+        .attr('transform', `translate(${margin.left},${margin.top})`);
+
+    // Create clip path for chart area
+    g.append('defs').append('clipPath')
+        .attr('id', `clip-funding-${dataset}`)
+        .append('rect')
+        .attr('width', width)
+        .attr('height', height);
+
+    // Chart groups (order matters for layering)
+    const referenceGroup = g.append('g').attr('class', 'reference-lines');
+    const areaGroup = g.append('g').attr('class', 'area-group').attr('clip-path', `url(#clip-funding-${dataset})`);
+    const lineGroup = g.append('g').attr('class', 'line-group').attr('clip-path', `url(#clip-funding-${dataset})`);
+    const axisGroup = g.append('g').attr('class', 'axis-group');
+    const crosshairGroup = g.append('g').attr('class', 'crosshair').style('display', 'none');
+
+    // Crosshair lines
+    crosshairGroup.append('line').attr('class', 'crosshair-x').attr('stroke', '#888').attr('stroke-width', 1).attr('stroke-dasharray', '3,3');
+    crosshairGroup.append('line').attr('class', 'crosshair-y').attr('stroke', '#888').attr('stroke-width', 1).attr('stroke-dasharray', '3,3');
+
+    // Add zoom overlay (transparent rect for interaction)
+    const zoomOverlay = g.append('rect')
+        .attr('class', 'zoom-overlay')
+        .attr('width', width)
+        .attr('height', height)
+        .style('fill', 'none')
+        .style('pointer-events', 'all');
+
+    // Store chart instance
+    fundingRateChartInstances[dataset] = {
+        svg, g, width, height, margin,
+        referenceGroup, areaGroup, lineGroup, axisGroup, crosshairGroup, zoomOverlay,
+        xScale: null,
+        yScale: null,
+        data: null
+    };
+
+    console.log(`Funding rate chart initialized for ${dataset}`);
+}
+
+/**
+ * Render funding rate chart with color-coded sentiment
+ * @param {string} dataset - Dataset name
+ * @param {Array} data - Funding rate data [[timestamp, rate_percentage], ...]
+ */
+export function renderFundingRateChart(dataset, data) {
+    const chart = fundingRateChartInstances[dataset];
+
+    if (!chart) {
+        console.error(`Funding rate chart not initialized for ${dataset}`);
+        return;
+    }
+
+    if (!data || data.length === 0) {
+        console.warn(`No funding rate data available for ${dataset}`);
+        return;
+    }
+
+    console.log(`Rendering funding rate chart for ${dataset} with ${data.length} points`);
+
+    // Store data
+    chart.data = data;
+
+    // Create scales
+    const xExtent = d3.extent(data, d => new Date(d[0]));
+    const yExtent = d3.extent(data, d => d[1]);
+
+    // Add padding to Y domain (10% on each side)
+    const yPadding = (yExtent[1] - yExtent[0]) * 0.1;
+    const yDomain = [yExtent[0] - yPadding, yExtent[1] + yPadding];
+
+    chart.xScale = d3.scaleTime()
+        .domain(xExtent)
+        .range([0, chart.width]);
+
+    chart.yScale = d3.scaleLinear()
+        .domain(yDomain)
+        .range([chart.height, 0]);
+
+    // Clear previous content
+    chart.referenceGroup.selectAll('*').remove();
+    chart.areaGroup.selectAll('*').remove();
+    chart.lineGroup.selectAll('*').remove();
+    chart.axisGroup.selectAll('*').remove();
+
+    // Define color thresholds
+    const positiveThreshold = 0.01;  // 0.01%
+    const negativeThreshold = -0.01; // -0.01%
+
+    // Color function based on value
+    const getColor = (value) => {
+        if (value > positiveThreshold) return '#26a69a';  // Green (bullish)
+        if (value < negativeThreshold) return '#ef5350';  // Red (bearish)
+        return '#888888';  // Gray (neutral)
+    };
+
+    // Render reference lines
+    const referenceLines = [
+        { value: positiveThreshold, label: '+0.01%', color: '#26a69a' },
+        { value: 0, label: '0%', color: '#888' },
+        { value: negativeThreshold, label: '-0.01%', color: '#ef5350' }
+    ];
+
+    referenceLines.forEach(line => {
+        const y = chart.yScale(line.value);
+
+        // Horizontal line
+        chart.referenceGroup.append('line')
+            .attr('x1', 0)
+            .attr('x2', chart.width)
+            .attr('y1', y)
+            .attr('y2', y)
+            .attr('stroke', line.color)
+            .attr('stroke-width', line.value === 0 ? 2 : 1)
+            .attr('stroke-opacity', line.value === 0 ? 0.5 : 0.3)
+            .attr('stroke-dasharray', line.value === 0 ? '0' : '3,3');
+
+        // Label (right side)
+        chart.referenceGroup.append('text')
+            .attr('x', chart.width + 5)
+            .attr('y', y)
+            .attr('dy', '0.32em')
+            .attr('fill', line.color)
+            .attr('font-size', '10px')
+            .text(line.label);
+    });
+
+    // Render area fill (color segments)
+    // Group data into segments by color
+    const segments = [];
+    let currentSegment = null;
+
+    data.forEach((d, i) => {
+        const color = getColor(d[1]);
+
+        if (!currentSegment || currentSegment.color !== color) {
+            // Start new segment
+            if (currentSegment) {
+                // Add transition point to previous segment
+                currentSegment.data.push(d);
+                segments.push(currentSegment);
+            }
+            currentSegment = { color, data: [d] };
+        } else {
+            // Continue current segment
+            currentSegment.data.push(d);
+        }
+    });
+
+    // Push final segment
+    if (currentSegment) {
+        segments.push(currentSegment);
+    }
+
+    // Area generator
+    const area = d3.area()
+        .x(d => chart.xScale(new Date(d[0])))
+        .y0(chart.yScale(0))
+        .y1(d => chart.yScale(d[1]))
+        .curve(d3.curveLinear);
+
+    // Render area segments
+    segments.forEach((segment, i) => {
+        chart.areaGroup.append('path')
+            .datum(segment.data)
+            .attr('class', `area-segment-${i}`)
+            .attr('fill', segment.color)
+            .attr('fill-opacity', 0.2)
+            .attr('d', area);
+    });
+
+    // Line generator
+    const line = d3.line()
+        .x(d => chart.xScale(new Date(d[0])))
+        .y(d => chart.yScale(d[1]))
+        .curve(d3.curveLinear);
+
+    // Render line segments (colored)
+    segments.forEach((segment, i) => {
+        chart.lineGroup.append('path')
+            .datum(segment.data)
+            .attr('class', `line-segment-${i}`)
+            .attr('fill', 'none')
+            .attr('stroke', segment.color)
+            .attr('stroke-width', 2)
+            .attr('d', line);
+    });
+
+    // X-axis
+    const xAxis = d3.axisBottom(chart.xScale)
+        .ticks(6)
+        .tickFormat(d3.timeFormat('%b %d'));
+
+    chart.axisGroup.append('g')
+        .attr('class', 'x-axis')
+        .attr('transform', `translate(0,${chart.height})`)
+        .call(xAxis)
+        .selectAll('text')
+        .attr('fill', '#888')
+        .style('font-size', '11px');
+
+    // Y-axis
+    const yAxis = d3.axisLeft(chart.yScale)
+        .ticks(6)
+        .tickFormat(d => `${d.toFixed(3)}%`);
+
+    chart.axisGroup.append('g')
+        .attr('class', 'y-axis')
+        .call(yAxis)
+        .selectAll('text')
+        .attr('fill', '#888')
+        .style('font-size', '11px');
+
+    // Axis labels
+    chart.axisGroup.append('text')
+        .attr('class', 'axis-label')
+        .attr('x', chart.width / 2)
+        .attr('y', chart.height + 40)
+        .attr('text-anchor', 'middle')
+        .attr('fill', '#888')
+        .style('font-size', '12px')
+        .text('Date');
+
+    chart.axisGroup.append('text')
+        .attr('class', 'axis-label')
+        .attr('transform', 'rotate(-90)')
+        .attr('x', -chart.height / 2)
+        .attr('y', -55)  // Moved from -45 to -55 to prevent overlap with Y-axis tick labels at all zoom levels
+        .attr('text-anchor', 'middle')
+        .attr('fill', '#888')
+        .style('font-size', '12px')
+        .text('Funding Rate (%)');
+
+    // Setup crosshair and tooltip
+    setupFundingRateCrosshair(dataset, data);
+
+    console.log(`Funding rate chart rendered for ${dataset}`);
+}
+
+/**
+ * Setup crosshair and tooltip for funding rate chart
+ * @param {string} dataset - Dataset name
+ * @param {Array} data - Funding rate data
+ */
+function setupFundingRateCrosshair(dataset, data) {
+    const chart = fundingRateChartInstances[dataset];
+    const tooltip = d3.select('#tooltip');
+
+    chart.zoomOverlay
+        .on('mousemove', function(event) {
+            const [mx, my] = d3.pointer(event);
+            const dateAtMouse = chart.xScale.invert(mx);
+
+            // Find closest data point
+            const bisect = d3.bisector(d => new Date(d[0])).left;
+            const index = bisect(data, dateAtMouse);
+            const d = data[index];
+
+            if (d) {
+                // Show crosshair
+                chart.crosshairGroup.style('display', null);
+
+                chart.crosshairGroup.select('.crosshair-x')
+                    .attr('x1', mx)
+                    .attr('x2', mx)
+                    .attr('y1', 0)
+                    .attr('y2', chart.height);
+
+                chart.crosshairGroup.select('.crosshair-y')
+                    .attr('x1', 0)
+                    .attr('x2', chart.width)
+                    .attr('y1', my)
+                    .attr('y2', my);
+
+                // Determine sentiment
+                const rate = d[1];
+                let sentiment, color;
+                if (rate > 0.01) {
+                    sentiment = 'Bullish Premium';
+                    color = '#26a69a';
+                } else if (rate < -0.01) {
+                    sentiment = 'Bearish Premium';
+                    color = '#ef5350';
+                } else {
+                    sentiment = 'Neutral';
+                    color = '#888';
+                }
+
+                // Show tooltip
+                const tooltipHTML = `
+                    <div class="tooltip-header">${new Date(d[0]).toLocaleDateString()}</div>
+                    <div class="tooltip-row">
+                        <span>Funding Rate:</span>
+                        <span class="tooltip-value" style="color: ${color};">${rate.toFixed(4)}%</span>
+                    </div>
+                    <div class="tooltip-row">
+                        <span>Sentiment:</span>
+                        <span class="tooltip-value" style="color: ${color};">${sentiment}</span>
+                    </div>
+                `;
+
+                tooltip.html(tooltipHTML)
+                    .classed('show', true)
+                    .style('left', (event.pageX + 15) + 'px')
+                    .style('top', (event.pageY - 15) + 'px');
+            }
+        })
+        .on('mouseleave', () => {
+            chart.crosshairGroup.style('display', 'none');
+            tooltip.classed('show', false);
+        });
 }
