@@ -6,11 +6,9 @@ from flask_cors import CORS
 import os
 import time
 # Data plugins
-from data import eth_price, btc_price, gold_price, spx_price, rsi, macd_histogram, adx, atr, sma, parabolic_sar
+from data import eth_price, btc_price, gold_price, spx_price, rsi, macd_histogram, adx, atr, sma, parabolic_sar, funding_rate
 from data import markov_regime
 from data.normalizers import zscore
-# Volatility oscillator plugins
-from data import realized_volatility, dvol_index, implied_volatility, iv_rank
 from config import CACHE_DURATION, RATE_LIMIT_DELAY
 
 # Initialize Sentry SDK for error monitoring
@@ -34,7 +32,8 @@ last_api_call = {}
 # Note: OVERLAY_PLUGINS will be merged into this dictionary below
 # Note: eth_price, gold_price, spx_price are kept as imports for future BTC oscillators
 DATA_PLUGINS = {
-    'btc': btc_price
+    'btc': btc_price,
+    'funding_rate_btc': lambda days: funding_rate.get_data(days, 'btc')
 }
 
 # Momentum Oscillator plugins (all require asset parameter)
@@ -45,14 +44,6 @@ OSCILLATOR_PLUGINS = {
     'atr': atr
 }
 
-# Volatility Oscillator plugins (all require asset parameter)
-VOLATILITY_OSCILLATOR_PLUGINS = {
-    'realized_volatility': realized_volatility,
-    'dvol': dvol_index,
-    'implied_volatility': implied_volatility,
-    'iv_rank': iv_rank
-}
-
 # Overlay plugins (Moving Averages & Parabolic SAR - callable via /api/data)
 # These overlay on price charts rather than displaying in separate oscillator chart
 # Only BTC overlays - ETH and Gold tabs removed
@@ -60,7 +51,7 @@ OVERLAY_PLUGINS = {
     'sma_7_btc': lambda days: sma.get_data(days, 'btc', 7),
     'sma_21_btc': lambda days: sma.get_data(days, 'btc', 21),
     'sma_60_btc': lambda days: sma.get_data(days, 'btc', 60),
-    'psar_btc': lambda days: parabolic_sar.get_data(days, 'btc'),
+    'psar_btc': lambda days: parabolic_sar.get_data(days, 'btc')
 }
 
 # Merge overlay plugins into DATA_PLUGINS so they're accessible via /api/data
@@ -198,7 +189,7 @@ def get_data():
 
     # Check cache first
     cache_key = get_cache_key(dataset_name, days)
-    
+
     if is_cache_valid(cache_key):
         print(f"Serving {dataset_name} from cache")
         return jsonify(cache[cache_key]['data'])
@@ -319,11 +310,9 @@ def get_oscillator_data():
             oscillator_metadata = {}  # Store metadata for breakdown chart
 
             for oscillator_name in dataset_names:
-                # Check both momentum and volatility oscillator plugins
+                # Check oscillator plugins
                 if oscillator_name in OSCILLATOR_PLUGINS:
                     oscillator_module = OSCILLATOR_PLUGINS[oscillator_name]
-                elif oscillator_name in VOLATILITY_OSCILLATOR_PLUGINS:
-                    oscillator_module = VOLATILITY_OSCILLATOR_PLUGINS[oscillator_name]
                 else:
                     print(f"[Composite Mode] Warning: Unknown oscillator '{oscillator_name}', skipping...")
                     continue

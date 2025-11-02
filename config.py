@@ -29,7 +29,6 @@ COINGECKO_API_KEY = ''  # Optional - not used
 COINAPI_BASE_URL = 'https://rest.coinapi.io/v1'
 COINAPI_RATE_LIMIT = 1000  # Requests per day
 COINAPI_CACHE_TTL = 3600 * 12  # 12 hours (aggressive caching to conserve API calls)
-COINAPI_OPTIONS_EXCHANGES = ['DERIBIT', 'BINANCE', 'OKX']  # Priority order
 
 # Cache Settings
 CACHE_DURATION = 300  # 5 minutes in seconds

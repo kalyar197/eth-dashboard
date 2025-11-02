@@ -26,12 +26,24 @@ export async function getDatasets() {
  * Fetches data for a specific dataset with the given time range
  * @param {string} dataset - The name of the dataset/plugin (e.g., 'eth', 'gold_price', 'rsi')
  * @param {string|number} days - The number of days to fetch ('30', '90', '365', 'max')
+ * @param {Object} options - Optional parameters (sensitivity, expiry_days for S/R)
  * @returns {Promise<Object>} Object containing data and metadata for the requested dataset
  * @throws {Error} If the fetch request fails
  */
-export async function getDatasetData(dataset, days = '365') {
+export async function getDatasetData(dataset, days = '365', options = {}) {
     try {
-        const response = await fetch(`${API_BASE_URL}/api/data?dataset=${dataset}&days=${days}`);
+        // Build query parameters
+        let url = `${API_BASE_URL}/api/data?dataset=${dataset}&days=${days}`;
+
+        // Add optional parameters if provided
+        if (options.sensitivity) {
+            url += `&sensitivity=${options.sensitivity}`;
+        }
+        if (options.expiry_days) {
+            url += `&expiry_days=${options.expiry_days}`;
+        }
+
+        const response = await fetch(url);
 
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}`);

@@ -31,7 +31,18 @@
       "Bash(NUL)",
       "Bash(timeout /t 2 /nobreak)",
       "Bash(del:*)",
-      "WebSearch"
+      "WebSearch",
+      "WebFetch(domain:www.coinapi.io)",
+      "WebFetch(domain:docs.coinapi.io)",
+      "Bash(timeout /t 3 /nobreak)",
+      "mcp__playwright__browser_navigate",
+      "mcp__playwright__browser_take_screenshot",
+      "mcp__playwright__browser_evaluate",
+      "mcp__playwright__browser_click",
+      "mcp__playwright__browser_wait_for",
+      "mcp__playwright__browser_close",
+      "mcp__playwright__browser_snapshot",
+      "Bash(git reset HEAD .playwright-mcp/ NUL)"
     ],
     "deny": [],
     "ask": []
