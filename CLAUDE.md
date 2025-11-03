@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Status**: Single Momentum Oscillator Section - Fully Functional
 
-**Latest Update (2025-11-03):** Fixed Markov regime background zones zoom synchronization - blue/red volatility zones now stay perfectly aligned with zoomed oscillator data.
+**Latest Update (2025-11-03):** Added Markov regime backgrounds to price chart and changed default noise level to Min (200 periods). Regime zones now display on both price chart and oscillator chart with perfect zoom synchronization.
 
 ### 🎯 What's Currently Working:
 
@@ -26,9 +26,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - ✅ Garman-Klass volatility estimation (data/volatility.py)
 - ✅ 2-state Markov regime detector (data/markov_regime.py)
 - ✅ User-tunable composite Z-score oscillator (data/composite_zscore.py)
-- ✅ 5 noise level controls (14, 30, 50, 100, 200 periods)
-- ✅ Regime-based background shading (blue=low-vol, red=high-vol)
-- ✅ Regime zones sync perfectly with zoom operations
+- ✅ 5 noise level controls (14, 30, 50, 100, 200 periods) - Default: Min (200)
+- ✅ Regime-based background shading on BOTH price chart and oscillator chart
+- ✅ Regime zones (blue=low-vol, red=high-vol) sync perfectly with zoom operations
 - ✅ 4 Base oscillators: RSI, MACD Histogram, ADX, ATR
 - ✅ Composite + Breakdown charts with legend
 - ✅ Fully interactive controls (checkboxes, buttons)
@@ -77,23 +77,35 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Files Changed in Latest Session (2025-11-03):**
 ```
-Modified Files (1):
-- static/js/oscillator.js (regime background zoom sync fix)
+Modified Files (3):
+- static/js/chart.js (regime background implementation for price chart)
+- static/js/main.js (regime data flow + default noise level change)
+- index.html (Min button active by default)
 
-Bug Fix Details:
-Problem: Regime background rectangles (blue/red volatility zones) were drawn
-once at initialization using original xScale, but did not update during zoom
-operations. This caused background zones to misalign with the zoomed oscillator.
+Feature Implementation:
+1. Price Chart Regime Backgrounds:
+   - Added renderPriceChartRegimeBackground() function (lines 249-309)
+   - Added updatePriceChartRegimeRectangles() function (lines 311-330)
+   - Fixed critical bug: moved regime rendering AFTER clearing candles group
+   - Regime zones now visible on price chart behind candlesticks
+   - Zoom synchronization works via updatePriceChartRegimeRectangles() call
 
-Solution (3-part fix):
-1. Line 477-478: Store regime segments in chart instance (chart.regimeSegments)
-2. Lines 506-525: Create updateRegimeRectangles() helper function
-3. Line 677: Call helper in updateOscillatorZoom() to update rectangles
+2. Data Flow Updates:
+   - main.js: Added regimeData storage to appState (lines 63-66)
+   - main.js: Pass regime data through renderChart() (lines 351-352, 405-417)
+   - chart.js: Updated renderChart() signature to accept regimeData parameter
 
-Technical implementation:
-- Added data-regime-index attribute to rectangles for reliable selection
-- Uses transformed xScale to recalculate rectangle x/width during zoom
-- Tested with mouse wheel zoom - regime zones stay perfectly aligned
+3. Default Noise Level:
+   - Changed from 50 (Default) to 200 (Min) periods
+   - main.js line 49: noiseLevel.btc = 200
+   - index.html line 571: "Min" button has active class
+
+Bug Fix:
+Problem: Regime rectangles were being rendered BEFORE the candles group was
+cleared, causing them to be immediately deleted.
+
+Solution: Moved chart.candlesGroup.selectAll('*').remove() to line 180,
+BEFORE calling renderPriceChartRegimeBackground() on line 182-184.
 ```
 
 **Quick Start:**
