@@ -91,7 +91,7 @@ export function initChart(containerId, dataset, color) {
  * @param {Array} data - OHLCV data [[timestamp, open, high, low, close, volume], ...]
  * @param {Array} overlays - Optional array of overlay datasets [{data: [[ts, value], ...], metadata: {...}}, ...]
  */
-export function renderChart(dataset, data, overlays = []) {
+export function renderChart(dataset, data, overlays = [], regimeData = null) {
     const chart = chartInstances[dataset];
     if (!chart) {
         console.error(`Chart instance for ${dataset} not found`);
@@ -108,9 +108,13 @@ export function renderChart(dataset, data, overlays = []) {
     if (overlays && overlays.length > 0) {
         console.log(`Rendering ${overlays.length} overlay(s) for ${dataset}`);
     }
+    if (regimeData) {
+        console.log(`Rendering regime background for ${dataset}`);
+    }
 
-    // Store overlay data for zoom updates
+    // Store overlay data and regime data for zoom updates
     chart.overlayData = overlays || [];
+    chart.regimeData = regimeData;
 
     // Create scales
     chart.xScale = d3.scaleTime()
@@ -172,8 +176,13 @@ export function renderChart(dataset, data, overlays = []) {
     // Calculate candle width based on data density
     const candleWidth = Math.max(2, Math.min(12, chart.width / data.length * 0.7));
 
-    // Draw candlesticks
+    // Clear existing candlesticks and regime backgrounds
     chart.candlesGroup.selectAll('*').remove();
+
+    // Draw regime background FIRST (behind candlesticks)
+    if (regimeData && regimeData.data && regimeData.metadata) {
+        renderPriceChartRegimeBackground(chart, regimeData.data, regimeData.metadata);
+    }
 
     // Draw wicks (high-low lines)
     chart.candlesGroup.selectAll('.wick')
@@ -229,6 +238,100 @@ export function renderChart(dataset, data, overlays = []) {
 
     // Add hover behavior
     setupCrosshair(dataset, data);
+}
+
+/**
+ * Render regime background for price chart
+ * @param {Object} chart - Chart instance
+ * @param {Array} regimeData - Regime data [[timestamp, regime], ...]
+ * @param {Object} metadata - Regime metadata with states info
+ */
+function renderPriceChartRegimeBackground(chart, regimeData, metadata) {
+    if (!regimeData || regimeData.length === 0) return;
+
+    const states = metadata.states;
+
+    // Clear existing regime backgrounds
+    chart.candlesGroup.selectAll('[class*="regime-bg"]').remove();
+
+    // Group consecutive timestamps with same regime
+    const regimeSegments = [];
+    let currentSegment = null;
+
+    regimeData.forEach((d, i) => {
+        const timestamp = d[0];
+        const regime = d[1];
+
+        if (!currentSegment || currentSegment.regime !== regime) {
+            // Start new segment
+            if (currentSegment) {
+                regimeSegments.push(currentSegment);
+            }
+            currentSegment = {
+                regime: regime,
+                startTime: timestamp,
+                endTime: timestamp
+            };
+        } else {
+            // Extend current segment
+            currentSegment.endTime = timestamp;
+        }
+    });
+
+    // Push last segment
+    if (currentSegment) {
+        regimeSegments.push(currentSegment);
+    }
+
+    // Store regime segments and metadata for zoom updates
+    chart.regimeSegments = regimeSegments;
+    chart.regimeMetadata = metadata;
+
+    // Render background rectangles (insert at beginning, behind candlesticks)
+    regimeSegments.forEach((segment, index) => {
+        const state = states[segment.regime];
+        if (!state) return;
+
+        const x1 = chart.xScale(new Date(segment.startTime));
+        const x2 = chart.xScale(new Date(segment.endTime));
+        const width = x2 - x1 || 2;  // Minimum width of 2px
+
+        chart.candlesGroup.insert('rect', ':first-child')  // Insert at beginning (background)
+            .attr('class', `regime-bg regime-bg-${segment.regime}`)
+            .attr('data-regime-index', index)  // For zoom updates
+            .attr('x', x1)
+            .attr('y', 0)
+            .attr('width', width)
+            .attr('height', chart.height)
+            .style('fill', state.color)
+            .style('opacity', 1);
+    });
+}
+
+/**
+ * Update regime background rectangles with new X scale (for zoom sync)
+ * @param {Object} chart - Chart instance
+ * @param {Function} newXScale - Transformed X scale
+ */
+function updatePriceChartRegimeRectangles(chart, newXScale) {
+    if (!chart.regimeSegments || chart.regimeSegments.length === 0) return;
+
+    const states = chart.regimeMetadata.states;
+
+    // Update all regime rectangles using data-regime-index attribute
+    chart.regimeSegments.forEach((segment, index) => {
+        const state = states[segment.regime];
+        if (!state) return;
+
+        const x1 = newXScale(new Date(segment.startTime));
+        const x2 = newXScale(new Date(segment.endTime));
+        const width = x2 - x1 || 2;  // Minimum width of 2px
+
+        // Update rectangle by data-regime-index attribute
+        chart.candlesGroup.select(`[data-regime-index="${index}"]`)
+            .attr('x', x1)
+            .attr('width', width);
+    });
 }
 
 /**
@@ -407,6 +510,9 @@ function updateZoom(dataset, data, transform) {
             }
         });
     }
+
+    // Update regime background rectangles position
+    updatePriceChartRegimeRectangles(chart, newXScale);
 }
 
 /**
@@ -548,7 +654,7 @@ export function initFundingRateChart(containerId, dataset) {
     }
 
     // Chart dimensions
-    const margin = { top: 30, right: 60, bottom: 50, left: 60 };
+    const margin = { top: 30, right: 60, bottom: 40, left: 60 };
     const width = containerNode.offsetWidth - margin.left - margin.right;
     const height = containerNode.offsetHeight - margin.top - margin.bottom;
 
@@ -776,26 +882,6 @@ export function renderFundingRateChart(dataset, data) {
         .selectAll('text')
         .attr('fill', '#888')
         .style('font-size', '11px');
-
-    // Axis labels
-    chart.axisGroup.append('text')
-        .attr('class', 'axis-label')
-        .attr('x', chart.width / 2)
-        .attr('y', chart.height + 40)
-        .attr('text-anchor', 'middle')
-        .attr('fill', '#888')
-        .style('font-size', '12px')
-        .text('Date');
-
-    chart.axisGroup.append('text')
-        .attr('class', 'axis-label')
-        .attr('transform', 'rotate(-90)')
-        .attr('x', -chart.height / 2)
-        .attr('y', -55)  // Moved from -45 to -55 to prevent overlap with Y-axis tick labels at all zoom levels
-        .attr('text-anchor', 'middle')
-        .attr('fill', '#888')
-        .style('font-size', '12px')
-        .text('Funding Rate (%)');
 
     // Setup crosshair and tooltip
     setupFundingRateCrosshair(dataset, data);

@@ -46,7 +46,7 @@ const appState = {
     },
     // Noise level state (for composite oscillator)
     noiseLevel: {
-        btc: 50                     // Default noise level
+        btc: 200                    // Default: Min noise level
     },
     compositeMode: true,  // Use composite oscillator mode by default
     // Overlay state (moving averages on price chart)
@@ -59,6 +59,10 @@ const appState = {
     },
     fundingRateInitialized: {
         btc: false
+    },
+    // Regime data state (for price chart background)
+    regimeData: {
+        btc: null
     }
 };
 
@@ -343,8 +347,9 @@ async function loadChartData(dataset) {
             }
         }
 
-        // Render chart with price data and overlays
-        renderChart(dataset, result.data, overlays);
+        // Render chart with price data, overlays, and regime background
+        const regimeData = appState.regimeData[dataset] || null;
+        renderChart(dataset, result.data, overlays, regimeData);
 
         // Clear loading message
         clearMessages(dataset);
@@ -397,6 +402,19 @@ async function loadOscillatorData(asset) {
             console.log(`  Composite points: ${result.composite.data.length}`);
             console.log(`  Regime points: ${result.regime.data.length}`);
             console.log(`  Breakdown oscillators:`, result.breakdown ? Object.keys(result.breakdown) : 'none');
+
+            // Store regime data for price chart background
+            appState.regimeData[asset] = {
+                data: result.regime.data,
+                metadata: result.regime.metadata
+            };
+
+            // Re-render price chart with regime background if chart data is already loaded
+            if (appState.chartData[asset]) {
+                const overlays = [];
+                // Re-fetch overlays (simplified - just pass empty for now, chart will handle)
+                renderChart(asset, appState.chartData[asset], overlays, appState.regimeData[asset]);
+            }
 
             // Render composite oscillator chart with regime background
             renderOscillatorChart(asset, {
