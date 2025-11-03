@@ -36,7 +36,7 @@ const appState = {
         btc: false
     },
     selectedDatasets: {
-        btc: ['rsi', 'macd_histogram', 'adx', 'atr']
+        btc: ['rsi', 'adx']  // Only ADX (60%) and RSI (40%)
     },
     datasetColors: {
         rsi: '#FF9500',           // Orange
@@ -168,10 +168,10 @@ function setupTimeControls() {
 
 /**
  * Setup oscillator control event handlers
+ * Handles checkbox toggles for oscillator datasets
  */
 function setupOscillatorControls() {
-    // Setup dataset checkboxes
-    document.querySelectorAll('.dataset-checkbox').forEach(checkbox => {
+    document.querySelectorAll('.oscillator-dataset-checkbox').forEach(checkbox => {
         checkbox.addEventListener('change', async () => {
             const asset = checkbox.dataset.asset;
             const datasetName = checkbox.dataset.dataset;
@@ -187,7 +187,10 @@ function setupOscillatorControls() {
                 );
             }
 
-            // Reload oscillator data
+            console.log(`Oscillator dataset ${datasetName} toggled for ${asset}:`, checkbox.checked);
+            console.log(`Current selections:`, appState.selectedDatasets[asset]);
+
+            // Reload oscillator data with updated selections
             await loadOscillatorData(asset);
         });
     });

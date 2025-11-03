@@ -27,7 +27,7 @@ export function initOscillatorChart(containerId, asset, assetColor) {
 
     // Get container dimensions
     const containerRect = container.getBoundingClientRect();
-    const margin = { top: 20, right: 50, bottom: 40, left: 60 };
+    const margin = { top: 20, right: 60, bottom: 40, left: 60 };
     const width = containerRect.width - margin.left - margin.right;
     const height = containerRect.height - margin.top - margin.bottom;
 
@@ -93,14 +93,14 @@ export function initOscillatorChart(containerId, asset, assetColor) {
         .style('stroke-dasharray', '5,5')
         .style('opacity', 0.5);
 
-    // Create zero line label
+    // Create zero line label (hidden for minimalist UI)
     const zeroLabel = g.append('text')
         .attr('class', 'reference-label')
         .attr('x', width + 5)
         .attr('text-anchor', 'start')
         .style('fill', assetColor)
         .style('font-size', '11px')
-        .text('0 (Price)');
+        .text('');
 
     // Create crosshair elements
     const crosshairGroup = g.append('g')
@@ -165,20 +165,19 @@ export function initBreakdownChart(containerId, asset) {
         return;
     }
 
-    // Clear any existing content (keep zoom controls and info text)
+    // Clear any existing content (keep zoom controls only)
     const existingZoomControls = container.querySelector('.zoom-controls');
-    const existingInfoText = container.querySelector('.info-text');
 
-    // Remove all children except zoom controls and info text
+    // Remove all children except zoom controls
     Array.from(container.children).forEach(child => {
-        if (!child.classList.contains('zoom-controls') && !child.classList.contains('info-text')) {
+        if (!child.classList.contains('zoom-controls')) {
             child.remove();
         }
     });
 
     // Get container dimensions
     const containerRect = container.getBoundingClientRect();
-    const margin = { top: 30, right: 50, bottom: 40, left: 60 };  // Extra top margin for legend
+    const margin = { top: 30, right: 60, bottom: 40, left: 60 };  // Extra top margin for legend
     const width = containerRect.width - margin.left - margin.right;
     const height = containerRect.height - margin.top - margin.bottom;
 
@@ -760,7 +759,9 @@ export function renderBreakdownChart(asset, breakdownData) {
         if (oscillatorData.data && oscillatorData.data.length > 0) {
             oscillatorData.data.forEach(d => {
                 allTimestamps.push(d[0]);
-                allValues.push(d[1]);
+                // Data is already inverted from backend for ADX and ATR
+                const value = d[1];
+                allValues.push(value);
             });
         }
     });
@@ -794,13 +795,6 @@ export function renderBreakdownChart(asset, breakdownData) {
     // Update zero line position
     chart.zeroLine.attr('y1', chart.yScale(0)).attr('y2', chart.yScale(0));
 
-    // Line generator
-    const lineGenerator = d3.line()
-        .x(d => chart.xScale(new Date(d[0])))
-        .y(d => chart.yScale(d[1]))
-        .defined(d => d[1] !== null && d[1] !== undefined && !isNaN(d[1]))
-        .curve(d3.curveMonotoneX);
-
     // Clear existing lines
     chart.linesGroup.selectAll('path').remove();
 
@@ -810,6 +804,13 @@ export function renderBreakdownChart(asset, breakdownData) {
 
         const color = oscillatorData.metadata.color || '#888';
         const label = oscillatorData.metadata.label || name.toUpperCase();
+
+        // Create line generator (data is already inverted from backend for ADX and ATR)
+        const lineGenerator = d3.line()
+            .x(d => chart.xScale(new Date(d[0])))
+            .y(d => chart.yScale(d[1]))
+            .defined(d => d[1] !== null && d[1] !== undefined && !isNaN(d[1]))
+            .curve(d3.curveMonotoneX);
 
         // Draw line
         chart.linesGroup.append('path')

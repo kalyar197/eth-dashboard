@@ -303,15 +303,7 @@
             border-color: #555;
             color: #fff;
         }
-        
-        .info-text {
-            position: absolute;
-            bottom: 20px;
-            left: 20px;
-            font-size: 11px;
-            color: #555;
-        }
-        
+
         /* Plugin specific colors */
 	.btc-label { --plugin-color: #F7931A; --plugin-color-dark: rgba(247, 147, 26, 0.2); }
 	.rsi-label { --plugin-color: #FF9500; --plugin-color-dark: rgba(255, 149, 0, 0.2); }
@@ -385,14 +377,14 @@
             display: block;
         }
 
-        /* Chart containers specific - Price charts (60% height) */
+        /* Chart containers specific - Price charts */
         #btc-chart-container {
             background: #1a1a1a;
             border-radius: 12px;
             border: 1px solid #2a2a2a;
             width: 100%;
             min-height: 400px;
-            height: 42vh;
+            height: 40vh;
             position: relative;
             padding: 20px;
             overflow: hidden;
@@ -406,7 +398,7 @@
             border: 1px solid #2a2a2a;
             width: 100%;
             min-height: 250px;
-            height: 23vh;
+            height: 25vh;
             position: relative;
             padding: 20px;
             overflow: hidden;
@@ -510,6 +502,18 @@
             font-weight: 600;
         }
 
+        /* Oscillator Dataset Controls */
+        .oscillator-dataset-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            padding: 15px;
+            background: #0a0a0a;
+            border-radius: 8px;
+            border: 1px solid #2a2a2a;
+            margin-top: 15px;
+        }
+
         /* Funding Rate Styles */
         #btc-funding-rate-container {
             background: #1a1a1a;
@@ -517,11 +521,11 @@
             border: 1px solid #2a2a2a;
             width: 100%;
             min-height: 150px;
-            height: 15vh;
+            height: 12vh;
             position: relative;
             padding: 20px;
             overflow: hidden;
-            margin-top: 15px;
+            margin-bottom: 20px;
         }
     </style>
 </head>
@@ -542,7 +546,6 @@
                 <button class="time-btn" data-dataset="btc" data-days="1095">3Y</button>
             </div>
             <div class="button-container control-group overlay-controls">
-                <label class="control-label">Moving Averages:</label>
                 <div class="dataset-checkbox-wrapper">
                     <input type="checkbox" id="sma-7-btc" class="overlay-checkbox" data-asset="btc" data-overlay="sma_7_btc">
                     <label for="sma-7-btc" style="color: #FF6B6B;">SMA-7</label>
@@ -560,60 +563,39 @@
                     <label for="psar-btc" style="color: #888;">PSAR</label>
                 </div>
             </div>
+            <div class="button-container control-group">
+                <button class="noise-btn" data-asset="btc" data-level="14">Max</button>
+                <button class="noise-btn" data-asset="btc" data-level="30">Med-High</button>
+                <button class="noise-btn active" data-asset="btc" data-level="50">Default</button>
+                <button class="noise-btn" data-asset="btc" data-level="100">Med-Low</button>
+                <button class="noise-btn" data-asset="btc" data-level="200">Min</button>
+            </div>
         </div>
 
-        <!-- Price Chart Section (60%) -->
+        <!-- Price Chart Section -->
         <div class="chart-section">
+            <!-- Funding Rate Chart -->
+            <div id="btc-funding-rate-container"></div>
+
+            <!-- Main Price Chart -->
             <div id="btc-chart-container">
                 <div class="zoom-controls">
                     <button class="zoom-btn reset-zoom" title="Reset Zoom">↺</button>
                     <button class="zoom-btn zoom-in" title="Zoom In">+</button>
                     <button class="zoom-btn zoom-out" title="Zoom Out">−</button>
                 </div>
-                <div class="info-text">Click and drag to zoom • Hover for OHLCV details</div>
             </div>
-
-            <!-- Funding Rate Chart -->
-            <div id="btc-funding-rate-container"></div>
         </div>
 
-        <!-- Oscillator Section (40%) -->
+        <!-- Oscillator Section -->
         <div class="chart-section">
-            <div class="oscillator-controls">
-                <div class="dataset-checkboxes">
-                    <div class="dataset-checkbox-wrapper">
-                        <input type="checkbox" id="rsi-btc" class="dataset-checkbox" data-asset="btc" data-dataset="rsi" checked>
-                        <label for="rsi-btc">RSI</label>
-                    </div>
-                    <div class="dataset-checkbox-wrapper">
-                        <input type="checkbox" id="macd-histogram-btc" class="dataset-checkbox" data-asset="btc" data-dataset="macd_histogram" checked>
-                        <label for="macd-histogram-btc">MACD Histogram</label>
-                    </div>
-                    <div class="dataset-checkbox-wrapper">
-                        <input type="checkbox" id="adx-btc" class="dataset-checkbox" data-asset="btc" data-dataset="adx" checked>
-                        <label for="adx-btc">ADX</label>
-                    </div>
-                    <div class="dataset-checkbox-wrapper">
-                        <input type="checkbox" id="atr-btc" class="dataset-checkbox" data-asset="btc" data-dataset="atr" checked>
-                        <label for="atr-btc">ATR</label>
-                    </div>
-                </div>
-                <div class="noise-level-controls">
-                    <label class="noise-label">Noise Level:</label>
-                    <button class="noise-btn" data-asset="btc" data-level="14">Max</button>
-                    <button class="noise-btn" data-asset="btc" data-level="30">Med-High</button>
-                    <button class="noise-btn active" data-asset="btc" data-level="50">Default</button>
-                    <button class="noise-btn" data-asset="btc" data-level="100">Med-Low</button>
-                    <button class="noise-btn" data-asset="btc" data-level="200">Min</button>
-                </div>
-            </div>
+            <!-- Composite Oscillator Chart -->
             <div id="btc-oscillator-container">
                 <div class="zoom-controls">
                     <button class="zoom-btn reset-zoom" title="Reset Zoom">↺</button>
                     <button class="zoom-btn zoom-in" title="Zoom In">+</button>
                     <button class="zoom-btn zoom-out" title="Zoom Out">−</button>
                 </div>
-                <div class="info-text">Oscillator: 0 line = BTC price • Synchronized zoom</div>
             </div>
 
             <!-- Breakdown Oscillator Chart -->
@@ -623,8 +605,28 @@
                     <button class="zoom-btn zoom-in" title="Zoom In">+</button>
                     <button class="zoom-btn zoom-out" title="Zoom Out">−</button>
                 </div>
-                <div class="info-text">Breakdown: Individual Normalized Oscillators • Synchronized zoom</div>
             </div>
+
+            <!-- Oscillator Dataset Selection - Temporarily disabled (hardcoded to ADX + RSI)
+            <div class="oscillator-dataset-controls">
+                <div class="dataset-checkbox-wrapper">
+                    <input type="checkbox" id="oscillator-rsi-btc" class="oscillator-dataset-checkbox" data-asset="btc" data-dataset="rsi" checked>
+                    <label for="oscillator-rsi-btc">RSI</label>
+                </div>
+                <div class="dataset-checkbox-wrapper">
+                    <input type="checkbox" id="oscillator-macd-btc" class="oscillator-dataset-checkbox" data-asset="btc" data-dataset="macd_histogram" checked>
+                    <label for="oscillator-macd-btc">MACD Histogram</label>
+                </div>
+                <div class="dataset-checkbox-wrapper">
+                    <input type="checkbox" id="oscillator-adx-btc" class="oscillator-dataset-checkbox" data-asset="btc" data-dataset="adx" checked>
+                    <label for="oscillator-adx-btc">ADX</label>
+                </div>
+                <div class="dataset-checkbox-wrapper">
+                    <input type="checkbox" id="oscillator-atr-btc" class="oscillator-dataset-checkbox" data-asset="btc" data-dataset="atr" checked>
+                    <label for="oscillator-atr-btc">ATR</label>
+                </div>
+            </div>
+            -->
 
         </div>
     </div>

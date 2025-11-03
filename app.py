@@ -112,10 +112,15 @@ def calculate_composite_average(common_timestamps, aligned_values, weights=None)
     # Determine weights
     oscillator_names = list(aligned_values.keys())
     if weights is None:
-        # Equal weights
-        n = len(oscillator_names)
-        weights = {name: 1.0 / n for name in oscillator_names}
-        print(f"[Composite] Using equal weights: {weights}")
+        # Custom weights for ADX + RSI: RSI=60%, ADX=40%
+        if set(oscillator_names) == {'adx', 'rsi'}:
+            weights = {'adx': 0.4, 'rsi': 0.6}
+            print(f"[Composite] Using custom weights for RSI+ADX: {weights}")
+        else:
+            # Fallback to equal weights for other combinations
+            n = len(oscillator_names)
+            weights = {name: 1.0 / n for name in oscillator_names}
+            print(f"[Composite] Using equal weights: {weights}")
     else:
         # Normalize weights to sum to 1
         total = sum(weights.values())
@@ -349,6 +354,12 @@ def get_oscillator_data():
                     if not normalized_data:
                         print(f"[Composite Mode] Warning: Normalization failed for {oscillator_name}, skipping...")
                         continue
+
+                    # INVERT ADX and ATR for composite calculation
+                    # Rationale: High ADX/ATR = high risk/late trend = bearish contribution
+                    if oscillator_name in ['adx', 'atr']:
+                        normalized_data = [[timestamp, -value] for timestamp, value in normalized_data]
+                        print(f"[Composite Mode] Inverted {oscillator_name} values (high = bearish)")
 
                     # Store normalized data
                     normalized_oscillators[oscillator_name] = normalized_data
