@@ -2,11 +2,11 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## ⚠️ PROJECT STATUS: MOMENTUM OSCILLATOR SYSTEM COMPLETE (2025-11-02)
+## ⚠️ PROJECT STATUS: MOMENTUM OSCILLATOR SYSTEM COMPLETE (2025-11-03)
 
 **Status**: Single Momentum Oscillator Section - Fully Functional
 
-**Latest Update (2025-11-02):** Redesigned UI with Main/Breakdown tab structure, fixed PSAR overlay bug, and improved chart spacing.
+**Latest Update (2025-11-03):** Fixed Markov regime background zones zoom synchronization - blue/red volatility zones now stay perfectly aligned with zoomed oscillator data.
 
 ### 🎯 What's Currently Working:
 
@@ -28,6 +28,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - ✅ User-tunable composite Z-score oscillator (data/composite_zscore.py)
 - ✅ 5 noise level controls (14, 30, 50, 100, 200 periods)
 - ✅ Regime-based background shading (blue=low-vol, red=high-vol)
+- ✅ Regime zones sync perfectly with zoom operations
 - ✅ 4 Base oscillators: RSI, MACD Histogram, ADX, ATR
 - ✅ Composite + Breakdown charts with legend
 - ✅ Fully interactive controls (checkboxes, buttons)
@@ -74,17 +75,25 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - CoinAPI Startup tier: 1000 requests/day limit
 - Funding rate data: ~3 months cached from Binance
 
-**Files Changed in Latest Session (2025-11-02):**
+**Files Changed in Latest Session (2025-11-03):**
 ```
-Modified Files (3):
-- index.html (removed heading, renamed tab to "Main", added empty "Breakdown" tab)
-- static/js/main.js (updated tab state management for new structure)
-- static/js/chart.js (fixed PSAR overlay clearing bug in renderOverlays function)
+Modified Files (1):
+- static/js/oscillator.js (regime background zoom sync fix)
 
 Bug Fix Details:
-- chart.js:239-251: Moved overlay clearing operation BEFORE empty array check
-- This ensures overlays are always cleared when unchecking boxes
-- Previously, overlays persisted when all checkboxes were unchecked
+Problem: Regime background rectangles (blue/red volatility zones) were drawn
+once at initialization using original xScale, but did not update during zoom
+operations. This caused background zones to misalign with the zoomed oscillator.
+
+Solution (3-part fix):
+1. Line 477-478: Store regime segments in chart instance (chart.regimeSegments)
+2. Lines 506-525: Create updateRegimeRectangles() helper function
+3. Line 677: Call helper in updateOscillatorZoom() to update rectangles
+
+Technical implementation:
+- Added data-regime-index attribute to rectangles for reliable selection
+- Uses transformed xScale to recalculate rectangle x/width during zoom
+- Tested with mouse wheel zoom - regime zones stay perfectly aligned
 ```
 
 **Quick Start:**
@@ -100,6 +109,241 @@ Bug Fix Details:
 This is being rebuilt as a **BTC Trading System** for options and swing trading. The system will fetch data from multiple APIs and display technical indicators normalized to a -100 to +100 scale for consistent analysis.
 
 **Architecture**: Flask backend (Python) + D3.js frontend (vanilla JavaScript)
+
+## 🔧 MCP (Model Context Protocol) Usage Guidelines
+
+This project has **10 MCP servers** configured to enhance development efficiency and code precision. Claude should proactively use these tools when they improve the workflow.
+
+### Available MCP Servers:
+
+1. **Context7** (`context7-mcp`)
+   - Purpose: Fetch up-to-date library/framework documentation
+   - Use When: Researching APIs, syntax, or best practices
+   - Context Cost: Low
+
+2. **Playwright** (`mcp-server-playwright`)
+   - Purpose: Browser automation and testing
+   - Use When: Testing UI, taking screenshots, verifying functionality
+   - Context Cost: Medium
+
+3. **Sequential-Thinking** (`@modelcontextprotocol/server-sequential-thinking`)
+   - Purpose: Dynamic problem-solving through thought sequences
+   - Use When: Planning complex features, breaking down tasks, multi-step reasoning
+   - Context Cost: High (use freely - efficiency gains outweigh costs)
+
+4. **Sentry** (`@sentry/mcp-server`)
+   - Purpose: Error monitoring and debugging
+   - Use When: Checking for production errors, debugging issues, after deployments
+   - Context Cost: Low
+
+5. **Filesystem** (`@modelcontextprotocol/server-filesystem`)
+   - Purpose: Secure file operations with access controls
+   - Use When: Batch operations (rename/move/copy multiple files), cache management
+   - **Prefer native tools** (Read/Write/Edit) for single-file operations (faster, less overhead)
+   - Context Cost: Low
+
+6. **Memory** (`@modelcontextprotocol/server-memory`)
+   - Purpose: Knowledge graph-based persistent memory (general patterns, cross-project)
+   - Use When: Storing general patterns, cross-project lessons learned
+   - Context Cost: High (use freely - token savings compound over sessions)
+
+7. **Git** (`@cyanheads/git-mcp-server`)
+   - Purpose: Git repository operations (commit, branch, diff, log, etc.)
+   - Use When: Version control, tracking changes, managing branches
+   - Context Cost: Low
+
+8. **Shadcn-UI** (`shadcn-ui-mcp-server`)
+   - Purpose: React component library assistance
+   - Use When: Creating/modifying UI components, learning component APIs
+   - **ALWAYS consult** when working with UI components for best practices
+   - Context Cost: Low
+
+9. **Serena** (custom - project-specific)
+   - Purpose: Semantic code analysis and intelligent navigation
+   - Use When: Finding symbols, analyzing code structure, symbolic edits
+   - **Project-specific memory storage** via `write_memory` tool
+   - Context Cost: Low
+
+10. **Alpaca Markets** (`alpaca-mcp-server`)
+   - Purpose: Financial market data and trading API access
+   - Use When: Fetching stock/crypto/options data, market analysis, cross-validation with CoinAPI
+   - **No API keys required** for crypto data (BTC, ETH) - higher limits with keys
+   - Available Data: Stocks, crypto, options, news, corporate actions
+   - Context Cost: Low
+
+### Usage Rules:
+
+**All MCPs: Use Freely (No Permission Required)**
+- All 10 servers are available for proactive use without asking permission
+- Efficiency gains and token savings outweigh context costs
+- Use the right tool for the job
+
+**Tool Selection Guidelines:**
+
+**Context7:**
+- Research library APIs and syntax when implementing new features
+- Get latest documentation for D3.js, NumPy, Flask, etc.
+
+**Playwright:**
+- Test UI after major changes
+- Take screenshots for verification
+- Automate browser interactions
+
+**Sequential-Thinking:**
+- Plan complex multi-step implementations
+- Break down large features
+- Explore alternative approaches
+- Use for hypothesis testing and revision
+
+**Sentry:**
+- Check proactively when user mentions bugs/errors
+- Query after deployments
+- Use when debugging production issues
+
+**Filesystem:**
+- ✅ Batch rename/move/copy operations
+- ✅ Directory-wide cache management
+- ✅ Complex file tree operations
+- ❌ Single file reads (use Read tool instead)
+- ❌ Single file edits (use Edit tool instead)
+
+**Memory (MCP):**
+- Store **general patterns** applicable across projects
+- Cross-project lessons learned
+- Generic best practices
+
+**Git:**
+- Manage branches for features
+- Create commits with proper messages
+- Review diffs and logs
+- Track changes history
+
+**Shadcn-UI:**
+- **ALWAYS consult** when creating/modifying UI components
+- Get component usage examples
+- Learn accessibility best practices
+- Follow React component patterns
+
+**Serena:**
+- Navigate code with symbolic tools (find_symbol, get_symbols_overview)
+- Find references to symbols
+- Perform symbolic edits (rename, replace)
+- Store **project-specific knowledge** via `write_memory` tool
+  - Architecture decisions
+  - Critical bug fixes
+  - Design patterns specific to this project
+  - File relationships and dependencies
+
+**Alpaca Markets:**
+- **UNIQUE DATASETS** (not available on CoinAPI Startup $79/month tier):
+  - ✅ **News & Sentiment** (NO API KEYS REQUIRED!)
+    - Historical news articles by symbol
+    - Date range queries
+    - Sentiment analysis ready
+  - ✅ **Corporate Actions** (requires API keys)
+    - Dividends, splits, earnings dates
+    - Ex-dividend dates, payment dates
+    - Historical corporate events
+  - ✅ **Options Data** (requires API keys)
+    - Options chains (calls/puts)
+    - Greeks (delta, gamma, theta, vega, rho)
+    - Implied volatility (IV)
+    - Open interest and volume
+    - Strike prices and expirations
+  - ✅ **Real-Time WebSocket Streams** (requires API keys)
+    - Live quotes (bid/ask)
+    - Live trades (price/volume)
+    - Millisecond-level data
+    - Multiple symbols simultaneously
+
+- **OVERLAPPING DATA** (also available on CoinAPI):
+  - 📊 BTC/USD, ETH/USD OHLCV bars (requires API keys)
+  - 📊 Stock data (SPY, equities) (requires API keys)
+  - 📊 Latest quotes and trades (requires API keys)
+
+- **API ARCHITECTURE**:
+  - Free Paper Trading API keys (no credit card)
+  - 5+ years of historical data
+  - No rate limits on news endpoint
+  - Separate clients: `StockHistoricalDataClient`, `CryptoHistoricalDataClient`, `OptionHistoricalDataClient`, `NewsClient`
+
+- **USE CASES**:
+  - Primary: News sentiment, options Greeks, corporate actions
+  - Secondary: Cross-validation with CoinAPI
+  - Fallback: When CoinAPI rate limits hit
+
+### Mandatory Workflows:
+
+**Before Commit / After Compact:**
+1. **Update CLAUDE.md** with latest changes, bug fixes, and status
+2. **Update Serena Memory** (`write_memory`) with new patterns/fixes/lessons
+3. **Use Serena symbolic tools** for code operations
+
+**When Creating/Modifying UI:**
+1. **Consult Shadcn-UI** for component patterns and best practices
+2. Implement following accessibility guidelines
+3. Use recommended component APIs
+
+**When Planning Complex Features:**
+1. **Use Sequential-Thinking** for multi-step planning
+2. Break down into actionable tasks
+3. Explore alternative approaches before implementation
+
+**When Debugging:**
+1. **Check Sentry** if production errors mentioned
+2. Use Git to review recent changes
+3. Use Serena to navigate code structure
+
+**When Working with UI Components:**
+1. **Use Playwright + Shadcn-UI together** for comprehensive UI development
+2. Shadcn-UI: Get component structure, patterns, and accessibility guidelines
+3. Playwright: Test component rendering, interactions, and visual regression
+4. Workflow: Design → Implement → Test → Iterate
+
+**When Multiple APIs Can Provide Same Data:**
+1. **ALWAYS ask user explicitly which API to use**
+2. Present options with pros/cons:
+   - CoinAPI: Rate limits, coverage, cost
+   - Alpaca: Rate limits, coverage, features
+3. Do not assume or default to one API
+4. Examples:
+   - "Both CoinAPI and Alpaca can provide BTC OHLCV data. Which should I use?"
+   - "ETH price is available from both APIs. CoinAPI has your Startup tier (1000 req/day), Alpaca has unlimited Paper Trading. Preference?"
+
+### Example Workflows:
+
+**Adding a New Indicator:**
+1. Sequential-Thinking: Plan implementation steps, explore approaches
+2. Context7: Research NumPy/technical indicator formulas
+3. Serena: Find existing indicator files as templates (find_symbol)
+4. Git: Create feature branch
+5. Native tools (Write/Edit): Create new indicator files
+6. Playwright: Test the new indicator in browser
+7. Git: Commit changes with descriptive message
+8. Serena Memory: Store implementation pattern for future reference
+
+**Debugging an Issue:**
+1. Sentry: Check for recent errors (if production issue)
+2. Git: Review recent changes (git diff, git log)
+3. Serena: Navigate code structure (find_symbol, find_referencing_symbols)
+4. Native tools (Read): Read relevant source files
+5. Playwright: Reproduce issue in browser
+6. Context7: Research solution if needed
+
+**Creating UI Components:**
+1. **Shadcn-UI + Playwright together**: Comprehensive UI workflow
+2. Shadcn-UI: Get component structure, accessibility patterns, and best practices
+3. Sequential-Thinking: Plan component architecture if complex
+4. Native tools (Edit): Implement component following Shadcn-UI patterns
+5. Playwright: Test rendering, interactions, responsive behavior, visual regression
+6. Playwright: Take screenshots for documentation/verification
+7. Serena Memory: Store UI patterns if novel
+
+**Commit/Compact Workflow:**
+1. Git: Review changes (git diff, git status)
+2. Native tools (Edit): Update CLAUDE.md with changes
+3. Serena: Update project memories with new patterns/fixes
+4. Git: Create commit with descriptive message
 
 ## Development Commands
 
@@ -488,3 +732,97 @@ The codebase references implementation phases:
 
 Phase comments in code indicate feature evolution and can guide understanding of system complexity layers.
 - the volatilty oscillators were removed in another session whihc wasnt compacted into progress
+
+---
+
+## Minimalist Dashboard Design Philosophy (2025-11-03)
+
+### Core Principle
+**"Why tell myself what I already know?"**
+
+This is a **personal, private dashboard** designed for an expert user who is intimately familiar with the data and visualizations. The design philosophy emphasizes **eliminating redundant labels and descriptions** to create a clean, distraction-free analytical environment optimized for visual analysis.
+
+### What to Remove
+
+#### 1. Control Labels
+- ❌ Labels like "Noise Level:", "Moving Averages:", etc.
+- ✅ Keep only the actual controls (buttons, checkboxes)
+- **Rationale**: The user knows what these controls do without needing labels
+
+#### 2. Axis Labels
+- ❌ Descriptive axis labels like "Date", "Funding Rate (%)", "Price ($)"
+- ✅ Keep axis tick values and numbers
+- **Rationale**: Chart context makes the axis meaning obvious
+
+#### 3. Info Text / Help Text
+- ❌ Instructional text like "Click and drag to zoom", "Hover for details"
+- ❌ Descriptive text like "Breakdown: Individual Normalized Oscillators"
+- ✅ Keep functional elements (zoom buttons, etc.)
+- **Rationale**: The user knows how to interact with charts
+
+#### 4. Reference Line Labels
+- ❌ Labels like "0 (Price)", "+2σ", "-3σ" on chart overlays
+- ✅ Keep the reference lines themselves visible
+- **Rationale**: Visual lines provide context without text clutter
+
+### What to Keep
+
+#### 1. Data Values
+- ✅ Actual numbers, percentages, prices
+- ✅ Tick mark values on axes
+- **Rationale**: These are information, not redundant labels
+
+#### 2. Legends with Non-Obvious Information
+- ✅ Dataset names in multi-line charts (e.g., "RSI", "MACD", "ADX")
+- ✅ Color-coded indicators
+- **Rationale**: Differentiating between similar-looking lines requires labels
+
+#### 3. Interactive Controls
+- ✅ Buttons, checkboxes, dropdowns
+- ✅ Zoom controls
+- **Rationale**: Functional elements that enable interaction
+
+### Implementation Guidelines for Future Features
+
+1. **Default to minimalism**: Don't add labels unless absolutely necessary
+2. **Test without labels first**: If the feature is usable without labels, leave them off
+3. **Use visual cues**: Colors, positioning, and context over text labels
+4. **Consider the audience**: This is for a single, expert user, not general public
+
+### Chart Alignment Critical Rule
+
+**All charts must maintain identical left/right margins for vertical date alignment:**
+- Price chart: `{ top: 20, right: 60, bottom: 40, left: 60 }`
+- Funding rate: `{ top: 30, right: 60, bottom: 40, left: 60 }`
+- Composite oscillator: `{ top: 20, right: 60, bottom: 40, left: 60 }`
+- Breakdown oscillator: `{ top: 30, right: 60, bottom: 40, left: 60 }`
+
+**Critical**: Left and right margins MUST be identical across all charts (60px) to ensure plotting areas have the same width and dates align vertically across all charts for visual analysis.
+
+### Code Examples
+
+**Removing Labels (HTML)**:
+```html
+<!-- BEFORE -->
+<label class="control-label">Noise Level:</label>
+<button>Max</button>
+
+<!-- AFTER -->
+<button>Max</button>
+```
+
+**Hiding Labels (JavaScript)**:
+```javascript
+// BEFORE
+.text('0 (Price)');
+
+// AFTER (keep DOM structure but hide text)
+.text('');
+```
+
+**Files Modified (2025-11-03)**:
+- `index.html`: Removed control labels, info-text divs, .info-text CSS
+- `static/js/chart.js`: Removed axis labels, fixed funding rate margin
+- `static/js/oscillator.js`: Fixed margins (50→60), hidden zero line label
+
+**Status**: Active design philosophy applied to all features.
