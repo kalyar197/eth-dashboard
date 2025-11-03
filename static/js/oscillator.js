@@ -473,8 +473,12 @@ function renderRegimeBackground(chart, regimeData, metadata) {
         regimeSegments.push(currentSegment);
     }
 
+    // Store regime segments in chart for zoom updates
+    chart.regimeSegments = regimeSegments;
+    chart.regimeMetadata = metadata;
+
     // Render background rectangles
-    regimeSegments.forEach(segment => {
+    regimeSegments.forEach((segment, index) => {
         const state = states[segment.regime];
         if (!state) return;
 
@@ -484,12 +488,39 @@ function renderRegimeBackground(chart, regimeData, metadata) {
 
         chart.linesGroup.insert('rect', ':first-child')  // Insert at beginning (background)
             .attr('class', `regime-background regime-${segment.regime}`)
+            .attr('data-regime-index', index)  // Add unique identifier for zoom updates
             .attr('x', x1)
             .attr('y', 0)
             .attr('width', width)
             .attr('height', chart.height)
             .style('fill', state.color)
             .style('opacity', 1);
+    });
+}
+
+/**
+ * Update regime background rectangles with new X scale (for zoom sync)
+ * @param {Object} chart - Chart instance
+ * @param {Function} newXScale - Transformed X scale
+ */
+function updateRegimeRectangles(chart, newXScale) {
+    if (!chart.regimeSegments || chart.regimeSegments.length === 0) return;
+
+    const states = chart.regimeMetadata.states;
+
+    // Update all regime rectangles using data-regime-index attribute
+    chart.regimeSegments.forEach((segment, index) => {
+        const state = states[segment.regime];
+        if (!state) return;
+
+        const x1 = newXScale(new Date(segment.startTime));
+        const x2 = newXScale(new Date(segment.endTime));
+        const width = x2 - x1 || 2;  // Minimum width of 2px
+
+        // Update rectangle by data-regime-index attribute
+        chart.linesGroup.select(`[data-regime-index="${index}"]`)
+            .attr('x', x1)
+            .attr('width', width);
     });
 }
 
@@ -642,6 +673,9 @@ function updateOscillatorZoom(asset, transform) {
         chart.linesGroup.select(`.line-${datasetName}`)
             .attr('d', line);
     });
+
+    // Update regime background rectangles with new scale
+    updateRegimeRectangles(chart, newXScale);
 }
 
 /**
