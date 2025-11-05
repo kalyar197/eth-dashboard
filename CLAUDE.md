@@ -6,7 +6,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Status**: Single Momentum Oscillator Section - Fully Functional
 
-**Latest Update (2025-11-03):** Added Markov regime backgrounds to price chart and changed default noise level to Min (200 periods). Regime zones now display on both price chart and oscillator chart with perfect zoom synchronization.
+**Latest Update (2025-11-03):**
+1. **Morning**: Added Markov regime backgrounds to price chart and changed default noise level to Min (200 periods). Regime zones now display on both price chart and oscillator chart with perfect zoom synchronization.
+2. **Afternoon**: Fixed critical macro oscillator data quality issues (BTC.D, USDT.D, DXY) - removed future/improvised data and established TradingView backfill + CoinMarketCap daily update system.
 
 ### 🎯 What's Currently Working:
 
@@ -32,6 +34,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - ✅ 4 Base oscillators: RSI, MACD Histogram, ADX, ATR
 - ✅ Composite + Breakdown charts with legend
 - ✅ Fully interactive controls (checkboxes, buttons)
+
+**MACRO OSCILLATORS** (Normalized Z-scores):
+- ✅ DXY (U.S. Dollar Index) - Yahoo Finance via yfinance (data/dxy_price_yfinance.py)
+- ✅ BTC.D (Bitcoin Dominance %) - TradingView backfill + CoinMarketCap daily updates (data/btc_dominance_cmc.py)
+- ✅ USDT.D (Tether Dominance %) - TradingView backfill + CoinMarketCap daily updates (data/usdt_dominance_cmc.py)
+- ✅ 3 years historical data (2022-11-07 to present)
+- ✅ Timestamp standardization to midnight UTC for BTC price alignment
+- ✅ No None values, no future data, 100% real historical data
+- ✅ Data Quality Critical Fix (2025-11-03): Removed future/improvised values, established hybrid data pipeline
 
 **Funding Rate Chart:**
 - ✅ Binance perpetual futures funding rates
@@ -76,36 +87,51 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Funding rate data: ~3 months cached from Binance
 
 **Files Changed in Latest Session (2025-11-03):**
+
+**Morning Session - Regime Backgrounds:**
 ```
 Modified Files (3):
 - static/js/chart.js (regime background implementation for price chart)
 - static/js/main.js (regime data flow + default noise level change)
 - index.html (Min button active by default)
 
-Feature Implementation:
-1. Price Chart Regime Backgrounds:
-   - Added renderPriceChartRegimeBackground() function (lines 249-309)
-   - Added updatePriceChartRegimeRectangles() function (lines 311-330)
-   - Fixed critical bug: moved regime rendering AFTER clearing candles group
-   - Regime zones now visible on price chart behind candlesticks
-   - Zoom synchronization works via updatePriceChartRegimeRectangles() call
+Feature: Price Chart Regime Backgrounds with zoom synchronization
+Bug Fix: Regime rectangles rendering before candles group clear
+```
 
-2. Data Flow Updates:
-   - main.js: Added regimeData storage to appState (lines 63-66)
-   - main.js: Pass regime data through renderChart() (lines 351-352, 405-417)
-   - chart.js: Updated renderChart() signature to accept regimeData parameter
+**Afternoon Session - Macro Oscillator Data Quality Fix:**
+```
+Modified Files (7):
+- data/coinmarketcap_client.py (dynamic API key import timing fix)
+- data/btc_dominance_cmc.py (field extraction + timestamp standardization + None handling)
+- data/usdt_dominance_cmc.py (timestamp standardization + None handling)
+- data/dxy_price_yfinance.py (timestamp standardization for BTC alignment)
+- historical_data/btc_dominance.json (cleaned: removed future/None values)
+- historical_data/usdt_dominance.json (cleaned: removed future/None values)
 
-3. Default Noise Level:
-   - Changed from 50 (Default) to 200 (Min) periods
-   - main.js line 49: noiseLevel.btc = 200
-   - index.html line 571: "Min" button has active class
+Created Scripts (3):
+- scripts/backfill_dominance_data.py (one-time 3-year TradingView backfill)
+- scripts/check_data.py (data verification utility)
+- scripts/final_fix_dominance.py (removed future data, fetched real Nov 2-3)
 
-Bug Fix:
-Problem: Regime rectangles were being rendered BEFORE the candles group was
-cleared, causing them to be immediately deleted.
+Critical Data Quality Fix:
+PROBLEM: BTC.D and USDT.D had None values for Nov 2 and future/improvised data for Nov 4-5
+ROOT CAUSE 1: CMC API provides current values only, no historical endpoint
+ROOT CAUSE 2: Timestamp misalignment (DXY at 04:00 UTC vs BTC at 00:00 UTC) caused flat 0σ line
+ROOT CAUSE 3: Incremental manager creating None placeholders for missing days
 
-Solution: Moved chart.candlesGroup.selectAll('*').remove() to line 180,
-BEFORE calling renderPriceChartRegimeBackground() on line 182-184.
+SOLUTION - Hybrid Data Pipeline:
+1. Historical Backfill: TradingView (tvdatafeed library) for 3 years (2022-11-07 to present)
+2. Daily Updates: CoinMarketCap API (free tier) fetches today's value every 15 minutes
+3. Timestamp Standardization: All timestamps normalized to midnight UTC via standardize_to_daily_utc()
+4. Data Integrity: No None values, no future dates, 100% real historical data
+5. Validation: BTC.D range 35-75%, USDT.D range 2-10%
+
+FINAL STATE (as of 2025-11-03):
+- BTC.D: 1093 records, last value 60.75% (Nov 3, 2025)
+- USDT.D: 1093 records, last value 5.24% (Nov 3, 2025)
+- DXY: Fixed flat 0σ line via timestamp standardization
+- All macro oscillators now display correctly with proper divergence values
 ```
 
 **Quick Start:**
