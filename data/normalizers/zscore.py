@@ -59,10 +59,22 @@ def normalize(dataset_data, asset_price_data, window=30):
         return []
 
     # Create price lookup (closing prices)
-    price_lookup = {item[0]: item[4] for item in asset_price_data}
+    # Handle both OHLCV format (6 elements) and simple format (2 elements)
+    try:
+        if len(asset_price_data[0]) == 6:
+            # OHLCV format: [timestamp, open, high, low, close, volume]
+            price_lookup = {item[0]: item[4] for item in asset_price_data}
+        elif len(asset_price_data[0]) == 2:
+            # Simple format: [timestamp, close_price]
+            price_lookup = {item[0]: item[1] for item in asset_price_data}
+        else:
+            raise ValueError(f"Unexpected asset_price_data format: {len(asset_price_data[0])} elements")
+    except Exception as e:
+        print(f"[Z-Score Normalizer] ERROR creating price lookup: {e}")
+        return []
 
-    # Extract indicator values
-    indicator_values = np.array([item[1] for item in dataset_data])
+    # Extract indicator values, replacing None with np.nan
+    indicator_values = np.array([item[1] if item[1] is not None else np.nan for item in dataset_data])
 
     # Build price array aligned with indicator timestamps
     aligned_prices = []
@@ -75,7 +87,7 @@ def normalize(dataset_data, asset_price_data, window=30):
             if aligned_prices:
                 aligned_prices.append(aligned_prices[-1])
             else:
-                aligned_prices.append(0)
+                aligned_prices.append(np.nan)
 
     price_values = np.array(aligned_prices)
 
@@ -89,8 +101,25 @@ def normalize(dataset_data, asset_price_data, window=30):
         indicator_window = indicator_values[i-window:i]
         price_window = price_values[i-window:i]
 
+        # Filter out NaN values
+        valid_mask = ~(np.isnan(indicator_window) | np.isnan(price_window))
+        valid_indicator = indicator_window[valid_mask]
+        valid_price = price_window[valid_mask]
+
+        # Skip if insufficient valid data (need at least 10 points for regression)
+        if len(valid_indicator) < 10:
+            normalized_data.append([timestamp, 0.0])
+            continue
+
+        # Skip if current values are NaN
+        current_price = price_values[i]
+        current_indicator = indicator_values[i]
+        if np.isnan(current_price) or np.isnan(current_indicator):
+            normalized_data.append([timestamp, 0.0])
+            continue
+
         # Skip if no variance
-        if np.std(price_window) == 0 or np.std(indicator_window) == 0:
+        if np.std(valid_price) == 0 or np.std(valid_indicator) == 0:
             normalized_data.append([timestamp, 0.0])
             continue
 
@@ -98,13 +127,9 @@ def normalize(dataset_data, asset_price_data, window=30):
         # Using numpy polyfit (degree 1 = linear regression)
         try:
             # polyfit returns [beta, alpha] for degree 1
-            coefficients = np.polyfit(price_window, indicator_window, deg=1)
+            coefficients = np.polyfit(valid_price, valid_indicator, deg=1)
             beta = coefficients[0]
             alpha = coefficients[1]
-
-            # Current values
-            current_price = price_values[i]
-            current_indicator = indicator_values[i]
 
             # Expected indicator value from regression
             expected_indicator = alpha + beta * current_price
@@ -113,8 +138,8 @@ def normalize(dataset_data, asset_price_data, window=30):
             residual = current_indicator - expected_indicator
 
             # Calculate standard error of residuals in window
-            predicted_window = alpha + beta * price_window
-            residuals_window = indicator_window - predicted_window
+            predicted_window = alpha + beta * valid_price
+            residuals_window = valid_indicator - predicted_window
             std_error = np.std(residuals_window)
 
             # Standardize residual

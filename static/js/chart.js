@@ -658,8 +658,8 @@ export function initFundingRateChart(containerId, dataset) {
     const width = containerNode.offsetWidth - margin.left - margin.right;
     const height = containerNode.offsetHeight - margin.top - margin.bottom;
 
-    // Clear any existing content
-    container.selectAll('*').remove();
+    // Clear any existing SVG (preserve zoom controls)
+    container.selectAll('svg').remove();
 
     // Create SVG with viewBox for responsive scaling
     const svg = container.append('svg')
@@ -886,6 +886,9 @@ export function renderFundingRateChart(dataset, data) {
     // Setup crosshair and tooltip
     setupFundingRateCrosshair(dataset, data);
 
+    // Setup zoom and pan behavior
+    setupFundingRateZoom(dataset, data);
+
     console.log(`Funding rate chart rendered for ${dataset}`);
 }
 
@@ -961,4 +964,163 @@ function setupFundingRateCrosshair(dataset, data) {
             chart.crosshairGroup.style('display', 'none');
             tooltip.classed('show', false);
         });
+}
+
+/**
+ * Setup zoom and pan behavior for funding rate chart
+ * @param {string} dataset - Dataset name
+ * @param {Array} data - Funding rate data
+ */
+function setupFundingRateZoom(dataset, data) {
+    const chart = fundingRateChartInstances[dataset];
+
+    // Create zoom behavior
+    chart.zoom = d3.zoom()
+        .scaleExtent([0.5, 10])
+        .translateExtent([[0, 0], [chart.width, chart.height]])
+        .extent([[0, 0], [chart.width, chart.height]])
+        .on('zoom', (event) => {
+            chart.currentTransform = event.transform;
+            updateFundingRateZoom(dataset, data, event.transform);
+        });
+
+    // Attach zoom to overlay
+    chart.zoomOverlay.call(chart.zoom);
+
+    // Setup zoom controls (buttons)
+    setupFundingRateZoomControls(dataset, data);
+}
+
+/**
+ * Update funding rate chart with zoom transform
+ * @param {string} dataset - Dataset name
+ * @param {Array} data - Funding rate data
+ * @param {Object} transform - D3 zoom transform
+ */
+function updateFundingRateZoom(dataset, data, transform) {
+    const chart = fundingRateChartInstances[dataset];
+
+    // Update X scale with transform
+    const newXScale = transform.rescaleX(chart.xScale);
+
+    // Update X axis
+    const xAxis = d3.axisBottom(newXScale)
+        .ticks(6)
+        .tickFormat(d3.timeFormat('%b %d'));
+
+    chart.axisGroup.select('.x-axis')
+        .call(xAxis)
+        .selectAll('text')
+        .attr('fill', '#888')
+        .style('font-size', '11px');
+
+    // Update reference lines
+    chart.referenceGroup.selectAll('line')
+        .attr('x1', 0)
+        .attr('x2', chart.width);
+
+    chart.referenceGroup.selectAll('text')
+        .attr('x', chart.width + 5);
+
+    // Rebuild segments with new X scale
+    const positiveThreshold = 0.01;
+    const negativeThreshold = -0.01;
+
+    const getColor = (value) => {
+        if (value > positiveThreshold) return '#26a69a';
+        if (value < negativeThreshold) return '#ef5350';
+        return '#888888';
+    };
+
+    const segments = [];
+    let currentSegment = null;
+
+    data.forEach((d, i) => {
+        const color = getColor(d[1]);
+
+        if (!currentSegment || currentSegment.color !== color) {
+            if (currentSegment) {
+                currentSegment.data.push(d);
+                segments.push(currentSegment);
+            }
+            currentSegment = { color, data: [d] };
+        } else {
+            currentSegment.data.push(d);
+        }
+    });
+
+    if (currentSegment) {
+        segments.push(currentSegment);
+    }
+
+    // Area generator with new X scale
+    const area = d3.area()
+        .x(d => newXScale(new Date(d[0])))
+        .y0(chart.yScale(0))
+        .y1(d => chart.yScale(d[1]))
+        .curve(d3.curveLinear);
+
+    // Line generator with new X scale
+    const line = d3.line()
+        .x(d => newXScale(new Date(d[0])))
+        .y(d => chart.yScale(d[1]))
+        .curve(d3.curveLinear);
+
+    // Update area segments
+    chart.areaGroup.selectAll('*').remove();
+    segments.forEach((segment, i) => {
+        chart.areaGroup.append('path')
+            .datum(segment.data)
+            .attr('class', `area-segment-${i}`)
+            .attr('fill', segment.color)
+            .attr('fill-opacity', 0.2)
+            .attr('d', area);
+    });
+
+    // Update line segments
+    chart.lineGroup.selectAll('*').remove();
+    segments.forEach((segment, i) => {
+        chart.lineGroup.append('path')
+            .datum(segment.data)
+            .attr('class', `line-segment-${i}`)
+            .attr('fill', 'none')
+            .attr('stroke', segment.color)
+            .attr('stroke-width', 2)
+            .attr('d', line);
+    });
+}
+
+/**
+ * Setup zoom control buttons for funding rate chart
+ * @param {string} dataset - Dataset name
+ * @param {Array} data - Funding rate data
+ */
+function setupFundingRateZoomControls(dataset, data) {
+    const chart = fundingRateChartInstances[dataset];
+    const container = document.getElementById(`${dataset}-funding-rate-container`);
+
+    if (!container) return;
+
+    const buttons = container.querySelectorAll('.zoom-btn');
+
+    buttons.forEach(button => {
+        button.addEventListener('click', () => {
+            if (button.classList.contains('reset-zoom')) {
+                // Reset zoom
+                chart.svg.transition()
+                    .duration(750)
+                    .call(chart.zoom.transform, d3.zoomIdentity);
+            } else if (button.classList.contains('zoom-in')) {
+                // Zoom in
+                chart.svg.transition()
+                    .duration(300)
+                    .call(chart.zoom.scaleBy, 1.5);
+            } else if (button.classList.contains('zoom-out')) {
+                // Zoom out
+                chart.svg.transition()
+                    .duration(300)
+                    .call(chart.zoom.scaleBy, 0.67);
+            }
+        });
+    });
 }

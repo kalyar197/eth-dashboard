@@ -18,6 +18,9 @@ except ImportError:
 COINAPI_KEY = os.environ.get('COINAPI_KEY')  # For crypto data (BTC, ETH, dominance)
 FMP_API_KEY = os.environ.get('FMP_API_KEY')  # Financial Modeling Prep for Gold
 FRED_API_KEY = os.environ.get('FRED_API_KEY')  # Federal Reserve Economic Data for DXY
+ALPACA_API_KEY = os.environ.get('ALPACA_API_KEY')  # Alpaca Markets API key
+ALPACA_SECRET_KEY = os.environ.get('ALPACA_SECRET_KEY')  # Alpaca Markets secret key
+COINMARKETCAP_API_KEY = os.environ.get('COINMARKETCAP_API_KEY')  # CoinMarketCap for market dominance data
 
 # Legacy/Deprecated API Keys (kept for reference only)
 COINSTATS_API_KEY = 'hn8xFxvTblGTj6wEq35nxyijBlQNyBrdJUWqPIeHZCU='  # DEPRECATED

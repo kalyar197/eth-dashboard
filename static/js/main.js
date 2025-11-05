@@ -38,6 +38,9 @@ const appState = {
     breakdownPriceInitialized: {
         btc: false
     },
+    breakdownMacroInitialized: {
+        btc: false
+    },
     selectedDatasets: {
         btc: ['rsi', 'adx']  // Only ADX (60%) and RSI (40%)
     },
@@ -149,10 +152,11 @@ function setupTabs() {
             // Update state
             appState.activeTab = tabName;
 
-            // Load both breakdown charts when switching to breakdown tab
+            // Load all breakdown charts when switching to breakdown tab
             if (tabName === 'breakdown') {
                 await loadBreakdownOscillatorData('btc');
                 await loadBreakdownPriceOscillatorData('btc');
+                await loadMacroOscillatorData('btc');
             }
         });
     });
@@ -260,9 +264,10 @@ function setupBreakdownNoiseLevelControls() {
 
             console.log(`Breakdown noise level changed for ${asset}: ${level}`);
 
-            // Reload both breakdown charts with new noise level
+            // Reload all breakdown charts with new noise level
             await loadBreakdownOscillatorData(asset);
             await loadBreakdownPriceOscillatorData(asset);
+            await loadMacroOscillatorData(asset);
         });
     });
 }
@@ -592,6 +597,52 @@ async function loadBreakdownPriceOscillatorData(asset) {
 
     } catch (error) {
         console.error(`Error loading breakdown price oscillator data for ${asset}:`, error);
+    }
+}
+
+/**
+ * Load macro oscillator data (DXY, BTC.D, USDT.D) for breakdown page
+ * @param {string} asset - Asset name (e.g., 'btc')
+ */
+async function loadMacroOscillatorData(asset) {
+    const days = appState.days[asset];
+    const datasets = 'dxy_price_yfinance,btc_dominance_cmc,usdt_dominance_cmc';  // Macro oscillators
+    const mode = 'composite';  // Use composite mode for normalization
+    const noiseLevel = appState.breakdownNoiseLevel[asset];  // Shared noise level
+    const normalizer = 'zscore';
+
+    console.log(`Fetching breakdown macro oscillator data for ${asset}: datasets=${datasets}, noise_level=${noiseLevel}, days=${days}`);
+
+    try {
+        // Build URL
+        const url = `/api/oscillator-data?asset=${asset}&datasets=${datasets}&days=${days}&normalizer=${normalizer}&mode=${mode}&noise_level=${noiseLevel}`;
+        const response = await fetch(url);
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const result = await response.json();
+
+        if (!result || !result.breakdown) {
+            throw new Error('Invalid breakdown macro oscillator data received');
+        }
+
+        console.log(`Received breakdown macro oscillator data for ${asset}:`, Object.keys(result.breakdown));
+
+        // Initialize macro oscillator chart if not already done
+        const containerId = `breakdown-macro-oscillator-container`;
+        const breakdownKey = `breakdown-macro-${asset}`;
+        if (!appState.breakdownMacroInitialized[asset]) {
+            initBreakdownChart(containerId, breakdownKey);
+            appState.breakdownMacroInitialized[asset] = true;
+        }
+
+        // Render macro oscillator chart with DXY, BTC.D, USDT.D
+        renderBreakdownChart(breakdownKey, result.breakdown);
+
+    } catch (error) {
+        console.error(`Error loading breakdown macro oscillator data for ${asset}:`, error);
     }
 }
 

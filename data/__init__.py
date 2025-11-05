@@ -17,6 +17,11 @@ from . import eth_price_alpaca
 from . import gold_price_oscillator
 from . import spx_price_fmp
 
+# Import macro oscillator plugins (for Breakdown tab - macro section)
+from . import dxy_price_yfinance
+from . import btc_dominance_cmc
+from . import usdt_dominance_cmc
+
 # Import oscillator plugins
 from . import rsi
 from . import macd_histogram
@@ -39,6 +44,9 @@ __all__ = [
     'eth_price_alpaca',
     'gold_price_oscillator',
     'spx_price_fmp',
+    'dxy_price_yfinance',
+    'btc_dominance_cmc',
+    'usdt_dominance_cmc',
     'rsi',
     'macd_histogram',
     'adx',

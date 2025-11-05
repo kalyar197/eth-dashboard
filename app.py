@@ -8,6 +8,7 @@ import time
 # Data plugins
 from data import eth_price, btc_price, gold_price, spx_price, rsi, macd_histogram, adx, atr, sma, parabolic_sar, funding_rate
 from data import eth_price_alpaca, spx_price_fmp, gold_price_oscillator
+from data import dxy_price_yfinance, btc_dominance_cmc, usdt_dominance_cmc
 from data import markov_regime
 from data.normalizers import zscore
 from config import CACHE_DURATION, RATE_LIMIT_DELAY
@@ -50,6 +51,13 @@ PRICE_OSCILLATOR_PLUGINS = {
     'eth_price_alpaca': eth_price_alpaca,
     'spx_price_fmp': spx_price_fmp,
     'gold_price_oscillator': gold_price_oscillator
+}
+
+# Macro Oscillator plugins (DXY, BTC.D, USDT.D - macroeconomic indicators)
+MACRO_OSCILLATOR_PLUGINS = {
+    'dxy_price_yfinance': dxy_price_yfinance,
+    'btc_dominance_cmc': btc_dominance_cmc,
+    'usdt_dominance_cmc': usdt_dominance_cmc
 }
 
 # Overlay plugins (Moving Averages & Parabolic SAR - callable via /api/data)
@@ -323,11 +331,13 @@ def get_oscillator_data():
             oscillator_metadata = {}  # Store metadata for breakdown chart
 
             for oscillator_name in dataset_names:
-                # Check oscillator plugins (both momentum and price oscillators)
+                # Check oscillator plugins (momentum, price, and macro oscillators)
                 if oscillator_name in OSCILLATOR_PLUGINS:
                     oscillator_module = OSCILLATOR_PLUGINS[oscillator_name]
                 elif oscillator_name in PRICE_OSCILLATOR_PLUGINS:
                     oscillator_module = PRICE_OSCILLATOR_PLUGINS[oscillator_name]
+                elif oscillator_name in MACRO_OSCILLATOR_PLUGINS:
+                    oscillator_module = MACRO_OSCILLATOR_PLUGINS[oscillator_name]
                 else:
                     print(f"[Composite Mode] Warning: Unknown oscillator '{oscillator_name}', skipping...")
                     continue
