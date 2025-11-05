@@ -2,11 +2,21 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## ⚠️ PROJECT STATUS: MOMENTUM OSCILLATOR SYSTEM COMPLETE (2025-11-03)
+## ⚠️ PROJECT STATUS: DERIVATIVES OSCILLATORS BACKEND COMPLETE (2025-11-05)
 
-**Status**: Single Momentum Oscillator Section - Fully Functional
+**Status**: Backend implementation complete, frontend integration pending
 
-**Latest Update (2025-11-03):**
+**Latest Update (2025-11-05):**
+1. **Derivatives Oscillators Added**: Implemented 3 new derivatives oscillators with full backend support:
+   - DVOL Index (Deribit): 1,096 points, 3 years of data
+   - Basis Spread (Binance): 475 points, 16 months
+   - Taker Ratio (Binance): 29 points, 1 month (CVD proxy without GB downloads)
+2. **API Integration**: All oscillators registered in OSCILLATOR_PLUGINS and working via `/api/oscillator-data`
+3. **Known Issues Identified**:
+   - ⚠️ Missing 4th breakdown chart for derivatives oscillators (backend works, no frontend display)
+   - ⚠️ Macro oscillator data has None values post-Oct 31 (BTC.D, USDT.D: Oct 31-Nov 4; DXY: weekends)
+
+**Previous Update (2025-11-03):**
 1. **Morning**: Added Markov regime backgrounds to price chart and changed default noise level to Min (200 periods). Regime zones now display on both price chart and oscillator chart with perfect zoom synchronization.
 2. **Afternoon**: Fixed critical macro oscillator data quality issues (BTC.D, USDT.D, DXY) - removed future/improvised data and established TradingView backfill + CoinMarketCap daily update system.
 
@@ -41,8 +51,23 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - ✅ USDT.D (Tether Dominance %) - TradingView backfill + CoinMarketCap daily updates (data/usdt_dominance_cmc.py)
 - ✅ 3 years historical data (2022-11-07 to present)
 - ✅ Timestamp standardization to midnight UTC for BTC price alignment
-- ✅ No None values, no future data, 100% real historical data
+- ⚠️ **Data Quality Issue**: None values from Oct 31-Nov 4 (BTC.D, USDT.D), weekends (DXY)
 - ✅ Data Quality Critical Fix (2025-11-03): Removed future/improvised values, established hybrid data pipeline
+
+**DERIVATIVES OSCILLATORS** (Backend Complete, Frontend Pending):
+- ✅ DVOL Index (Deribit): 1,096 points, 3 years (data/dvol_index_deribit.py)
+  - Deribit Volatility Index - 30-day implied volatility from options
+  - Range: 32-115, Latest: 48.11
+- ✅ Basis Spread (Binance): 475 points, 16 months (data/basis_spread_binance.py)
+  - Spot vs Futures price differential
+  - 91.6% contango, 8.4% backwardation
+- ✅ Taker Ratio (Binance): 29 points, 1 month (data/taker_ratio_binance.py)
+  - CVD proxy without GB downloads
+  - 79.3% bearish, 20.7% bullish
+- ✅ Backend: Registered in OSCILLATOR_PLUGINS, working via API
+- ✅ Utilities: data/deribit_utils.py, data/binance_utils.py, data/derivatives_config.py
+- ✅ Backfill scripts: scripts/backfill_dvol.py, scripts/backfill_basis.py, scripts/backfill_taker.py
+- ⚠️ **Missing**: No 4th breakdown chart on frontend to display these oscillators
 
 **Funding Rate Chart:**
 - ✅ Binance perpetual futures funding rates

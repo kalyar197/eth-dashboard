@@ -28,6 +28,11 @@ from . import macd_histogram
 from . import adx
 from . import atr
 
+# Import derivatives oscillator plugins
+from . import dvol_index_deribit
+from . import basis_spread_binance
+from . import taker_ratio_binance
+
 # Import overlay plugins
 from . import sma
 from . import parabolic_sar
@@ -51,6 +56,9 @@ __all__ = [
     'macd_histogram',
     'adx',
     'atr',
+    'dvol_index_deribit',
+    'basis_spread_binance',
+    'taker_ratio_binance',
     'sma',
     'parabolic_sar'
 ]
