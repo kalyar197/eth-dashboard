@@ -12,6 +12,11 @@ from . import btc_price
 from . import gold_price
 from . import spx_price
 
+# Import price oscillator plugins (for Breakdown tab)
+from . import eth_price_alpaca
+from . import gold_price_oscillator
+from . import spx_price_fmp
+
 # Import oscillator plugins
 from . import rsi
 from . import macd_histogram
@@ -31,6 +36,9 @@ __all__ = [
     'btc_price',
     'gold_price',
     'spx_price',
+    'eth_price_alpaca',
+    'gold_price_oscillator',
+    'spx_price_fmp',
     'rsi',
     'macd_histogram',
     'adx',

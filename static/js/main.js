@@ -35,6 +35,9 @@ const appState = {
     breakdownInitialized: {
         btc: false
     },
+    breakdownPriceInitialized: {
+        btc: false
+    },
     selectedDatasets: {
         btc: ['rsi', 'adx']  // Only ADX (60%) and RSI (40%)
     },
@@ -46,6 +49,10 @@ const appState = {
     },
     // Noise level state (for composite oscillator)
     noiseLevel: {
+        btc: 200                    // Default: Min noise level
+    },
+    // Breakdown tab noise level (independent from main oscillator)
+    breakdownNoiseLevel: {
         btc: 200                    // Default: Min noise level
     },
     compositeMode: true,  // Use composite oscillator mode by default
@@ -99,6 +106,9 @@ async function initialize() {
         // Setup noise level controls
         setupNoiseLevelControls();
 
+        // Setup breakdown tab noise level controls
+        setupBreakdownNoiseLevelControls();
+
         // Setup overlay controls (moving averages)
         setupOverlayControls();
 
@@ -139,8 +149,11 @@ function setupTabs() {
             // Update state
             appState.activeTab = tabName;
 
-            // Both main and breakdown tabs show BTC data, no need to reload
-            // Data is already loaded during initialization
+            // Load both breakdown charts when switching to breakdown tab
+            if (tabName === 'breakdown') {
+                await loadBreakdownOscillatorData('btc');
+                await loadBreakdownPriceOscillatorData('btc');
+            }
         });
     });
 }
@@ -166,6 +179,7 @@ function setupTimeControls() {
             appState.days[dataset] = days;
             await loadChartData(dataset);
             await loadOscillatorData(dataset);
+            await loadFundingRateData(dataset);
         });
     });
 }
@@ -222,6 +236,33 @@ function setupNoiseLevelControls() {
 
             // Reload oscillator data with new noise level
             await loadOscillatorData(asset);
+        });
+    });
+}
+
+/**
+ * Setup breakdown tab noise level controls
+ */
+function setupBreakdownNoiseLevelControls() {
+    document.querySelectorAll('.breakdown-noise-btn').forEach(button => {
+        button.addEventListener('click', async () => {
+            const asset = button.dataset.asset;
+            const level = parseInt(button.dataset.level);
+
+            // Update active button state for this asset
+            document.querySelectorAll(`.breakdown-noise-btn[data-asset="${asset}"]`).forEach(btn => {
+                btn.classList.remove('active');
+            });
+            button.classList.add('active');
+
+            // Update state
+            appState.breakdownNoiseLevel[asset] = level;
+
+            console.log(`Breakdown noise level changed for ${asset}: ${level}`);
+
+            // Reload both breakdown charts with new noise level
+            await loadBreakdownOscillatorData(asset);
+            await loadBreakdownPriceOscillatorData(asset);
         });
     });
 }
@@ -459,6 +500,98 @@ async function loadOscillatorData(asset) {
 
     } catch (error) {
         console.error(`Error loading oscillator data for ${asset}:`, error);
+    }
+}
+
+/**
+ * Load breakdown oscillator data for Breakdown tab (independent noise level)
+ * Shows all 4 oscillators: RSI + ADX (inverted) + ATR (inverted) + MACD
+ */
+async function loadBreakdownOscillatorData(asset) {
+    const days = appState.days[asset];
+    const datasets = 'rsi,adx,atr,macd_histogram';  // All 4 oscillators
+    const mode = 'composite';  // Use composite mode to get inversions
+    const noiseLevel = appState.breakdownNoiseLevel[asset];  // Independent noise level
+    const normalizer = 'zscore';
+
+    console.log(`Fetching breakdown oscillator data for ${asset}: datasets=${datasets}, noise_level=${noiseLevel}, days=${days}`);
+
+    try {
+        // Build URL
+        const url = `/api/oscillator-data?asset=${asset}&datasets=${datasets}&days=${days}&normalizer=${normalizer}&mode=${mode}&noise_level=${noiseLevel}`;
+        const response = await fetch(url);
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const result = await response.json();
+
+        if (!result || !result.breakdown) {
+            throw new Error('Invalid breakdown oscillator data received');
+        }
+
+        console.log(`Received breakdown oscillator data for ${asset}:`, Object.keys(result.breakdown));
+
+        // Initialize breakdown chart if not already done
+        const containerId = `breakdown-${asset}-oscillator-container`;
+        const breakdownKey = `breakdown-${asset}`;
+        if (!appState.breakdownInitialized[breakdownKey]) {
+            initBreakdownChart(containerId, breakdownKey);
+            appState.breakdownInitialized[breakdownKey] = true;
+        }
+
+        // Render breakdown chart with all 4 oscillators
+        renderBreakdownChart(breakdownKey, result.breakdown);
+
+    } catch (error) {
+        console.error(`Error loading breakdown oscillator data for ${asset}:`, error);
+    }
+}
+
+/**
+ * Load price oscillator data (ETH, Gold, SPX) for breakdown page
+ * @param {string} asset - Asset name (e.g., 'btc')
+ */
+async function loadBreakdownPriceOscillatorData(asset) {
+    const days = appState.days[asset];
+    const datasets = 'eth_price_alpaca,gold_price_oscillator,spx_price_fmp';  // Price oscillators
+    const mode = 'composite';  // Use composite mode for normalization
+    const noiseLevel = appState.breakdownNoiseLevel[asset];  // Shared noise level with momentum oscillators
+    const normalizer = 'zscore';
+
+    console.log(`Fetching breakdown price oscillator data for ${asset}: datasets=${datasets}, noise_level=${noiseLevel}, days=${days}`);
+
+    try {
+        // Build URL
+        const url = `/api/oscillator-data?asset=${asset}&datasets=${datasets}&days=${days}&normalizer=${normalizer}&mode=${mode}&noise_level=${noiseLevel}`;
+        const response = await fetch(url);
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const result = await response.json();
+
+        if (!result || !result.breakdown) {
+            throw new Error('Invalid breakdown price oscillator data received');
+        }
+
+        console.log(`Received breakdown price oscillator data for ${asset}:`, Object.keys(result.breakdown));
+
+        // Initialize price oscillator chart if not already done
+        const containerId = `breakdown-price-oscillator-container`;
+        const breakdownKey = `breakdown-price-${asset}`;
+        if (!appState.breakdownPriceInitialized[asset]) {
+            initBreakdownChart(containerId, breakdownKey);
+            appState.breakdownPriceInitialized[asset] = true;
+        }
+
+        // Render price oscillator chart with ETH, Gold, SPX
+        renderBreakdownChart(breakdownKey, result.breakdown);
+
+    } catch (error) {
+        console.error(`Error loading breakdown price oscillator data for ${asset}:`, error);
     }
 }
 

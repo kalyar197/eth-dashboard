@@ -7,6 +7,7 @@ import os
 import time
 # Data plugins
 from data import eth_price, btc_price, gold_price, spx_price, rsi, macd_histogram, adx, atr, sma, parabolic_sar, funding_rate
+from data import eth_price_alpaca, spx_price_fmp, gold_price_oscillator
 from data import markov_regime
 from data.normalizers import zscore
 from config import CACHE_DURATION, RATE_LIMIT_DELAY
@@ -42,6 +43,13 @@ OSCILLATOR_PLUGINS = {
     'macd_histogram': macd_histogram,
     'adx': adx,
     'atr': atr
+}
+
+# Price Oscillator plugins (ETH, Gold, SPX prices normalized against BTC)
+PRICE_OSCILLATOR_PLUGINS = {
+    'eth_price_alpaca': eth_price_alpaca,
+    'spx_price_fmp': spx_price_fmp,
+    'gold_price_oscillator': gold_price_oscillator
 }
 
 # Overlay plugins (Moving Averages & Parabolic SAR - callable via /api/data)
@@ -315,9 +323,11 @@ def get_oscillator_data():
             oscillator_metadata = {}  # Store metadata for breakdown chart
 
             for oscillator_name in dataset_names:
-                # Check oscillator plugins
+                # Check oscillator plugins (both momentum and price oscillators)
                 if oscillator_name in OSCILLATOR_PLUGINS:
                     oscillator_module = OSCILLATOR_PLUGINS[oscillator_name]
+                elif oscillator_name in PRICE_OSCILLATOR_PLUGINS:
+                    oscillator_module = PRICE_OSCILLATOR_PLUGINS[oscillator_name]
                 else:
                     print(f"[Composite Mode] Warning: Unknown oscillator '{oscillator_name}', skipping...")
                     continue
@@ -331,7 +341,14 @@ def get_oscillator_data():
                     if days == 'max':
                         extra_days = 'max'
                     else:
-                        extra_days = str(int(days) + noise_level + 10)
+                        # For stock market data (weekdays only), request ~1.5x more calendar days
+                        # to ensure we have enough weekday data points after accounting for weekends
+                        stock_market_oscillators = ['spx_price_fmp', 'gold_price_oscillator']
+                        if oscillator_name in stock_market_oscillators:
+                            # Need ~1.5x calendar days to get enough weekday data
+                            extra_days = str(int((int(days) + noise_level + 10) * 1.5))
+                        else:
+                            extra_days = str(int(days) + noise_level + 10)
 
                     # All momentum oscillators require asset parameter
                     oscillator_result = oscillator_module.get_data(extra_days, asset)
@@ -484,16 +501,18 @@ def get_oscillator_data():
             normalizer_module = NORMALIZERS[normalizer_name]
 
             for dataset_name in dataset_names:
-                if dataset_name not in OSCILLATOR_PLUGINS:
+                # Check both momentum and price oscillator plugins
+                if dataset_name in OSCILLATOR_PLUGINS:
+                    oscillator_module = OSCILLATOR_PLUGINS[dataset_name]
+                elif dataset_name in PRICE_OSCILLATOR_PLUGINS:
+                    oscillator_module = PRICE_OSCILLATOR_PLUGINS[dataset_name]
+                else:
                     print(f"Warning: Unknown oscillator dataset '{dataset_name}', skipping...")
                     continue
 
                 try:
                     # Apply rate limiting
                     rate_limit_check(f"{dataset_name}_{asset}")
-
-                    # Fetch raw oscillator data
-                    oscillator_module = OSCILLATOR_PLUGINS[dataset_name]
 
                     # All momentum oscillators require asset parameter
                     oscillator_result = oscillator_module.get_data(days, asset)
