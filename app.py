@@ -9,7 +9,7 @@ import time
 from data import eth_price, btc_price, gold_price, spx_price, rsi, macd_histogram, adx, atr, sma, parabolic_sar, funding_rate
 from data import eth_price_alpaca, spx_price_fmp, gold_price_oscillator
 from data import dxy_price_yfinance, btc_dominance_cmc, usdt_dominance_cmc
-from data import dvol_index_deribit, basis_spread_binance, taker_ratio_binance
+from data import dvol_index_deribit, basis_spread_binance
 from data import markov_regime
 from data.normalizers import zscore
 from config import CACHE_DURATION, RATE_LIMIT_DELAY
@@ -46,8 +46,7 @@ OSCILLATOR_PLUGINS = {
     'adx': adx,
     'atr': atr,
     'dvol_index_deribit': dvol_index_deribit,
-    'basis_spread_binance': basis_spread_binance,
-    'taker_ratio_binance': taker_ratio_binance
+    'basis_spread_binance': basis_spread_binance
 }
 
 # Price Oscillator plugins (ETH, Gold, SPX prices normalized against BTC)

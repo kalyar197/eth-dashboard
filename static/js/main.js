@@ -41,6 +41,9 @@ const appState = {
     breakdownMacroInitialized: {
         btc: false
     },
+    breakdownDerivativesInitialized: {
+        btc: false
+    },
     selectedDatasets: {
         btc: ['rsi', 'adx']  // Only ADX (60%) and RSI (40%)
     },
@@ -157,6 +160,7 @@ function setupTabs() {
                 await loadBreakdownOscillatorData('btc');
                 await loadBreakdownPriceOscillatorData('btc');
                 await loadMacroOscillatorData('btc');
+                await loadBreakdownDerivativesOscillatorData('btc');
             }
         });
     });
@@ -268,6 +272,7 @@ function setupBreakdownNoiseLevelControls() {
             await loadBreakdownOscillatorData(asset);
             await loadBreakdownPriceOscillatorData(asset);
             await loadMacroOscillatorData(asset);
+            await loadBreakdownDerivativesOscillatorData(asset);
         });
     });
 }
@@ -643,6 +648,52 @@ async function loadMacroOscillatorData(asset) {
 
     } catch (error) {
         console.error(`Error loading breakdown macro oscillator data for ${asset}:`, error);
+    }
+}
+
+/**
+ * Load derivatives oscillator data (DVOL Index, Basis Spread) for breakdown page
+ * @param {string} asset - Asset name (e.g., 'btc')
+ */
+async function loadBreakdownDerivativesOscillatorData(asset) {
+    const days = appState.days[asset];
+    const datasets = 'dvol_index_deribit,basis_spread_binance';  // Derivatives oscillators
+    const mode = 'composite';  // Use composite mode for normalization
+    const noiseLevel = appState.breakdownNoiseLevel[asset];  // Shared noise level
+    const normalizer = 'zscore';
+
+    console.log(`Fetching breakdown derivatives oscillator data for ${asset}: datasets=${datasets}, noise_level=${noiseLevel}, days=${days}`);
+
+    try {
+        // Build URL
+        const url = `/api/oscillator-data?asset=${asset}&datasets=${datasets}&days=${days}&normalizer=${normalizer}&mode=${mode}&noise_level=${noiseLevel}`;
+        const response = await fetch(url);
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const result = await response.json();
+
+        if (!result || !result.breakdown) {
+            throw new Error('Invalid breakdown derivatives oscillator data received');
+        }
+
+        console.log(`Received breakdown derivatives oscillator data for ${asset}:`, Object.keys(result.breakdown));
+
+        // Initialize derivatives oscillator chart if not already done
+        const containerId = `breakdown-derivatives-oscillator-container`;
+        const breakdownKey = `breakdown-derivatives-${asset}`;
+        if (!appState.breakdownDerivativesInitialized[asset]) {
+            initBreakdownChart(containerId, breakdownKey);
+            appState.breakdownDerivativesInitialized[asset] = true;
+        }
+
+        // Render derivatives oscillator chart with DVOL, Basis Spread, Taker Ratio
+        renderBreakdownChart(breakdownKey, result.breakdown);
+
+    } catch (error) {
+        console.error(`Error loading breakdown derivatives oscillator data for ${asset}:`, error);
     }
 }
 
