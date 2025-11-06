@@ -208,3 +208,10 @@ __marimo__/
 
 # Application-specific cache directory
 data_cache/
+
+# Testing and Development
+.playwright-mcp/
+.serena/
+noise_*.json
+test_*.py
+NUL
