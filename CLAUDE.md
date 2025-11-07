@@ -6,6 +6,43 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Status**: All oscillators have 3+ years of historical data, Taker Ratio removed
 
+## 🔄 RECOVERY EVENT (2025-11-07)
+
+**Incident**: Accidental `git clean -fd` during Google Trends system removal
+
+**Impact Analysis**:
+- ❌ **Deleted**: Google Trends feature (21 files, 5,996 lines) added in commit 53c26f5
+- ❌ **Deleted**: `.env` file (untracked, contained API keys)
+- ✅ **Intact**: Core Dash trading system (100% preserved)
+- ✅ **Intact**: All historical data files (21 JSON files, 900KB total)
+- ✅ **Intact**: All data collection modules (33 Python files)
+- ✅ **Intact**: All backfill scripts (17 Python files)
+- ✅ **Intact**: Frontend code (HTML, CSS, JavaScript)
+
+**Recovery Actions Completed**:
+1. ✅ Comprehensive damage assessment verified no data loss
+2. ✅ Created `.env` template with API key structure and provider links
+3. ✅ Committed Google Trends deletion (commit 22a32d4)
+4. ✅ Verified Flask startup successful (loads .env correctly)
+5. ✅ Documented data_cache/ directory purpose
+6. ✅ Updated CLAUDE.md with recovery event
+
+**System Status**: Fully operational pending API key configuration
+
+**Lessons Learned**:
+- `git clean -fd` removes ALL untracked files including critical configs
+- Always use `git clean -fdn` (dry run) first to preview deletions
+- Keep backup copy of `.env` file outside repository
+- Recovery process validated data integrity checking procedures
+
+**Files Modified in Recovery**:
+- Created: `.env` (template with placeholders)
+- Created: `data_cache/README.md` (directory documentation)
+- Modified: `CLAUDE.md` (this recovery documentation)
+- Commit: 22a32d4 "Remove Google Trends system after accidental force delete"
+
+---
+
 **Latest Update (2025-11-06):**
 1. **Price Oscillators Backfilled to 3 Years**:
    - DXY: 1,095 records (3.0 years, Yahoo Finance)
