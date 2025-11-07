@@ -133,13 +133,13 @@ def filter_by_days(data: List[List], days: str) -> List[List]:
         return data
 
 
-def get_data(asset: str = 'btc', days: str = '365') -> Dict[str, Any]:
+def get_data(days: str = '365', asset: str = 'btc') -> Dict[str, Any]:
     """
     Get DVOL data with automatic cache updates.
 
     Args:
-        asset: 'btc' or 'eth' (converted to uppercase for API)
         days: Number of days ('7', '30', '90', '365') or 'max'
+        asset: 'btc' or 'eth' (converted to uppercase for API)
 
     Returns:
         Dictionary with metadata and data

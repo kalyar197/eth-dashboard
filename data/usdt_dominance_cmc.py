@@ -221,6 +221,11 @@ def get_data(days='1095', asset='btc'):
         if valid_values:
             print(f"[USDT Dominance CMC] USDT.D range: {min(valid_values):.2f}% to {max(valid_values):.2f}%")
 
+    # CRITICAL: Filter out None values before returning (prevents Z-score calculation errors)
+    result_data = [[ts, val] for ts, val in result_data if val is not None]
+    if len(result_data) < len([d for d in standardized_data if d[1] is not None]):
+        print(f"[USDT Dominance CMC] Warning: Filtered out {len(standardized_data) - len(result_data)} None values")
+
     return {
         'metadata': get_metadata(),
         'data': result_data

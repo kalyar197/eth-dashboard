@@ -459,6 +459,20 @@
             margin-top: 20px;
         }
 
+        /* Derivatives oscillator container (DVOL, Basis Spread, Taker Ratio) */
+        #breakdown-derivatives-oscillator-container {
+            background: #1a1a1a;
+            border-radius: 12px;
+            border: 1px solid #2a2a2a;
+            width: 100%;
+            min-height: 200px;
+            height: 30vh;
+            position: relative;
+            padding: 20px;
+            overflow: hidden;
+            margin-top: 20px;
+        }
+
         /* Oscillator controls */
         .oscillator-controls {
             display: flex;
@@ -710,6 +724,17 @@
         <!-- Macro Oscillator Chart (DXY, BTC.D, USDT.D) -->
         <div class="chart-section">
             <div id="breakdown-macro-oscillator-container">
+                <div class="zoom-controls">
+                    <button class="zoom-btn reset-zoom" title="Reset Zoom">↺</button>
+                    <button class="zoom-btn zoom-in" title="Zoom In">+</button>
+                    <button class="zoom-btn zoom-out" title="Zoom Out">−</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Derivatives Oscillator Chart (DVOL Index, Basis Spread, Taker Ratio) -->
+        <div class="chart-section">
+            <div id="breakdown-derivatives-oscillator-container">
                 <div class="zoom-controls">
                     <button class="zoom-btn reset-zoom" title="Reset Zoom">↺</button>
                     <button class="zoom-btn zoom-in" title="Zoom In">+</button>
