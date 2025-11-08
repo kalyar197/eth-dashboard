@@ -115,8 +115,7 @@ def normalize(dataset_data, asset_price_data, window=30):
         current_price = price_values[i]
         current_indicator = indicator_values[i]
         if np.isnan(current_price) or np.isnan(current_indicator):
-            normalized_data.append([timestamp, 0.0])
-            continue
+            continue  # Skip null timestamps entirely (weekends/holidays)
 
         # Skip if no variance
         if np.std(valid_price) == 0 or np.std(valid_indicator) == 0:
