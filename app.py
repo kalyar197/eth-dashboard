@@ -3,10 +3,13 @@
 import sentry_sdk
 from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
+from flask_apscheduler import APScheduler
 import os
 import time
 # Data plugins
 from data import eth_price, btc_price, gold_price, spx_price, rsi, macd_histogram, adx, atr, sma, parabolic_sar, funding_rate
+# Startup data update
+from scripts.startup_data_update import check_and_update as startup_data_update
 from data import eth_price_alpaca, spx_price_fmp, gold_price_oscillator
 from data import dxy_price_yfinance, btc_dominance_cmc, usdt_dominance_cmc
 from data import dvol_index_deribit, basis_spread_binance
@@ -24,6 +27,14 @@ sentry_sdk.init(
 
 app = Flask(__name__)
 CORS(app)
+
+# Initialize APScheduler for background tasks
+scheduler = APScheduler()
+scheduler.init_app(app)
+scheduler.start()
+
+# Auto-update data on startup (non-blocking)
+startup_data_update()
 
 # Cache configuration
 cache = {}
@@ -108,8 +119,6 @@ def align_timestamps(normalized_oscillators):
     for name, data in normalized_oscillators.items():
         lookup = {item[0]: item[1] for item in data}
         aligned[name] = [lookup[ts] for ts in common_timestamps]
-
-    print(f"[Composite] Aligned {len(normalized_oscillators)} oscillators to {len(common_timestamps)} common timestamps")
 
     return common_timestamps, aligned
 
@@ -385,9 +394,9 @@ def get_oscillator_data():
                         print(f"[Composite Mode] Warning: Normalization failed for {oscillator_name}, skipping...")
                         continue
 
-                    # INVERT ADX and ATR for composite calculation
-                    # Rationale: High ADX/ATR = high risk/late trend = bearish contribution
-                    if oscillator_name in ['adx', 'atr']:
+                    # INVERT ATR for composite calculation
+                    # Rationale: High ATR = high volatility/risk = bearish contribution
+                    if oscillator_name in ['atr']:
                         normalized_data = [[timestamp, -value] for timestamp, value in normalized_data]
                         print(f"[Composite Mode] Inverted {oscillator_name} values (high = bearish)")
 
@@ -430,8 +439,39 @@ def get_oscillator_data():
                 composite_data = [d for d in composite_data if d[0] >= cutoff_timestamp]
                 print(f"[Composite Mode] Trimmed to {len(composite_data)} points for {days} days")
 
-            # Step 5: Get Markov regime data
-            regime_result = markov_regime.get_data(days=days, asset=asset)
+            # Step 5: Get Markov regime data aligned to composite timestamps
+            # Filter OHLCV data to match common timestamps for perfect alignment
+            common_timestamps_set = set(common_timestamps)
+            aligned_ohlcv_data = [candle for candle in asset_ohlcv_data if candle[0] in common_timestamps_set]
+
+            print(f"[Composite Mode] Aligned OHLCV data: {len(aligned_ohlcv_data)} points (from {len(asset_ohlcv_data)} total)")
+
+            # Calculate volatility from aligned OHLCV data
+            from data import volatility
+            aligned_volatility_data = volatility.calculate_gk_volatility(aligned_ohlcv_data)
+
+            # Fit Markov model to aligned volatility
+            fitted_model = markov_regime.fit_markov_model(aligned_volatility_data)
+
+            # Classify regimes
+            if fitted_model is not None:
+                aligned_regime_data = markov_regime.classify_regimes(fitted_model, aligned_volatility_data)
+                print(f"[Composite Mode] Markov model fitted successfully: {len(aligned_regime_data)} regime points")
+            else:
+                # Fallback to simple threshold
+                print("[Composite Mode] Markov model fitting failed, using threshold-based classification")
+                aligned_regime_data = markov_regime.simple_threshold_regimes(aligned_volatility_data)
+
+            # Trim regime data to requested number of days (same as composite)
+            if aligned_regime_data and days != 'max':
+                cutoff_timestamp = aligned_regime_data[-1][0] - (int(days) * 24 * 60 * 60 * 1000)
+                aligned_regime_data = [d for d in aligned_regime_data if d[0] >= cutoff_timestamp]
+
+            regime_result = {
+                'data': aligned_regime_data,
+                'metadata': markov_regime.get_metadata(),
+                'structure': 'simple'
+            }
 
             # Step 5.5: Build breakdown data (individual normalized oscillators)
             # Use aligned common timestamps to ensure all oscillators have same time range
@@ -452,8 +492,6 @@ def get_oscillator_data():
                     'data': trimmed_data,
                     'metadata': oscillator_metadata[oscillator_name]
                 }
-
-            print(f"[Composite Mode] Generated breakdown data for {len(breakdown_data)} oscillators with aligned timestamps")
 
             # Step 6: Build result
             result = {
@@ -636,6 +674,32 @@ def api_status():
         'rebuild_status': 'Core infrastructure only - plugins will be added incrementally'
     })
 
+@scheduler.task('interval', id='update_dominance_data', minutes=15, misfire_grace_time=900)
+def update_dominance_data():
+    """
+    Scheduled task to update BTC.D and USDT.D data every 15 minutes.
+    This ensures dominance data stays current without requiring page loads.
+    """
+    try:
+        print("[Scheduler] Updating dominance data...")
+
+        # Fetch and update BTC dominance
+        btc_dom_result = btc_dominance_cmc.get_data('1', 'btc')
+        if btc_dom_result and btc_dom_result.get('data'):
+            print(f"[Scheduler] BTC.D updated: {len(btc_dom_result['data'])} records")
+
+        # Fetch and update USDT dominance
+        usdt_dom_result = usdt_dominance_cmc.get_data('1', 'btc')
+        if usdt_dom_result and usdt_dom_result.get('data'):
+            print(f"[Scheduler] USDT.D updated: {len(usdt_dom_result['data'])} records")
+
+        print("[Scheduler] Dominance data update complete")
+
+    except Exception as e:
+        print(f"[Scheduler] Error updating dominance data: {e}")
+        import traceback
+        traceback.print_exc()
+
 if __name__ == '__main__':
     from config import FMP_API_KEY, COINAPI_KEY
 
@@ -664,6 +728,10 @@ if __name__ == '__main__':
     print("  - Frontend design and styling intact")
     print("  - Data plugins will be added one-by-one")
     print("  - Chart system ready for 12+ normalized indicators")
+
+    print("\n[SCHEDULER] Background Tasks:")
+    print("  - BTC.D & USDT.D auto-update: Every 15 minutes")
+    print("  - Keeps dominance data current without page refreshes")
 
     print("="*60)
     print("Dependencies: pip install Flask requests Flask-Cors numpy")
