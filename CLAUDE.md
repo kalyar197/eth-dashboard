@@ -15,7 +15,8 @@ python app.py  # Server runs on http://127.0.0.1:5000
 
 **Oscillators** (All have 3+ years historical data):
 - **Momentum**: RSI, MACD Histogram, ADX, ATR
-- **Macro**: BTC.D, USDT.D, DXY, ETH, Gold, SPX
+- **Price** (market hours only): DXY, Gold, SPX
+- **Macro** (24/7 crypto): ETH, BTC.D, USDT.D
 - **Derivatives**: DVOL Index (Deribit), Basis Spread (Binance)
 - **Composite Z-Score**: RSI + ADX (equal weights, 5 noise levels: 14, 30, 50, 100, 200 periods)
 - **Markov Regime Detection**: Blue (low-vol) / Red (high-vol) backgrounds on ALL oscillators (composite + breakdown)
@@ -27,6 +28,7 @@ python app.py  # Server runs on http://127.0.0.1:5000
 - Funding rate chart (Binance, 3-month cache)
 - Minimalist UI (no redundant labels)
 - Chart margin alignment: 60px left/right for vertical date sync
+- **Single-tab layout**: All 6 oscillator charts on main tab with unified noise control
 
 **Dependencies**:
 ```bash
@@ -72,10 +74,12 @@ pip install Flask requests Flask-Cors numpy statsmodels
 **Two Independent Components**:
 
 1. **Pilot (User-Tunable Z-Score)**:
+   - **Unified noise control**: Single controller on main tab controls ALL 6 oscillator charts
    - Composite Z-score from RSI + ADX (equal weights, both normal values)
    - 5 noise levels: 14, 30, 50, 100, 200 periods
    - ±2σ = 95% confidence, ±3σ = 99.7% confidence
    - Files: `data/composite_zscore.py`, `static/js/oscillator.js`
+   - **Chart layout**: All oscillators stacked vertically on main tab (Composite → Momentum → Price → Macro → Derivatives)
 
 2. **Radar (Markov Regime)**:
    - Garman-Klass volatility → 2-state Markov model
@@ -119,9 +123,10 @@ def get_data(days='365'):
 **Caching**: Disk (`data_cache/`) + in-memory (5min TTL)
 
 **Frontend**: D3.js (`index.html`, `static/js/`) - chart rendering, zoom/pan, multi-axis
-- `main.js`: Application state + data fetching (`window.appState` exposed globally)
+- `main.js`: Application state + data fetching (`window.appState` exposed globally), unified noise control
 - `oscillator.js`: Chart rendering, regime backgrounds, zoom/pan
 - `chart.js`: Price charts, funding rate charts
+- **Tab Structure**: Main tab displays all charts; Breakdown tab empty (reserved for future use)
 
 ## Critical Notes
 
@@ -147,8 +152,20 @@ def get_data(days='365'):
 **Null Handling in Normalization** (`data/normalizers/zscore.py:118`):
 - Weekend/holiday nulls are **skipped entirely** (not rendered as 0.0)
 - This prevents false "gaps at 0.0" on charts for non-trading periods
-- Applies to all oscillators with market-hours data (DXY, BTC.D, USDT.D, Gold, SPX, ETH)
-- Continuous oscillators (RSI, MACD, ADX, ATR) have no nulls and are unaffected
+- Applies to market-hours oscillators (DXY, Gold, SPX) which have weekends/holidays off
+- 24/7 crypto (ETH, BTC.D, USDT.D) and derivatives (DVOL, Basis) have no nulls
+- Momentum oscillators (RSI, MACD, ADX, ATR) have no nulls and are unaffected
+
+**Oscillator Grouping by Trading Schedule** (`static/js/main.js`):
+- All 6 oscillator charts displayed vertically on main tab (auto-loaded on startup)
+- **Composite** (top): RSI + ADX composite Z-score
+- **Momentum**: RSI, ADX (both normal values, not inverted)
+- **Price** oscillators (DXY + Gold + SPX): Market hours only → grouped together to avoid timestamp mismatches
+- **Macro** oscillators (ETH + BTC.D + USDT.D): 24/7 crypto → grouped together for maximum data points
+- **Derivatives**: DVOL Index + Basis Spread
+- Grouping by trading schedule prevents null-value filtering from reducing common timestamps
+- Result: Macro chart has ~176 points vs ~139 when mixed with market-hours assets
+- All charts share unified noise level controller on main tab
 
 ## Minimalist Design Philosophy
 

@@ -596,8 +596,8 @@
         <div class="controls">
             <div class="button-container control-group">
                 <button class="time-btn" data-dataset="btc" data-days="7">1W</button>
-                <button class="time-btn active" data-dataset="btc" data-days="30">1M</button>
-                <button class="time-btn" data-dataset="btc" data-days="180">6M</button>
+                <button class="time-btn" data-dataset="btc" data-days="30">1M</button>
+                <button class="time-btn active" data-dataset="btc" data-days="180">6M</button>
                 <button class="time-btn" data-dataset="btc" data-days="1095">3Y</button>
             </div>
             <div class="button-container control-group overlay-controls">
@@ -619,11 +619,11 @@
                 </div>
             </div>
             <div class="button-container control-group">
-                <button class="noise-btn" data-asset="btc" data-level="14">Max</button>
+                <button class="noise-btn active" data-asset="btc" data-level="14">Max</button>
                 <button class="noise-btn" data-asset="btc" data-level="30">Med-High</button>
                 <button class="noise-btn" data-asset="btc" data-level="50">Default</button>
                 <button class="noise-btn" data-asset="btc" data-level="100">Med-Low</button>
-                <button class="noise-btn active" data-asset="btc" data-level="200">Min</button>
+                <button class="noise-btn" data-asset="btc" data-level="200">Min</button>
             </div>
         </div>
 
@@ -659,8 +659,40 @@
                 </div>
             </div>
 
-            <!-- Breakdown Oscillator Chart -->
-            <div id="btc-breakdown-oscillator-container">
+            <!-- Breakdown Momentum Oscillator Chart (RSI, MACD, ADX, ATR) -->
+            <div id="breakdown-btc-oscillator-container">
+                <div class="zoom-controls">
+                    <button class="zoom-btn reset-zoom" title="Reset Zoom">↺</button>
+                    <button class="zoom-btn zoom-in" title="Zoom In">+</button>
+                    <button class="zoom-btn zoom-out" title="Zoom Out">−</button>
+                </div>
+            </div>
+
+            <!-- Breakdown Price Oscillator Chart (DXY, Gold, SPX) -->
+            <div id="breakdown-price-oscillator-container">
+                <div class="zoom-controls">
+                    <button class="zoom-btn reset-zoom" title="Reset Zoom">↺</button>
+                    <button class="zoom-btn zoom-in" title="Zoom In">+</button>
+                    <button class="zoom-btn zoom-out" title="Zoom Out">−</button>
+                </div>
+            </div>
+
+            <!-- Breakdown Macro Oscillator Chart (ETH, BTC.D, USDT.D) -->
+            <div id="breakdown-macro-oscillator-container">
+                <div class="zoom-controls">
+                    <button class="zoom-btn reset-zoom" title="Reset Zoom">↺</button>
+                    <button class="zoom-btn zoom-in" title="Zoom In">+</button>
+                    <button class="zoom-btn zoom-out" title="Zoom Out">−</button>
+                </div>
+            </div>
+
+            <!-- Breakdown Derivatives Oscillator Chart (DVOL Index, Basis Spread) -->
+            <div id="breakdown-derivatives-oscillator-container">
+                <div class="zoom-controls">
+                    <button class="zoom-btn reset-zoom" title="Reset Zoom">↺</button>
+                    <button class="zoom-btn zoom-in" title="Zoom In">+</button>
+                    <button class="zoom-btn zoom-out" title="Zoom Out">−</button>
+                </div>
             </div>
 
             <!-- Oscillator Dataset Selection - Temporarily disabled (hardcoded to ADX + RSI)
@@ -687,61 +719,8 @@
         </div>
     </div>
 
-    <!-- Breakdown Tab Content -->
+    <!-- Breakdown Tab Content (Empty - all oscillators moved to Main tab) -->
     <div class="tab-content" id="breakdown-tab">
-        <div class="controls-section">
-            <div class="button-container control-group">
-                <button class="breakdown-noise-btn" data-asset="btc" data-level="14">Max</button>
-                <button class="breakdown-noise-btn" data-asset="btc" data-level="30">Med-High</button>
-                <button class="breakdown-noise-btn" data-asset="btc" data-level="50">Default</button>
-                <button class="breakdown-noise-btn" data-asset="btc" data-level="100">Med-Low</button>
-                <button class="breakdown-noise-btn active" data-asset="btc" data-level="200">Min</button>
-            </div>
-        </div>
-
-        <!-- Breakdown Oscillator Chart -->
-        <div class="chart-section">
-            <div id="breakdown-btc-oscillator-container">
-                <div class="zoom-controls">
-                    <button class="zoom-btn reset-zoom" title="Reset Zoom">↺</button>
-                    <button class="zoom-btn zoom-in" title="Zoom In">+</button>
-                    <button class="zoom-btn zoom-out" title="Zoom Out">−</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Price Oscillator Chart (ETH, Gold, SPX) -->
-        <div class="chart-section">
-            <div id="breakdown-price-oscillator-container">
-                <div class="zoom-controls">
-                    <button class="zoom-btn reset-zoom" title="Reset Zoom">↺</button>
-                    <button class="zoom-btn zoom-in" title="Zoom In">+</button>
-                    <button class="zoom-btn zoom-out" title="Zoom Out">−</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Macro Oscillator Chart (DXY, BTC.D, USDT.D) -->
-        <div class="chart-section">
-            <div id="breakdown-macro-oscillator-container">
-                <div class="zoom-controls">
-                    <button class="zoom-btn reset-zoom" title="Reset Zoom">↺</button>
-                    <button class="zoom-btn zoom-in" title="Zoom In">+</button>
-                    <button class="zoom-btn zoom-out" title="Zoom Out">−</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Derivatives Oscillator Chart (DVOL Index, Basis Spread, Taker Ratio) -->
-        <div class="chart-section">
-            <div id="breakdown-derivatives-oscillator-container">
-                <div class="zoom-controls">
-                    <button class="zoom-btn reset-zoom" title="Reset Zoom">↺</button>
-                    <button class="zoom-btn zoom-in" title="Zoom In">+</button>
-                    <button class="zoom-btn zoom-out" title="Zoom Out">−</button>
-                </div>
-            </div>
-        </div>
     </div>
 
     <div class="tooltip" id="tooltip"></div>

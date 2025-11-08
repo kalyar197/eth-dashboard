@@ -53,12 +53,8 @@ const appState = {
         adx: '#673AB7',           // Purple
         atr: '#FF5722'            // Orange-red
     },
-    // Noise level state (for composite oscillator)
+    // Noise level state (unified for all oscillators)
     noiseLevel: {
-        btc: 14                     // Default: Max noise level
-    },
-    // Breakdown tab noise level (independent from main oscillator)
-    breakdownNoiseLevel: {
         btc: 14                     // Default: Max noise level
     },
     compositeMode: true,  // Use composite oscillator mode by default
@@ -114,11 +110,8 @@ async function initialize() {
         // Setup oscillator controls
         setupOscillatorControls();
 
-        // Setup noise level controls
+        // Setup noise level controls (unified for all oscillators)
         setupNoiseLevelControls();
-
-        // Setup breakdown tab noise level controls
-        setupBreakdownNoiseLevelControls();
 
         // Setup overlay controls (moving averages)
         setupOverlayControls();
@@ -159,14 +152,6 @@ function setupTabs() {
 
             // Update state
             appState.activeTab = tabName;
-
-            // Load all breakdown charts when switching to breakdown tab
-            if (tabName === 'breakdown') {
-                await loadBreakdownOscillatorData('btc');
-                await loadBreakdownPriceOscillatorData('btc');
-                await loadMacroOscillatorData('btc');
-                await loadBreakdownDerivativesOscillatorData('btc');
-            }
         });
     });
 }
@@ -228,7 +213,7 @@ function setupOscillatorControls() {
 }
 
 /**
- * Setup noise level controls for composite oscillator
+ * Setup noise level controls for all oscillators (composite + breakdown)
  */
 function setupNoiseLevelControls() {
     document.querySelectorAll('.noise-btn:not(.volatility-noise-btn)').forEach(button => {
@@ -247,33 +232,8 @@ function setupNoiseLevelControls() {
 
             console.log(`Noise level changed for ${asset}: ${level}`);
 
-            // Reload oscillator data with new noise level
+            // Reload all oscillator charts with new noise level
             await loadOscillatorData(asset);
-        });
-    });
-}
-
-/**
- * Setup breakdown tab noise level controls
- */
-function setupBreakdownNoiseLevelControls() {
-    document.querySelectorAll('.breakdown-noise-btn').forEach(button => {
-        button.addEventListener('click', async () => {
-            const asset = button.dataset.asset;
-            const level = parseInt(button.dataset.level);
-
-            // Update active button state for this asset
-            document.querySelectorAll(`.breakdown-noise-btn[data-asset="${asset}"]`).forEach(btn => {
-                btn.classList.remove('active');
-            });
-            button.classList.add('active');
-
-            // Update state
-            appState.breakdownNoiseLevel[asset] = level;
-
-            console.log(`Breakdown noise level changed for ${asset}: ${level}`);
-
-            // Reload all breakdown charts with new noise level
             await loadBreakdownOscillatorData(asset);
             await loadBreakdownPriceOscillatorData(asset);
             await loadMacroOscillatorData(asset);
@@ -349,8 +309,12 @@ async function loadTab(dataset) {
     // Load price chart data
     await loadChartData(dataset);
 
-    // Load oscillator data
+    // Load all oscillator data (composite + 4 breakdown charts)
     await loadOscillatorData(dataset);
+    await loadBreakdownOscillatorData(dataset);
+    await loadBreakdownPriceOscillatorData(dataset);
+    await loadMacroOscillatorData(dataset);
+    await loadBreakdownDerivativesOscillatorData(dataset);
 
     // Load funding rate data
     await loadFundingRateData(dataset);
@@ -530,14 +494,13 @@ async function loadOscillatorData(asset) {
 }
 
 /**
- * Load breakdown oscillator data for Breakdown tab (independent noise level)
- * Shows RSI + ADX (both normal, not inverted)
+ * Load breakdown oscillator data (Momentum: RSI, MACD, ADX, ATR)
  */
 async function loadBreakdownOscillatorData(asset) {
     const days = appState.days[asset];
     const datasets = 'rsi,adx';  // Only RSI + ADX
     const mode = 'composite';  // Use composite mode for normalization
-    const noiseLevel = appState.breakdownNoiseLevel[asset];  // Independent noise level
+    const noiseLevel = appState.noiseLevel[asset];  // Unified noise level
     const normalizer = 'zscore';
 
     console.log(`Fetching breakdown oscillator data for ${asset}: datasets=${datasets}, noise_level=${noiseLevel}, days=${days}`);
@@ -577,14 +540,14 @@ async function loadBreakdownOscillatorData(asset) {
 }
 
 /**
- * Load price oscillator data (DXY, Gold, SPX) for breakdown page
+ * Load price oscillator data (DXY, Gold, SPX)
  * @param {string} asset - Asset name (e.g., 'btc')
  */
 async function loadBreakdownPriceOscillatorData(asset) {
     const days = appState.days[asset];
     const datasets = 'dxy_price_yfinance,gold_price_oscillator,spx_price_fmp';  // Price oscillators (market hours only)
     const mode = 'composite';  // Use composite mode for normalization
-    const noiseLevel = appState.breakdownNoiseLevel[asset];  // Shared noise level with momentum oscillators
+    const noiseLevel = appState.noiseLevel[asset];  // Unified noise level
     const normalizer = 'zscore';
 
     console.log(`Fetching breakdown price oscillator data for ${asset}: datasets=${datasets}, noise_level=${noiseLevel}, days=${days}`);
@@ -624,14 +587,14 @@ async function loadBreakdownPriceOscillatorData(asset) {
 }
 
 /**
- * Load macro oscillator data (ETH, BTC.D, USDT.D) for breakdown page
+ * Load macro oscillator data (ETH, BTC.D, USDT.D)
  * @param {string} asset - Asset name (e.g., 'btc')
  */
 async function loadMacroOscillatorData(asset) {
     const days = appState.days[asset];
     const datasets = 'eth_price_alpaca,btc_dominance_cmc,usdt_dominance_cmc';  // Macro oscillators (24/7 crypto)
     const mode = 'composite';  // Use composite mode for normalization
-    const noiseLevel = appState.breakdownNoiseLevel[asset];  // Shared noise level
+    const noiseLevel = appState.noiseLevel[asset];  // Unified noise level
     const normalizer = 'zscore';
 
     console.log(`Fetching breakdown macro oscillator data for ${asset}: datasets=${datasets}, noise_level=${noiseLevel}, days=${days}`);
@@ -671,14 +634,14 @@ async function loadMacroOscillatorData(asset) {
 }
 
 /**
- * Load derivatives oscillator data (DVOL Index, Basis Spread) for breakdown page
+ * Load derivatives oscillator data (DVOL Index, Basis Spread)
  * @param {string} asset - Asset name (e.g., 'btc')
  */
 async function loadBreakdownDerivativesOscillatorData(asset) {
     const days = appState.days[asset];
     const datasets = 'dvol_index_deribit,basis_spread_binance';  // Derivatives oscillators
     const mode = 'composite';  // Use composite mode for normalization
-    const noiseLevel = appState.breakdownNoiseLevel[asset];  // Shared noise level
+    const noiseLevel = appState.noiseLevel[asset];  // Unified noise level
     const normalizer = 'zscore';
 
     console.log(`Fetching breakdown derivatives oscillator data for ${asset}: datasets=${datasets}, noise_level=${noiseLevel}, days=${days}`);
