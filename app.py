@@ -7,7 +7,7 @@ from flask_apscheduler import APScheduler
 import os
 import time
 # Data plugins
-from data import eth_price, btc_price, gold_price, spx_price, rsi, macd_histogram, adx, atr, sma, parabolic_sar, funding_rate
+from data import eth_price, btc_price, gold_price, spx_price, rsi, macd_histogram, adx, atr, sma, parabolic_sar, funding_rate, btc_price_1min_resampled
 # Startup data update
 from scripts.startup_data_update import check_and_update as startup_data_update
 from data import eth_price_alpaca, spx_price_fmp, gold_price_oscillator
@@ -258,6 +258,72 @@ def get_data():
             return jsonify(cache[cache_key]['data'])
         
         return jsonify({'error': f'Server error processing {dataset_name}: {str(e)}'}), 500
+
+@app.route('/api/depth-chart')
+def get_depth_chart():
+    """
+    Fetch resampled 1-minute BTC OHLCV data for depth chart.
+
+    Query parameters:
+    - timeframe: '1m' | '15m' | '1h' | '4h' (default: '1h')
+    - days: Number of days to return (1, 3, 7, 30, 90) (default: 7)
+
+    Returns:
+        JSON with OHLCV data [[timestamp_ms, open, high, low, close, volume], ...]
+    """
+    timeframe = request.args.get('timeframe', '1h')
+    days = request.args.get('days', '7')
+
+    # Validate timeframe
+    valid_timeframes = ['1m', '15m', '1h', '4h']
+    if timeframe not in valid_timeframes:
+        return jsonify({'error': f'Invalid timeframe. Must be one of {valid_timeframes}'}), 400
+
+    # Validate days
+    try:
+        days_int = int(days)
+        if days_int not in [1, 3, 7, 30, 90]:
+            return jsonify({'error': 'Invalid days parameter. Must be 1, 3, 7, 30, or 90'}), 400
+    except ValueError:
+        return jsonify({'error': 'Days parameter must be an integer'}), 400
+
+    # Check cache
+    cache_key = f'depth_chart_{timeframe}_{days}'
+
+    if is_cache_valid(cache_key):
+        print(f"[Depth Chart] Serving {timeframe}/{days}d from cache")
+        return jsonify(cache[cache_key]['data'])
+
+    try:
+        # Fetch resampled data
+        print(f"[Depth Chart] Fetching {timeframe} data for {days} days")
+        data = btc_price_1min_resampled.get_data(timeframe=timeframe, days=days)
+
+        # Store in cache
+        cache[cache_key] = {
+            'data': data,
+            'timestamp': time.time()
+        }
+
+        print(f"[Depth Chart] Returning {len(data.get('data', []))} candles")
+        return jsonify(data)
+
+    except Exception as e:
+        print(f"[Depth Chart] Error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+
+        # Return stale cache if available
+        if cache_key in cache:
+            print(f"[Depth Chart] Returning stale cache due to error")
+            return jsonify(cache[cache_key]['data'])
+
+        return jsonify({
+            'error': f'Failed to fetch depth chart data: {str(e)}',
+            'metadata': btc_price_1min_resampled.get_metadata(),
+            'data': [],
+            'structure': 'OHLCV'
+        }), 500
 
 @app.route('/api/oscillator-data')
 def get_oscillator_data():

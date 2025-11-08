@@ -209,6 +209,11 @@ __marimo__/
 # Application-specific cache directory
 data_cache/
 
+# Large data files (pre-computed and source)
+historical_data/btc_1min/*.json
+historical_data/btc_price_1min_complete.json
+historical_data/options_pcr_cvd/*.json
+
 # Testing and Development
 .playwright-mcp/
 .serena/
