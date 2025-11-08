@@ -90,8 +90,10 @@ export function initChart(containerId, dataset, color) {
  * @param {string} dataset - Dataset name ('btc', 'eth', or 'gold')
  * @param {Array} data - OHLCV data [[timestamp, open, high, low, close, volume], ...]
  * @param {Array} overlays - Optional array of overlay datasets [{data: [[ts, value], ...], metadata: {...}}, ...]
+ * @param {Object} regimeData - Optional regime data for background shading
+ * @param {Array} forcedDomain - Optional forced x-axis domain [minDate, maxDate] for chart alignment
  */
-export function renderChart(dataset, data, overlays = [], regimeData = null) {
+export function renderChart(dataset, data, overlays = [], regimeData = null, forcedDomain = null) {
     const chart = chartInstances[dataset];
     if (!chart) {
         console.error(`Chart instance for ${dataset} not found`);
@@ -117,8 +119,10 @@ export function renderChart(dataset, data, overlays = [], regimeData = null) {
     chart.regimeData = regimeData;
 
     // Create scales
+    // Use forced domain if provided, otherwise calculate from data
+    const xDomain = forcedDomain || d3.extent(data, d => new Date(d[0]));
     chart.xScale = d3.scaleTime()
-        .domain(d3.extent(data, d => new Date(d[0])))
+        .domain(xDomain)
         .range([0, chart.width]);
 
     // Find price range (considering high/low and overlay values)
@@ -714,8 +718,9 @@ export function initFundingRateChart(containerId, dataset) {
  * Render funding rate chart with color-coded sentiment
  * @param {string} dataset - Dataset name
  * @param {Array} data - Funding rate data [[timestamp, rate_percentage], ...]
+ * @param {Array} forcedDomain - Optional forced x-axis domain [minDate, maxDate] for chart alignment
  */
-export function renderFundingRateChart(dataset, data) {
+export function renderFundingRateChart(dataset, data, forcedDomain = null) {
     const chart = fundingRateChartInstances[dataset];
 
     if (!chart) {
@@ -734,7 +739,8 @@ export function renderFundingRateChart(dataset, data) {
     chart.data = data;
 
     // Create scales
-    const xExtent = d3.extent(data, d => new Date(d[0]));
+    // Use forced domain if provided, otherwise calculate from data
+    const xExtent = forcedDomain || d3.extent(data, d => new Date(d[0]));
     const yExtent = d3.extent(data, d => d[1]);
 
     // Add padding to Y domain (10% on each side)
@@ -886,8 +892,8 @@ export function renderFundingRateChart(dataset, data) {
     // Setup crosshair and tooltip
     setupFundingRateCrosshair(dataset, data);
 
-    // Setup zoom and pan behavior
-    setupFundingRateZoom(dataset, data);
+    // Setup zoom and pan behavior (mouse interaction only, no button controls)
+    setupFundingRateZoom(dataset);
 
     console.log(`Funding rate chart rendered for ${dataset}`);
 }
@@ -969,10 +975,12 @@ function setupFundingRateCrosshair(dataset, data) {
 /**
  * Setup zoom and pan behavior for funding rate chart
  * @param {string} dataset - Dataset name
- * @param {Array} data - Funding rate data
  */
-function setupFundingRateZoom(dataset, data) {
+function setupFundingRateZoom(dataset) {
     const chart = fundingRateChartInstances[dataset];
+
+    // Store data for zoom updates
+    const data = chart.data;
 
     // Create zoom behavior
     chart.zoom = d3.zoom()
@@ -986,9 +994,6 @@ function setupFundingRateZoom(dataset, data) {
 
     // Attach zoom to overlay
     chart.zoomOverlay.call(chart.zoom);
-
-    // Setup zoom controls (buttons)
-    setupFundingRateZoomControls(dataset, data);
 }
 
 /**
@@ -1090,37 +1095,3 @@ function updateFundingRateZoom(dataset, data, transform) {
     });
 }
 
-/**
- * Setup zoom control buttons for funding rate chart
- * @param {string} dataset - Dataset name
- * @param {Array} data - Funding rate data
- */
-function setupFundingRateZoomControls(dataset, data) {
-    const chart = fundingRateChartInstances[dataset];
-    const container = document.getElementById(`${dataset}-funding-rate-container`);
-
-    if (!container) return;
-
-    const buttons = container.querySelectorAll('.zoom-btn');
-
-    buttons.forEach(button => {
-        button.addEventListener('click', () => {
-            if (button.classList.contains('reset-zoom')) {
-                // Reset zoom
-                chart.svg.transition()
-                    .duration(750)
-                    .call(chart.zoom.transform, d3.zoomIdentity);
-            } else if (button.classList.contains('zoom-in')) {
-                // Zoom in
-                chart.svg.transition()
-                    .duration(300)
-                    .call(chart.zoom.scaleBy, 1.5);
-            } else if (button.classList.contains('zoom-out')) {
-                // Zoom out
-                chart.svg.transition()
-                    .duration(300)
-                    .call(chart.zoom.scaleBy, 0.67);
-            }
-        });
-    });
-}
