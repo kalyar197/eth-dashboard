@@ -233,15 +233,21 @@ export function initBreakdownChart(containerId, asset) {
         .attr('clip-path', `url(#clip-${asset}-breakdown)`)
         .attr('class', 'lines-group');
 
-    // Create zero line
+    // Create zero line (enhanced visibility to match composite oscillator)
+    // Extract base asset from breakdown ID
+    // Examples: 'breakdown-btc' -> 'btc', 'breakdown-price-btc' -> 'btc', 'breakdown-macro-btc' -> 'btc'
+    const assetMatch = asset.match(/-(btc|eth|gold)$/);
+    const baseAsset = assetMatch ? assetMatch[1] : asset.replace('breakdown-', '');
+    const assetColor = window.appState?.colors?.[baseAsset] || '#FFFFFF';  // Default to white for better visibility
+
     const zeroLine = g.append('line')
         .attr('class', 'reference-line')
         .attr('x1', 0)
         .attr('x2', width)
-        .style('stroke', '#666')
-        .style('stroke-width', 1)
+        .style('stroke', assetColor)     // Use asset color (orange for BTC) instead of gray
+        .style('stroke-width', 2)        // Thicker line (matches composite)
         .style('stroke-dasharray', '3,3')
-        .style('opacity', 0.3);
+        .style('opacity', 0.5);          // Higher opacity (matches composite)
 
     // Create legend group (top-left)
     const legendGroup = svg.append('g')
@@ -304,8 +310,10 @@ export function initBreakdownChart(containerId, asset) {
  * @param {string} asset - Asset name
  * @param {Object} datasetsData - Object with dataset names as keys and data arrays as values
  * @param {Object} colors - Object mapping dataset names to colors
+ * @param {boolean} compositeMode - Whether to render in composite mode
+ * @param {Array} forcedDomain - Optional forced x-axis domain [minDate, maxDate] for chart alignment
  */
-export function renderOscillatorChart(asset, datasetsData, colors, compositeMode = false) {
+export function renderOscillatorChart(asset, datasetsData, colors, compositeMode = false, forcedDomain = null) {
     const chart = oscillatorInstances[asset];
     if (!chart) {
         console.error(`Oscillator chart not initialized for ${asset}`);
@@ -314,7 +322,7 @@ export function renderOscillatorChart(asset, datasetsData, colors, compositeMode
 
     if (compositeMode) {
         console.log(`Rendering COMPOSITE oscillator chart for ${asset}`);
-        renderCompositeOscillator(asset, datasetsData, colors);
+        renderCompositeOscillator(asset, datasetsData, colors, forcedDomain);
     } else {
         console.log(`Rendering INDIVIDUAL oscillator chart for ${asset} with datasets:`, Object.keys(datasetsData));
         renderIndividualOscillator(asset, datasetsData, colors);
@@ -331,8 +339,12 @@ export function renderOscillatorChart(asset, datasetsData, colors, compositeMode
 
 /**
  * Render composite oscillator with regime background
+ * @param {string} asset - Asset name
+ * @param {Object} data - Composite and regime data
+ * @param {Object} colors - Color mapping
+ * @param {Array} forcedDomain - Optional forced x-axis domain [minDate, maxDate] for chart alignment
  */
-function renderCompositeOscillator(asset, data, colors) {
+function renderCompositeOscillator(asset, data, colors, forcedDomain = null) {
     const chart = oscillatorInstances[asset];
     const compositeData = data.composite;
     const regimeData = data.regime;
@@ -352,7 +364,8 @@ function renderCompositeOscillator(asset, data, colors) {
     const allValues = compositeData.map(d => d[1]);
 
     // Update scales
-    const xExtent = d3.extent(allTimestamps);
+    // Use forced domain if provided, otherwise calculate from data
+    const xExtent = forcedDomain || d3.extent(allTimestamps);
     const yExtent = d3.extent(allValues);
 
     // Symmetrical y-domain around 0 for Z-scores
@@ -444,11 +457,29 @@ function renderRegimeBackground(chart, regimeData, metadata) {
 
     const states = metadata.states;
 
+    // Filter regime data to match current xScale domain (oscillator's date range)
+    // This ensures backgrounds only show for periods where both oscillator AND regime data exist
+    const xDomain = chart.xScale.domain();
+    const minTime = xDomain[0].getTime();
+    const maxTime = xDomain[1].getTime();
+
+    const filteredRegimeData = regimeData.filter(d => {
+        const timestamp = d[0];
+        return timestamp >= minTime && timestamp <= maxTime;
+    });
+
+    if (filteredRegimeData.length === 0) {
+        console.log('[Regime] No regime data in current date range');
+        return;
+    }
+
+    console.log(`[Regime] Filtered to ${filteredRegimeData.length}/${regimeData.length} points in date range`);
+
     // Group consecutive timestamps with same regime
     const regimeSegments = [];
     let currentSegment = null;
 
-    regimeData.forEach((d, i) => {
+    filteredRegimeData.forEach((d, i) => {
         const timestamp = d[0];
         const regime = d[1];
 
@@ -775,8 +806,9 @@ function setupOscillatorCrosshair(asset) {
  * Render breakdown chart with individual normalized oscillators
  * @param {string} asset - Asset name
  * @param {Object} breakdownData - Object with oscillator names as keys containing data and metadata
+ * @param {Array} forcedDomain - Optional forced x-axis domain [minDate, maxDate] for chart alignment
  */
-export function renderBreakdownChart(asset, breakdownData) {
+export function renderBreakdownChart(asset, breakdownData, forcedDomain = null) {
     const chart = breakdownInstances[asset];
     if (!chart) {
         console.error(`Breakdown chart not initialized for ${asset}`);
@@ -793,7 +825,7 @@ export function renderBreakdownChart(asset, breakdownData) {
         if (oscillatorData.data && oscillatorData.data.length > 0) {
             oscillatorData.data.forEach(d => {
                 allTimestamps.push(d[0]);
-                // Data is already inverted from backend for ADX and ATR
+                // Data is already inverted from backend for ATR (if present)
                 const value = d[1];
                 allValues.push(value);
             });
@@ -806,8 +838,9 @@ export function renderBreakdownChart(asset, breakdownData) {
     }
 
     // Update X scale domain
-    const xExtent = d3.extent(allTimestamps);
-    chart.xScale.domain(xExtent.map(ts => new Date(ts)));
+    // Use forced domain if provided, otherwise calculate from data
+    const xExtent = forcedDomain || d3.extent(allTimestamps).map(ts => new Date(ts));
+    chart.xScale.domain(xExtent);
 
     // Update Y scale domain (use same logic as composite - symmetrical around 0, minimum ±3.5)
     const yExtent = d3.extent(allValues);
@@ -829,6 +862,24 @@ export function renderBreakdownChart(asset, breakdownData) {
     // Update zero line position
     chart.zeroLine.attr('y1', chart.yScale(0)).attr('y2', chart.yScale(0));
 
+    // Render regime background (if available)
+    // Extract base asset from breakdown ID
+    // Examples: 'breakdown-btc' -> 'btc', 'breakdown-price-btc' -> 'btc', 'breakdown-macro-btc' -> 'btc'
+    const assetMatch = asset.match(/-(btc|eth|gold)$/);
+    const baseAsset = assetMatch ? assetMatch[1] : asset.replace('breakdown-', '');
+
+    if (window.appState?.regimeData?.[baseAsset]) {
+        const regimeData = window.appState.regimeData[baseAsset].data;
+        const regimeMetadata = window.appState.regimeData[baseAsset].metadata;
+
+        // Clear existing regime backgrounds
+        chart.linesGroup.selectAll('.regime-background').remove();
+
+        // Render regime backgrounds (will be filtered to match xScale domain)
+        renderRegimeBackground(chart, regimeData, regimeMetadata);
+        console.log(`[Breakdown] Rendered regime background for ${asset}`);
+    }
+
     // Clear existing lines
     chart.linesGroup.selectAll('path').remove();
 
@@ -839,7 +890,7 @@ export function renderBreakdownChart(asset, breakdownData) {
         const color = oscillatorData.metadata.color || '#888';
         const label = oscillatorData.metadata.label || name.toUpperCase();
 
-        // Create line generator (data is already inverted from backend for ADX and ATR)
+        // Create line generator (data is already inverted from backend for ATR if present)
         const lineGenerator = d3.line()
             .x(d => chart.xScale(new Date(d[0])))
             .y(d => chart.yScale(d[1]))
@@ -1001,6 +1052,11 @@ function updateBreakdownZoom(asset, transform) {
             .datum(lineInfo.data)
             .attr('d', line);
     });
+
+    // Update regime background rectangles with new scale (if regime segments exist)
+    if (chart.regimeSegments) {
+        updateRegimeRectangles(chart, newXScale);
+    }
 }
 
 /**

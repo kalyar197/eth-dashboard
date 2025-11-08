@@ -35,7 +35,7 @@ def get_metadata():
         'yAxisLabel': 'Normalized Divergence (σ)',
         'unit': 'σ',
         'chartType': 'line',
-        'color': '#00FF00',  # Green color for S&P 500
+        'color': '#FF6B6B',  # Coral red color for S&P 500
         'strokeWidth': 2,
         'description': 'S&P 500 Index price oscillator',
         'data_structure': 'simple'

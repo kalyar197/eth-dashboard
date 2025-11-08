@@ -14,7 +14,7 @@ import {
 const appState = {
     activeTab: 'main',              // Current active tab (main or breakdown)
     days: {
-        btc: 30                     // Default 1M for BTC
+        btc: 180                    // Default 6M for BTC
     },
     chartData: {
         btc: null
@@ -23,7 +23,7 @@ const appState = {
         btc: false
     },
     colors: {
-        btc: '#F7931A'              // Bitcoin orange
+        btc: '#FFFFFF'              // White for better 0-line visibility
     },
     // Oscillator state
     oscillatorData: {
@@ -55,11 +55,11 @@ const appState = {
     },
     // Noise level state (for composite oscillator)
     noiseLevel: {
-        btc: 200                    // Default: Min noise level
+        btc: 14                     // Default: Max noise level
     },
     // Breakdown tab noise level (independent from main oscillator)
     breakdownNoiseLevel: {
-        btc: 200                    // Default: Min noise level
+        btc: 14                     // Default: Max noise level
     },
     compositeMode: true,  // Use composite oscillator mode by default
     // Overlay state (moving averages on price chart)
@@ -76,8 +76,13 @@ const appState = {
     // Regime data state (for price chart background)
     regimeData: {
         btc: null
-    }
+    },
+    // Global date extent for synchronized chart alignment
+    globalDateExtent: null
 };
+
+// Expose appState globally for access from other modules (oscillator.js needs regime data)
+window.appState = appState;
 
 /**
  * Main application entry point
@@ -376,6 +381,13 @@ async function loadChartData(dataset) {
         // Store data in state
         appState.chartData[dataset] = result.data;
 
+        // Calculate and store global date extent for chart alignment (from BTC price data)
+        if (dataset === 'btc' && result.data.length > 0) {
+            const timestamps = result.data.map(d => new Date(d[0]));
+            appState.globalDateExtent = d3.extent(timestamps);
+            console.log(`Global date extent calculated: ${appState.globalDateExtent[0]} to ${appState.globalDateExtent[1]}`);
+        }
+
         // Fetch overlay data (moving averages) if any are selected
         const overlays = [];
         const selectedOverlays = appState.overlaySelections[dataset] || [];
@@ -398,9 +410,10 @@ async function loadChartData(dataset) {
             }
         }
 
-        // Render chart with price data, overlays, and regime background
+        // Render chart with price data, overlays, regime background, and forced domain
         const regimeData = appState.regimeData[dataset] || null;
-        renderChart(dataset, result.data, overlays, regimeData);
+        const forcedDomain = appState.globalDateExtent || null;
+        renderChart(dataset, result.data, overlays, regimeData, forcedDomain);
 
         // Clear loading message
         clearMessages(dataset);
@@ -463,11 +476,13 @@ async function loadOscillatorData(asset) {
             // Re-render price chart with regime background if chart data is already loaded
             if (appState.chartData[asset]) {
                 const overlays = [];
+                const forcedDomain = appState.globalDateExtent || null;
                 // Re-fetch overlays (simplified - just pass empty for now, chart will handle)
-                renderChart(asset, appState.chartData[asset], overlays, appState.regimeData[asset]);
+                renderChart(asset, appState.chartData[asset], overlays, appState.regimeData[asset], forcedDomain);
             }
 
-            // Render composite oscillator chart with regime background
+            // Render composite oscillator chart with regime background and forced domain
+            const forcedDomain = appState.globalDateExtent || null;
             renderOscillatorChart(asset, {
                 composite: result.composite.data,
                 regime: result.regime.data,
@@ -475,7 +490,7 @@ async function loadOscillatorData(asset) {
                     composite: result.composite.metadata,
                     regime: result.regime.metadata
                 }
-            }, appState.datasetColors, true);  // true = composite mode
+            }, appState.datasetColors, true, forcedDomain);  // true = composite mode
 
             // Render breakdown chart if data is available
             if (result.breakdown && Object.keys(result.breakdown).length > 0) {
@@ -486,8 +501,9 @@ async function loadOscillatorData(asset) {
                     appState.breakdownInitialized[asset] = true;
                 }
 
-                // Render breakdown chart
-                renderBreakdownChart(asset, result.breakdown);
+                // Render breakdown chart with forced domain
+                const forcedDomain = appState.globalDateExtent || null;
+                renderBreakdownChart(asset, result.breakdown, forcedDomain);
             }
 
         } else {
@@ -515,12 +531,12 @@ async function loadOscillatorData(asset) {
 
 /**
  * Load breakdown oscillator data for Breakdown tab (independent noise level)
- * Shows all 4 oscillators: RSI + ADX (inverted) + ATR (inverted) + MACD
+ * Shows RSI + ADX (both normal, not inverted)
  */
 async function loadBreakdownOscillatorData(asset) {
     const days = appState.days[asset];
-    const datasets = 'rsi,adx,atr,macd_histogram';  // All 4 oscillators
-    const mode = 'composite';  // Use composite mode to get inversions
+    const datasets = 'rsi,adx';  // Only RSI + ADX
+    const mode = 'composite';  // Use composite mode for normalization
     const noiseLevel = appState.breakdownNoiseLevel[asset];  // Independent noise level
     const normalizer = 'zscore';
 
@@ -551,8 +567,9 @@ async function loadBreakdownOscillatorData(asset) {
             appState.breakdownInitialized[breakdownKey] = true;
         }
 
-        // Render breakdown chart with all 4 oscillators
-        renderBreakdownChart(breakdownKey, result.breakdown);
+        // Render breakdown chart with all 4 oscillators and forced domain
+        const forcedDomain = appState.globalDateExtent || null;
+        renderBreakdownChart(breakdownKey, result.breakdown, forcedDomain);
 
     } catch (error) {
         console.error(`Error loading breakdown oscillator data for ${asset}:`, error);
@@ -560,12 +577,12 @@ async function loadBreakdownOscillatorData(asset) {
 }
 
 /**
- * Load price oscillator data (ETH, Gold, SPX) for breakdown page
+ * Load price oscillator data (DXY, Gold, SPX) for breakdown page
  * @param {string} asset - Asset name (e.g., 'btc')
  */
 async function loadBreakdownPriceOscillatorData(asset) {
     const days = appState.days[asset];
-    const datasets = 'eth_price_alpaca,gold_price_oscillator,spx_price_fmp';  // Price oscillators
+    const datasets = 'dxy_price_yfinance,gold_price_oscillator,spx_price_fmp';  // Price oscillators (market hours only)
     const mode = 'composite';  // Use composite mode for normalization
     const noiseLevel = appState.breakdownNoiseLevel[asset];  // Shared noise level with momentum oscillators
     const normalizer = 'zscore';
@@ -597,8 +614,9 @@ async function loadBreakdownPriceOscillatorData(asset) {
             appState.breakdownPriceInitialized[asset] = true;
         }
 
-        // Render price oscillator chart with ETH, Gold, SPX
-        renderBreakdownChart(breakdownKey, result.breakdown);
+        // Render price oscillator chart with DXY, Gold, SPX and forced domain
+        const forcedDomain = appState.globalDateExtent || null;
+        renderBreakdownChart(breakdownKey, result.breakdown, forcedDomain);
 
     } catch (error) {
         console.error(`Error loading breakdown price oscillator data for ${asset}:`, error);
@@ -606,12 +624,12 @@ async function loadBreakdownPriceOscillatorData(asset) {
 }
 
 /**
- * Load macro oscillator data (DXY, BTC.D, USDT.D) for breakdown page
+ * Load macro oscillator data (ETH, BTC.D, USDT.D) for breakdown page
  * @param {string} asset - Asset name (e.g., 'btc')
  */
 async function loadMacroOscillatorData(asset) {
     const days = appState.days[asset];
-    const datasets = 'dxy_price_yfinance,btc_dominance_cmc,usdt_dominance_cmc';  // Macro oscillators
+    const datasets = 'eth_price_alpaca,btc_dominance_cmc,usdt_dominance_cmc';  // Macro oscillators (24/7 crypto)
     const mode = 'composite';  // Use composite mode for normalization
     const noiseLevel = appState.breakdownNoiseLevel[asset];  // Shared noise level
     const normalizer = 'zscore';
@@ -643,8 +661,9 @@ async function loadMacroOscillatorData(asset) {
             appState.breakdownMacroInitialized[asset] = true;
         }
 
-        // Render macro oscillator chart with DXY, BTC.D, USDT.D
-        renderBreakdownChart(breakdownKey, result.breakdown);
+        // Render macro oscillator chart with ETH, BTC.D, USDT.D and forced domain
+        const forcedDomain = appState.globalDateExtent || null;
+        renderBreakdownChart(breakdownKey, result.breakdown, forcedDomain);
 
     } catch (error) {
         console.error(`Error loading breakdown macro oscillator data for ${asset}:`, error);
@@ -689,8 +708,9 @@ async function loadBreakdownDerivativesOscillatorData(asset) {
             appState.breakdownDerivativesInitialized[asset] = true;
         }
 
-        // Render derivatives oscillator chart with DVOL, Basis Spread, Taker Ratio
-        renderBreakdownChart(breakdownKey, result.breakdown);
+        // Render derivatives oscillator chart with DVOL, Basis Spread and forced domain
+        const forcedDomain = appState.globalDateExtent || null;
+        renderBreakdownChart(breakdownKey, result.breakdown, forcedDomain);
 
     } catch (error) {
         console.error(`Error loading breakdown derivatives oscillator data for ${asset}:`, error);
@@ -770,8 +790,9 @@ async function loadFundingRateData(asset) {
         // Store data in state
         appState.fundingRateData[asset] = result.data;
 
-        // Render funding rate chart
-        renderFundingRateChart(asset, result.data);
+        // Render funding rate chart with forced domain
+        const forcedDomain = appState.globalDateExtent || null;
+        renderFundingRateChart(asset, result.data, forcedDomain);
 
     } catch (error) {
         console.error(`Error loading funding rate data for ${asset}:`, error);
