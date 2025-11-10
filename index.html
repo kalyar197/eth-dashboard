@@ -583,29 +583,16 @@
             margin-bottom: 20px;
         }
 
-        /* Depth Chart Styles */
-        #depth-chart-container {
-            background: #1a1a1a;
-            border-radius: 12px;
-            border: 1px solid #2a2a2a;
-            width: 100%;
-            min-height: 500px;
-            height: 70vh;
-            position: relative;
-            padding: 20px;
-            overflow: hidden;
-        }
     </style>
 </head>
 <body>
     <!-- Tab Navigation -->
     <div class="tabs">
-        <button class="tab-btn" data-tab="main">Main</button>
-        <button class="tab-btn active" data-tab="breakdown">Depth</button>
+        <button class="tab-btn active" data-tab="main">Main</button>
     </div>
 
     <!-- Main Tab Content -->
-    <div class="tab-content" id="main-tab">
+    <div class="tab-content active" id="main-tab">
         <div class="controls">
             <div class="button-container control-group">
                 <button class="time-btn" data-dataset="btc" data-days="7">1W</button>
@@ -699,39 +686,6 @@
             </div>
             -->
 
-        </div>
-    </div>
-
-    <!-- Depth Tab Content - Multi-timeframe Candle Chart -->
-    <div class="tab-content active" id="breakdown-tab">
-        <div class="controls">
-            <!-- Timeframe Controls -->
-            <div class="button-container control-group">
-                <button class="depth-timeframe-btn" data-timeframe="1m">1m</button>
-                <button class="depth-timeframe-btn" data-timeframe="15m">15m</button>
-                <button class="depth-timeframe-btn" data-timeframe="1h">1h</button>
-                <button class="depth-timeframe-btn active" data-timeframe="4h">4h</button>
-            </div>
-
-            <!-- Time Depth Controls -->
-            <div class="button-container control-group">
-                <button class="depth-days-btn active" data-days="1">1D</button>
-                <button class="depth-days-btn" data-days="3">3D</button>
-                <button class="depth-days-btn" data-days="7">1W</button>
-                <button class="depth-days-btn" data-days="30">1M</button>
-                <button class="depth-days-btn" data-days="90">3M</button>
-            </div>
-        </div>
-
-        <!-- Depth Chart Container -->
-        <div class="chart-section">
-            <div id="depth-chart-container">
-                <div class="zoom-controls">
-                    <button class="zoom-btn reset-zoom-depth" title="Reset Zoom">↺</button>
-                    <button class="zoom-btn zoom-in-depth" title="Zoom In">+</button>
-                    <button class="zoom-btn zoom-out-depth" title="Zoom Out">−</button>
-                </div>
-            </div>
         </div>
     </div>
 

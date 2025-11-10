@@ -11,38 +11,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 python app.py  # Server runs on http://127.0.0.1:5000
 ```
 
-## Depth Tab - Multi-Timeframe Candle Chart
+**Startup Process**:
+- Dashboard loads immediately without data dependencies
+- Only Taker Ratio data auto-updates on startup (background thread, non-blocking)
+- All 1-minute BTC data updates are separated from dashboard startup
+- Manual updates: Run `scripts/binance_daily_update.py` independently
 
-**DEFAULT TAB** - Opens immediately on dashboard access
-
-**Pre-Computed Architecture** (NO on-the-fly computation):
-- **Timeframes**: 1m, 15m, 1h, 4h (all pre-computed and stored)
-- **Time Depths**: 1D, 3D, 1W, 1M, 3M (filtered from pre-computed files)
-- **Data Source**: `historical_data/btc_1min/*.json` (pre-computed timeframes)
-- **Performance**: 50-200ms load time (pure file reading, no pandas resampling)
-- **Defaults**: 4h timeframe, 1 day depth (7 candles - instant load)
-- **Data Range**: 2020-01-01 to 2025-11-08 (5.8 years, 3.0M 1-minute candles)
-
-**Regenerating Pre-Computed Data**:
-```bash
-python scripts/precompute_btc_1min_timeframes.py  # Takes ~90 seconds
-```
-
-**Source File**: `historical_data/btc_price_1min_complete.json` (221 MB, 3.0M candles)
-
-**Generated Files** in `historical_data/btc_1min/`:
-- `btc_price_1m.json` (211 MB, 3.0M candles)
-- `btc_price_15m.json` (13.8 MB, 205K candles)
-- `btc_price_1h.json` (3.4 MB, 51K candles)
-- `btc_price_4h.json` (0.85 MB, 12.8K candles)
-
-**Implementation Files**:
-- Backend: `data/btc_price_1min_resampled.py` (loads pre-computed files only)
-- API: `/api/depth-chart?timeframe=4h&days=1`
-- Frontend: `static/js/depth.js` (D3.js candlestick rendering)
-- Integration: `static/js/main.js` (tab system, controls, data fetching)
-
-### Current System Status
+## Current System Status
 
 **Oscillators** (All have 3+ years historical data):
 - **Momentum**: RSI, MACD Histogram, ADX, ATR
@@ -59,7 +34,7 @@ python scripts/precompute_btc_1min_timeframes.py  # Takes ~90 seconds
 - Funding rate chart (Binance, 3-month cache)
 - Minimalist UI (no redundant labels)
 - Chart margin alignment: 60px left/right for vertical date sync
-- **Single-tab layout**: All 6 oscillator charts on main tab with unified noise control
+- All 6 oscillator charts with unified noise control
 
 **Dependencies**:
 ```bash
@@ -157,10 +132,6 @@ def get_data(days='365'):
 - `main.js`: Application state + data fetching (`window.appState` exposed globally), unified noise control
 - `oscillator.js`: Chart rendering, regime backgrounds, zoom/pan
 - `chart.js`: Price charts, funding rate charts
-- `depth.js`: Multi-timeframe candlestick chart (1m, 15m, 1h, 4h)
-- **Tab Structure**:
-  - **Depth tab** (DEFAULT): Multi-timeframe candlestick chart with 4h/1D default
-  - **Main tab**: All oscillator charts + BTC price + funding rate
 
 ## Critical Notes
 
@@ -168,8 +139,6 @@ def get_data(days='365'):
 - BTC price returns full 6-component OHLCV for indicator calculations
 - Use `time_transformer.extract_component()` to get close/volume
 - Do NOT discard OHLCV components
-- **Depth chart pre-computation**: Source data has ZERO None values - never use `dropna()` unnecessarily
-- Pre-computed files preserve 100% data integrity - raw data is core asset
 
 **Timestamps**: Millisecond Unix timestamps (not seconds) - `standardize_to_daily_utc()`
 
@@ -193,7 +162,7 @@ def get_data(days='365'):
 - Momentum oscillators (RSI, MACD, ADX, ATR) have no nulls and are unaffected
 
 **Oscillator Grouping by Trading Schedule** (`static/js/main.js`):
-- All 6 oscillator charts displayed vertically on Main tab (lazy-loaded when switching from Depth)
+- All 6 oscillator charts displayed vertically
 - **Composite** (top): RSI + ADX composite Z-score
 - **Momentum**: RSI, ADX (both normal values, not inverted)
 - **Price** oscillators (DXY + Gold + SPX): Market hours only → grouped together to avoid timestamp mismatches
@@ -201,12 +170,7 @@ def get_data(days='365'):
 - **Derivatives**: DVOL Index + Basis Spread
 - Grouping by trading schedule prevents null-value filtering from reducing common timestamps
 - Result: Macro chart has ~176 points vs ~139 when mixed with market-hours assets
-- All charts share unified noise level controller on main tab
-
-**Depth Chart Time Filtering** (`data/btc_price_1min_resampled.py:filter_by_days_from_end`):
-- Filters from END of dataset, not from current date
-- Example: "1D" shows last 24 hours of available data (may be historical if not updated)
-- Critical for working with historical datasets that don't extend to present day
+- All charts share unified noise level controller
 
 ## Minimalist Design Philosophy
 

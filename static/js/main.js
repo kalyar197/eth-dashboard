@@ -9,11 +9,10 @@ import { initChart, renderChart, initFundingRateChart, renderFundingRateChart } 
 import {
     initOscillatorChart, renderOscillatorChart, initBreakdownChart, renderBreakdownChart
 } from './oscillator.js';
-import { initDepthChart, renderDepthChart, showDepthLoading, showDepthError } from './depth.js';
 
 // Application state
 const appState = {
-    activeTab: 'breakdown',         // Current active tab (main or breakdown) - DEFAULT: Depth chart
+    activeTab: 'main',         // Current active tab
     days: {
         btc: 180                    // Default 6M for BTC
     },
@@ -75,12 +74,7 @@ const appState = {
         btc: null
     },
     // Global date extent for synchronized chart alignment
-    globalDateExtent: null,
-    // Depth chart state
-    depthChartInitialized: false,
-    depthTimeframe: '4h',      // Default: 4 hour (fastest)
-    depthDays: 1,              // Default: 1 day (fastest)
-    depthChartData: null
+    globalDateExtent: null
 };
 
 // Expose appState globally for access from other modules (oscillator.js needs regime data)
@@ -122,8 +116,8 @@ async function initialize() {
         // Setup overlay controls (moving averages)
         setupOverlayControls();
 
-        // Initialize and load the default tab (Depth Chart - Breakdown)
-        await loadDepthTab();
+        // Load main tab data on startup
+        await loadTab('btc');
 
         console.log('Application initialized successfully!');
 
@@ -158,11 +152,6 @@ function setupTabs() {
 
             // Update state
             appState.activeTab = tabName;
-
-            // Load depth chart if switching to breakdown tab
-            if (tabName === 'breakdown') {
-                await loadDepthTab();
-            }
         });
     });
 }
@@ -770,106 +759,6 @@ async function loadFundingRateData(asset) {
 
     } catch (error) {
         console.error(`Error loading funding rate data for ${asset}:`, error);
-    }
-}
-
-/**
- * Load depth tab (initialize and load depth chart)
- */
-async function loadDepthTab() {
-    console.log('Loading depth tab');
-
-    // Initialize depth chart if not already initialized
-    if (!appState.depthChartInitialized) {
-        console.log('Initializing depth chart');
-        initDepthChart('depth-chart-container');
-        appState.depthChartInitialized = true;
-    }
-
-    // Setup depth chart controls if not already set up
-    setupDepthControls();
-
-    // Load depth chart data
-    await loadDepthChartData();
-}
-
-/**
- * Setup depth chart controls (timeframe and days buttons)
- */
-function setupDepthControls() {
-    // Setup timeframe buttons
-    document.querySelectorAll('.depth-timeframe-btn').forEach(button => {
-        button.addEventListener('click', async () => {
-            const timeframe = button.dataset.timeframe;
-
-            // Update active button
-            document.querySelectorAll('.depth-timeframe-btn').forEach(btn => {
-                btn.classList.remove('active');
-            });
-            button.classList.add('active');
-
-            // Update state and reload chart
-            appState.depthTimeframe = timeframe;
-            await loadDepthChartData();
-        });
-    });
-
-    // Setup days buttons
-    document.querySelectorAll('.depth-days-btn').forEach(button => {
-        button.addEventListener('click', async () => {
-            const days = parseInt(button.dataset.days);
-
-            // Update active button
-            document.querySelectorAll('.depth-days-btn').forEach(btn => {
-                btn.classList.remove('active');
-            });
-            button.classList.add('active');
-
-            // Update state and reload chart
-            appState.depthDays = days;
-            await loadDepthChartData();
-        });
-    });
-}
-
-/**
- * Fetch depth chart data and render
- */
-async function loadDepthChartData() {
-    const timeframe = appState.depthTimeframe;
-    const days = appState.depthDays;
-
-    console.log(`Fetching depth chart data: timeframe=${timeframe}, days=${days}`);
-
-    // Show loading message
-    showDepthLoading();
-
-    try {
-        // Fetch data from API
-        const url = `/api/depth-chart?timeframe=${timeframe}&days=${days}`;
-        const response = await fetch(url);
-
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const result = await response.json();
-
-        if (!result || !result.data || result.data.length === 0) {
-            throw new Error('No data available');
-        }
-
-        console.log(`Received ${result.data.length} candles for ${timeframe}/${days}d`);
-
-        // Store data in state
-        appState.depthChartData = result.data;
-
-        // Render depth chart
-        renderDepthChart(result.data);
-
-    } catch (error) {
-        console.error('Error loading depth chart data:', error);
-        showDepthError(`Failed to load depth chart data: ${error.message}`);
     }
 }
 

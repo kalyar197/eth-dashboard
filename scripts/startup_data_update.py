@@ -11,11 +11,9 @@ from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
 # Data files to check
-BTC_DATA_FILE = Path('historical_data/btc_price_1min_complete.json')
 TAKER_DATA_FILE = Path('historical_data/options_pcr_cvd/taker_ratio_3m.json')
 
 # Update scripts
-BTC_UPDATE_SCRIPT = Path('scripts/binance_daily_update.py')
 TAKER_UPDATE_SCRIPT = Path('scripts/binance_taker_ratio_update.py')
 
 # Update threshold: only update if data is older than this
@@ -84,17 +82,6 @@ def update_data_background():
     print("STARTUP DATA UPDATE CHECK")
     print("="*60)
 
-    # Check BTC data
-    if BTC_DATA_FILE.exists():
-        last_update = get_last_update_time(BTC_DATA_FILE)
-        if last_update:
-            age_hours = (datetime.now(tz=timezone.utc) - last_update).total_seconds() / 3600
-            print(f"[BTC Data] Last update: {last_update.strftime('%Y-%m-%d %H:%M')} UTC ({age_hours:.1f}h ago)")
-        else:
-            print(f"[BTC Data] Could not read last update")
-    else:
-        print(f"[BTC Data] File not found")
-
     # Check Taker Ratio data
     if TAKER_DATA_FILE.exists():
         last_update = get_last_update_time(TAKER_DATA_FILE)
@@ -108,9 +95,6 @@ def update_data_background():
 
     # Run updates if needed
     updates_needed = []
-
-    if needs_update(BTC_DATA_FILE):
-        updates_needed.append(('BTC Price', BTC_UPDATE_SCRIPT))
 
     if needs_update(TAKER_DATA_FILE):
         updates_needed.append(('Taker Ratio', TAKER_UPDATE_SCRIPT))
