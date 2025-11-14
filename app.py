@@ -140,15 +140,10 @@ def calculate_composite_average(common_timestamps, aligned_values, weights=None)
     # Determine weights
     oscillator_names = list(aligned_values.keys())
     if weights is None:
-        # Custom weights for ADX + RSI: RSI=60%, ADX=40%
-        if set(oscillator_names) == {'adx', 'rsi'}:
-            weights = {'adx': 0.4, 'rsi': 0.6}
-            print(f"[Composite] Using custom weights for RSI+ADX: {weights}")
-        else:
-            # Fallback to equal weights for other combinations
-            n = len(oscillator_names)
-            weights = {name: 1.0 / n for name in oscillator_names}
-            print(f"[Composite] Using equal weights: {weights}")
+        # Equal weights for all oscillators (including RSI+ADX: 50/50)
+        n = len(oscillator_names)
+        weights = {name: 1.0 / n for name in oscillator_names}
+        print(f"[Composite] Using equal weights: {weights}")
     else:
         # Normalize weights to sum to 1
         total = sum(weights.values())
@@ -394,14 +389,15 @@ def get_oscillator_data():
                         print(f"[Composite Mode] Warning: Normalization failed for {oscillator_name}, skipping...")
                         continue
 
-                    # INVERT ATR for composite calculation
-                    # Rationale: High ATR = high volatility/risk = bearish contribution
-                    if oscillator_name in ['atr']:
-                        normalized_data = [[timestamp, -value] for timestamp, value in normalized_data]
-                        print(f"[Composite Mode] Inverted {oscillator_name} values (high = bearish)")
-
-                    # Store normalized data
+                    # Store original normalized data for breakdown (before any inversion)
+                    # This ensures breakdown charts show intuitive values
                     normalized_oscillators[oscillator_name] = normalized_data
+
+                    # INVERT ATR for composite calculation only
+                    # Rationale: High ATR = high volatility/risk = bearish contribution
+                    # Note: Inversion happens later when aligning values for composite
+                    if oscillator_name in ['atr']:
+                        print(f"[Composite Mode] Will invert {oscillator_name} for composite (high = bearish)")
 
                     # Capture metadata for breakdown chart
                     metadata = oscillator_result['metadata'].copy()
@@ -426,10 +422,17 @@ def get_oscillator_data():
             if not common_timestamps:
                 raise ValueError("No common timestamps found across normalized oscillators")
 
+            # Step 3.5: Invert ATR for composite calculation only
+            # (Breakdown will use original non-inverted values from normalized_oscillators)
+            aligned_values_for_composite = aligned_values.copy()
+            if 'atr' in aligned_values_for_composite:
+                aligned_values_for_composite['atr'] = [-v for v in aligned_values_for_composite['atr']]
+                print(f"[Composite Mode] Inverted ATR values for composite (high ATR = bearish)")
+
             # Step 4: Calculate equally-weighted composite average
             composite_data = calculate_composite_average(
                 common_timestamps=common_timestamps,
-                aligned_values=aligned_values,
+                aligned_values=aligned_values_for_composite,
                 weights=None  # Equal weights
             )
 

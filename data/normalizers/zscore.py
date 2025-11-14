@@ -108,8 +108,7 @@ def normalize(dataset_data, asset_price_data, window=30):
 
         # Skip if insufficient valid data (need at least 10 points for regression)
         if len(valid_indicator) < 10:
-            normalized_data.append([timestamp, 0.0])
-            continue
+            continue  # Skip timestamp - insufficient data for meaningful calculation
 
         # Skip if current values are NaN
         current_price = price_values[i]
@@ -117,10 +116,9 @@ def normalize(dataset_data, asset_price_data, window=30):
         if np.isnan(current_price) or np.isnan(current_indicator):
             continue  # Skip null timestamps entirely (weekends/holidays)
 
-        # Skip if no variance
+        # Skip if no variance (flat data can't establish relationship)
         if np.std(valid_price) == 0 or np.std(valid_indicator) == 0:
-            normalized_data.append([timestamp, 0.0])
-            continue
+            continue  # Skip timestamp - zero variance prevents regression
 
         # Perform OLS regression: indicator = alpha + beta * price
         # Using numpy polyfit (degree 1 = linear regression)
@@ -144,14 +142,14 @@ def normalize(dataset_data, asset_price_data, window=30):
             # Standardize residual
             if std_error > 0:
                 standardized_residual = residual / std_error
+                normalized_data.append([timestamp, standardized_residual])
             else:
-                standardized_residual = 0.0
-
-            normalized_data.append([timestamp, standardized_residual])
+                # Skip if zero std_error (perfect prediction - can't standardize)
+                continue
 
         except Exception:
-            # If regression fails, return 0
-            normalized_data.append([timestamp, 0.0])
+            # If regression fails, skip timestamp
+            continue
 
     return normalized_data
 
