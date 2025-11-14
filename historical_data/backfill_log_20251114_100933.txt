@@ -1,0 +1,72 @@
+[2025-11-14 10:09:33] [INFO    ] ================================================================================
+[2025-11-14 10:09:33] [INFO    ] TRADINGVIEW BACKFILL SCRIPT - STARTING
+[2025-11-14 10:09:33] [INFO    ] ================================================================================
+[2025-11-14 10:09:33] [INFO    ] Dry-run mode: True
+[2025-11-14 10:09:33] [INFO    ] Resume mode: False
+[2025-11-14 10:09:33] [INFO    ] Log file: C:\Users\majee\Desktop\Dash\historical_data\backfill_log_20251114_100933.txt
+[2025-11-14 10:09:33] [INFO    ] 
+[2025-11-14 10:09:33] [INFO    ] Loaded 27 symbols from config
+[2025-11-14 10:09:33] [INFO    ] Limited to first 3 symbols for testing
+[2025-11-14 10:09:33] [INFO    ] Symbols grouped into 1 exchanges
+[2025-11-14 10:09:33] [INFO    ] 
+[2025-11-14 10:09:33] [INFO    ] Processing exchange 1/1: GLASSNODE (3 symbols)
+[2025-11-14 10:09:33] [INFO    ] 
+--- Symbol 1/3: BTC_SOPR ---
+[2025-11-14 10:09:33] [INFO    ] Fetching GLASSNODE:BTC_SOPR (attempt 1/4)
+[2025-11-14 10:09:35] [SUCCESS ] Fetched 1095 points for GLASSNODE:BTC_SOPR
+[2025-11-14 10:09:35] [INFO    ]   Date range: 2022-11-14 to 2025-11-12
+[2025-11-14 10:09:35] [INFO    ] Validating BTC_SOPR...
+[2025-11-14 10:09:35] [WARNING ] 5 warnings for BTC_SOPR:
+[2025-11-14 10:09:35] [WARNING ]   - 20 sampled timestamps not at midnight UTC
+[2025-11-14 10:09:35] [WARNING ]   - 5 extreme outliers (>5 sigma from mean):
+[2025-11-14 10:09:35] [WARNING ]   -   - 2022-11-18: 0.87 (7.4sigma)
+[2025-11-14 10:09:35] [WARNING ]   -   - 2023-03-30: 0.88 (7.1sigma)
+[2025-11-14 10:09:35] [WARNING ]   -   - 2024-03-23: 1.13 (6.7sigma)
+[2025-11-14 10:09:35] [INFO    ] Standardizing timestamps for BTC_SOPR...
+[2025-11-14 10:09:35] [INFO    ] Standardized 1095 -> 1095 points
+[2025-11-14 10:09:35] [INFO    ] [DRY-RUN] Would save 1095 points for BTC_SOPR
+[2025-11-14 10:09:35] [INFO    ] Rate limit delay: 3s...
+[2025-11-14 10:09:38] [INFO    ] 
+--- Symbol 2/3: BTC_MEDIANVOLUME ---
+[2025-11-14 10:09:38] [INFO    ] Fetching GLASSNODE:BTC_MEDIANVOLUME (attempt 1/4)
+[2025-11-14 10:09:40] [SUCCESS ] Fetched 1095 points for GLASSNODE:BTC_MEDIANVOLUME
+[2025-11-14 10:09:40] [INFO    ]   Date range: 2022-11-14 to 2025-11-12
+[2025-11-14 10:09:40] [INFO    ] Validating BTC_MEDIANVOLUME...
+[2025-11-14 10:09:40] [ERROR   ] Validation FAILED for BTC_MEDIANVOLUME
+[2025-11-14 10:09:40] [ERROR   ]   - 76 likely data errors detected (>200% daily change):
+[2025-11-14 10:09:40] [ERROR   ]   -   - 2023-04-23: 0.00 -> 0.01 (1545.5% change)
+[2025-11-14 10:09:40] [ERROR   ]   -   - 2023-05-01: 0.00 -> 0.00 (6662.4% change)
+[2025-11-14 10:09:40] [ERROR   ]   -   - 2023-05-07: 0.00 -> 0.00 (1535.3% change)
+[2025-11-14 10:09:50] [INFO    ] 
+--- Symbol 3/3: BTC_MEANTXFEES ---
+[2025-11-14 10:09:50] [INFO    ] Fetching GLASSNODE:BTC_MEANTXFEES (attempt 1/4)
+[2025-11-14 10:09:53] [SUCCESS ] Fetched 1095 points for GLASSNODE:BTC_MEANTXFEES
+[2025-11-14 10:09:53] [INFO    ]   Date range: 2022-11-14 to 2025-11-12
+[2025-11-14 10:09:53] [INFO    ] Validating BTC_MEANTXFEES...
+[2025-11-14 10:09:53] [WARNING ] 11 warnings for BTC_MEANTXFEES:
+[2025-11-14 10:09:53] [WARNING ]   - 20 sampled timestamps not at midnight UTC
+[2025-11-14 10:09:53] [WARNING ]   - 99 suspicious spikes detected (>50% daily change):
+[2025-11-14 10:09:53] [WARNING ]   -   - 2023-01-30: 0.00 -> 0.00 (62.9% change)
+[2025-11-14 10:09:53] [WARNING ]   -   - 2023-02-09: 0.00 -> 0.00 (53.5% change)
+[2025-11-14 10:09:53] [WARNING ]   -   - 2023-04-23: 0.00 -> 0.00 (80.7% change)
+[2025-11-14 10:09:53] [INFO    ] Standardizing timestamps for BTC_MEANTXFEES...
+[2025-11-14 10:09:53] [INFO    ] Standardized 1095 -> 1095 points
+[2025-11-14 10:09:53] [INFO    ] [DRY-RUN] Would save 1095 points for BTC_MEANTXFEES
+[2025-11-14 10:09:53] [INFO    ] 
+================================================================================
+[2025-11-14 10:09:53] [INFO    ] GENERATING VALIDATION REPORT
+[2025-11-14 10:09:53] [INFO    ] ================================================================================
+[2025-11-14 10:09:53] [INFO    ] 
+Results saved to: C:\Users\majee\Desktop\Dash\historical_data\backfill_results.json
+[2025-11-14 10:09:53] [INFO    ] Report saved to: C:\Users\majee\Desktop\Dash\historical_data\backfill_validation_report.txt
+[2025-11-14 10:09:53] [INFO    ] Log saved to: C:\Users\majee\Desktop\Dash\historical_data\backfill_log_20251114_100933.txt
+[2025-11-14 10:09:53] [INFO    ] 
+================================================================================
+[2025-11-14 10:09:53] [INFO    ] BACKFILL COMPLETE!
+[2025-11-14 10:09:53] [INFO    ] ================================================================================
+[2025-11-14 10:09:53] [INFO    ] Successful: 2/3
+[2025-11-14 10:09:53] [INFO    ] Failed: 1/3
+[2025-11-14 10:09:53] [INFO    ] 
+[DRY-RUN] No files were written
+[2025-11-14 10:09:53] [WARNING ] 
+[WARNING] PARTIAL SUCCESS (2/3)

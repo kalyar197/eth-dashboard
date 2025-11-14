@@ -1,0 +1,248 @@
+{
+  "metadata": {
+    "total_symbols": 28,
+    "verified_date": "2024-11-14",
+    "source": "TradingView user-provided exact symbols",
+    "all_verified": true
+  },
+  "symbols": {
+    "BTC_SOPR": {
+      "exchange": "GLASSNODE",
+      "symbol": "BTC_SOPR",
+      "full": "GLASSNODE:BTC_SOPR",
+      "description": "Bitcoin Spent Output Profit Ratio",
+      "category": "on_chain"
+    },
+    "BTC_MEDIANVOLUME": {
+      "exchange": "GLASSNODE",
+      "symbol": "BTC_MEDIANVOLUME",
+      "full": "GLASSNODE:BTC_MEDIANVOLUME",
+      "description": "Bitcoin Median Transaction Volume",
+      "category": "on_chain"
+    },
+    "BTC_MEANTXFEES": {
+      "exchange": "GLASSNODE",
+      "symbol": "BTC_MEANTXFEES",
+      "full": "GLASSNODE:BTC_MEANTXFEES",
+      "description": "Bitcoin Mean Transaction Fees",
+      "category": "on_chain"
+    },
+    "BTC_SENDINGADDRESSES": {
+      "exchange": "GLASSNODE",
+      "symbol": "BTC_SENDINGADDRESSES",
+      "full": "GLASSNODE:BTC_SENDINGADDRESSES",
+      "description": "Bitcoin Sending Addresses (Active)",
+      "category": "on_chain"
+    },
+    "BTC_ACTIVE1Y": {
+      "exchange": "GLASSNODE",
+      "symbol": "BTC_ACTIVE1Y",
+      "full": "GLASSNODE:BTC_ACTIVE1Y",
+      "description": "Bitcoin Active Supply (1 Year)",
+      "category": "on_chain"
+    },
+    "BTC_RECEIVINGADDRESSES": {
+      "exchange": "GLASSNODE",
+      "symbol": "BTC_RECEIVINGADDRESSES",
+      "full": "GLASSNODE:BTC_RECEIVINGADDRESSES",
+      "description": "Bitcoin Receiving Addresses (Active)",
+      "category": "on_chain"
+    },
+    "BTC_NEWADDRESSES": {
+      "exchange": "GLASSNODE",
+      "symbol": "BTC_NEWADDRESSES",
+      "full": "GLASSNODE:BTC_NEWADDRESSES",
+      "description": "Bitcoin New Addresses",
+      "category": "on_chain",
+      "note": "Also available as COINMETRICS:BTC_NEWADDRESSES"
+    },
+    "BTC_SER": {
+      "exchange": "COINMETRICS",
+      "symbol": "BTC_SER",
+      "full": "COINMETRICS:BTC_SER",
+      "description": "Bitcoin Spent Entities Ratio",
+      "category": "on_chain"
+    },
+    "BTC_AVGTX": {
+      "exchange": "COINMETRICS",
+      "symbol": "BTC_AVGTX",
+      "full": "COINMETRICS:BTC_AVGTX",
+      "description": "Bitcoin Average Transaction Size",
+      "category": "on_chain"
+    },
+    "BTC_TXCOUNT": {
+      "exchange": "COINMETRICS",
+      "symbol": "BTC_TXCOUNT",
+      "full": "COINMETRICS:BTC_TXCOUNT",
+      "description": "Bitcoin Transaction Count (Daily)",
+      "category": "on_chain"
+    },
+    "BTC_SPLYADRBAL1": {
+      "exchange": "COINMETRICS",
+      "symbol": "BTC_SPLYADRBAL1",
+      "full": "COINMETRICS:BTC_SPLYADRBAL1",
+      "description": "Bitcoin Supply in Addresses with Balance",
+      "category": "on_chain"
+    },
+    "BTC_ADDRESSESSUPPLY1IN10K": {
+      "exchange": "COINMETRICS",
+      "symbol": "BTC_ADDRESSESSUPPLY1IN10K",
+      "full": "COINMETRICS:BTC_ADDRESSESSUPPLY1IN10K",
+      "description": "Bitcoin Addresses Holding 1/10,000 of Supply",
+      "category": "on_chain"
+    },
+    "BTC_LARGETXCOUNT": {
+      "exchange": "COINMETRICS",
+      "symbol": "BTC_LARGETXCOUNT",
+      "full": "COINMETRICS:BTC_LARGETXCOUNT",
+      "description": "Bitcoin Large Transaction Count (>$100k)",
+      "category": "on_chain"
+    },
+    "BTC_ACTIVESUPPLY1Y": {
+      "exchange": "COINMETRICS",
+      "symbol": "BTC_ACTIVESUPPLY1Y",
+      "full": "COINMETRICS:BTC_ACTIVESUPPLY1Y",
+      "description": "Bitcoin Active Supply (Last 1 Year)",
+      "category": "on_chain"
+    },
+    "USDT_AVGTX": {
+      "exchange": "COINMETRICS",
+      "symbol": "USDT_AVGTX",
+      "full": "COINMETRICS:USDT_AVGTX",
+      "description": "USDT Average Transaction Size",
+      "category": "stablecoin"
+    },
+    "USDT_TFSPS": {
+      "exchange": "GLASSNODE",
+      "symbol": "USDT_TFSPS",
+      "full": "GLASSNODE:USDT_TFSPS",
+      "description": "USDT Transfer Speed (Transactions per Second)",
+      "category": "stablecoin"
+    },
+    "USDTUSD.PM": {
+      "exchange": "KRAKEN",
+      "symbol": "USDTUSD.PM",
+      "full": "KRAKEN:USDTUSD.PM",
+      "description": "USDT Premium/Discount to USD",
+      "category": "stablecoin"
+    },
+    "BTC_POSTSCREATED": {
+      "exchange": "LUNARCRUSH",
+      "symbol": "BTC_POSTSCREATED",
+      "full": "LUNARCRUSH:BTC_POSTSCREATED",
+      "description": "Bitcoin Social Posts Created",
+      "category": "social"
+    },
+    "BTC_CONTRIBUTORSCREATED": {
+      "exchange": "LUNARCRUSH",
+      "symbol": "BTC_CONTRIBUTORSCREATED",
+      "full": "LUNARCRUSH:BTC_CONTRIBUTORSCREATED",
+      "description": "Bitcoin New Contributors",
+      "category": "social"
+    },
+    "BTC_SOCIALDOMINANCE": {
+      "exchange": "LUNARCRUSH",
+      "symbol": "BTC_SOCIALDOMINANCE",
+      "full": "LUNARCRUSH:BTC_SOCIALDOMINANCE",
+      "description": "Bitcoin Social Dominance %",
+      "category": "social"
+    },
+    "BTC_CONTRIBUTORSACTIVE": {
+      "exchange": "LUNARCRUSH",
+      "symbol": "BTC_CONTRIBUTORSACTIVE",
+      "full": "LUNARCRUSH:BTC_CONTRIBUTORSACTIVE",
+      "description": "Bitcoin Active Contributors",
+      "category": "social"
+    },
+    "BTCST_TVL": {
+      "exchange": "DEFILLAMA",
+      "symbol": "BTCST_TVL",
+      "full": "DEFILLAMA:BTCST_TVL",
+      "description": "Bitcoin Staking Total Value Locked",
+      "category": "defi"
+    },
+    "IBIT": {
+      "exchange": "NASDAQ",
+      "symbol": "IBIT",
+      "full": "NASDAQ:IBIT",
+      "description": "iShares Bitcoin Trust ETF",
+      "category": "etf"
+    },
+    "GBTC": {
+      "exchange": "AMEX",
+      "symbol": "GBTC",
+      "full": "AMEX:GBTC",
+      "description": "Grayscale Bitcoin Trust ETF",
+      "category": "etf",
+      "note": "Correct ticker is GBTC, not GGBTC"
+    },
+    "TOTAL3": {
+      "exchange": "CRYPTOCAP",
+      "symbol": "TOTAL3",
+      "full": "CRYPTOCAP:TOTAL3",
+      "description": "Total Altcoin Market Cap (excluding BTC & ETH)",
+      "category": "market"
+    },
+    "STABLE.C.D": {
+      "exchange": "CRYPTOCAP",
+      "symbol": "STABLE.C.D",
+      "full": "CRYPTOCAP:STABLE.C.D",
+      "description": "Stablecoin Dominance %",
+      "category": "market"
+    },
+    "RRPONTSYD": {
+      "exchange": "FRED",
+      "symbol": "RRPONTSYD",
+      "full": "FRED:RRPONTSYD",
+      "description": "Federal Reserve Reverse Repo Outstanding",
+      "category": "macro"
+    }
+  },
+  "exchanges": {
+    "GLASSNODE": {
+      "count": 6,
+      "type": "On-chain metrics"
+    },
+    "COINMETRICS": {
+      "count": 9,
+      "type": "On-chain metrics"
+    },
+    "LUNARCRUSH": {
+      "count": 5,
+      "type": "Social metrics + stablecoin"
+    },
+    "KRAKEN": {
+      "count": 1,
+      "type": "Exchange data"
+    },
+    "CRYPTOCAP": {
+      "count": 2,
+      "type": "Market cap data"
+    },
+    "NASDAQ": {
+      "count": 1,
+      "type": "Stock exchange"
+    },
+    "AMEX": {
+      "count": 1,
+      "type": "Stock exchange"
+    },
+    "DEFILLAMA": {
+      "count": 1,
+      "type": "DeFi TVL"
+    },
+    "FRED": {
+      "count": 1,
+      "type": "Federal Reserve data"
+    }
+  },
+  "categories": {
+    "on_chain": 15,
+    "social": 4,
+    "stablecoin": 3,
+    "market": 2,
+    "etf": 2,
+    "defi": 1,
+    "macro": 1
+  }
+}

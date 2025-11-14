@@ -1,0 +1,37 @@
+{
+  "generated_at": "2025-11-14T09:36:39.736376",
+  "results": [
+    {
+      "metric": "BTC.D (Bitcoin Dominance)",
+      "total_points": 1095,
+      "date_range": {
+        "first": "2022-11-16",
+        "last": "2025-11-14",
+        "days": 1094
+      },
+      "issues": 6,
+      "warnings": 0,
+      "has_duplicates": false,
+      "has_nulls": false,
+      "has_gaps": false,
+      "out_of_range": 0,
+      "large_changes": 0
+    },
+    {
+      "metric": "USDT.D (USDT Dominance)",
+      "total_points": 1095,
+      "date_range": {
+        "first": "2022-11-16",
+        "last": "2025-11-14",
+        "days": 1094
+      },
+      "issues": 6,
+      "warnings": 3,
+      "has_duplicates": false,
+      "has_nulls": false,
+      "has_gaps": false,
+      "out_of_range": 0,
+      "large_changes": 2
+    }
+  ]
+}

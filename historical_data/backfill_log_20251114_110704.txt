@@ -1,0 +1,45 @@
+[2025-11-14 11:07:04] [INFO    ] ================================================================================
+[2025-11-14 11:07:04] [INFO    ] TRADINGVIEW BACKFILL SCRIPT - STARTING
+[2025-11-14 11:07:04] [INFO    ] ================================================================================
+[2025-11-14 11:07:04] [INFO    ] Dry-run mode: False
+[2025-11-14 11:07:04] [INFO    ] Resume mode: False
+[2025-11-14 11:07:04] [INFO    ] TradingView Login: ENABLED (user: majeedabdullah123)
+[2025-11-14 11:07:04] [INFO    ] Log file: C:\Users\majee\Desktop\Dash\historical_data\backfill_log_20251114_110704.txt
+[2025-11-14 11:07:04] [INFO    ] 
+[2025-11-14 11:07:04] [INFO    ] Loaded 27 symbols from config
+[2025-11-14 11:07:04] [INFO    ] Limited to first 1 symbols for testing
+[2025-11-14 11:07:04] [INFO    ] Symbols grouped into 1 exchanges
+[2025-11-14 11:07:04] [INFO    ] 
+[2025-11-14 11:07:04] [INFO    ] Processing exchange 1/1: GLASSNODE (1 symbols)
+[2025-11-14 11:07:04] [INFO    ] 
+--- Symbol 1/1: BTC_SOPR ---
+[2025-11-14 11:07:04] [INFO    ] Fetching GLASSNODE:BTC_SOPR (attempt 1/4)
+[2025-11-14 11:07:05] [INFO    ]   Using TradingView login (premium data access)
+[2025-11-14 11:07:06] [SUCCESS ] Fetched 1095 points for GLASSNODE:BTC_SOPR
+[2025-11-14 11:07:06] [INFO    ]   Date range: 2022-11-14 to 2025-11-12
+[2025-11-14 11:07:06] [INFO    ] Validating BTC_SOPR...
+[2025-11-14 11:07:06] [WARNING ] 5 warnings for BTC_SOPR:
+[2025-11-14 11:07:06] [WARNING ]   - 20 sampled timestamps not at midnight UTC
+[2025-11-14 11:07:06] [WARNING ]   - 5 extreme outliers (>5 sigma from mean):
+[2025-11-14 11:07:06] [WARNING ]   -   - 2022-11-18: 0.87 (7.4sigma)
+[2025-11-14 11:07:06] [WARNING ]   -   - 2023-03-30: 0.88 (7.1sigma)
+[2025-11-14 11:07:06] [WARNING ]   -   - 2024-03-23: 1.13 (6.7sigma)
+[2025-11-14 11:07:06] [INFO    ] Standardizing timestamps for BTC_SOPR...
+[2025-11-14 11:07:06] [INFO    ] Standardized 1095 -> 1095 points
+[2025-11-14 11:07:06] [SUCCESS ] Saved 1095 points for BTC_SOPR to cache
+[2025-11-14 11:07:06] [INFO    ] 
+================================================================================
+[2025-11-14 11:07:06] [INFO    ] GENERATING VALIDATION REPORT
+[2025-11-14 11:07:06] [INFO    ] ================================================================================
+[2025-11-14 11:07:06] [INFO    ] 
+Results saved to: C:\Users\majee\Desktop\Dash\historical_data\backfill_results.json
+[2025-11-14 11:07:06] [INFO    ] Report saved to: C:\Users\majee\Desktop\Dash\historical_data\backfill_validation_report.txt
+[2025-11-14 11:07:06] [INFO    ] Log saved to: C:\Users\majee\Desktop\Dash\historical_data\backfill_log_20251114_110704.txt
+[2025-11-14 11:07:06] [INFO    ] 
+================================================================================
+[2025-11-14 11:07:06] [INFO    ] BACKFILL COMPLETE!
+[2025-11-14 11:07:06] [INFO    ] ================================================================================
+[2025-11-14 11:07:06] [INFO    ] Successful: 1/1
+[2025-11-14 11:07:06] [INFO    ] Failed: 0/1
+[2025-11-14 11:07:06] [INFO    ] 
+[SUCCESS] ALL SYMBOLS FETCHED SUCCESSFULLY

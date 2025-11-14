@@ -177,6 +177,10 @@ function setupTimeControls() {
             appState.days[dataset] = days;
             await loadChartData(dataset);
             await loadOscillatorData(dataset);
+            await loadBreakdownOscillatorData(dataset);
+            await loadBreakdownPriceOscillatorData(dataset);
+            await loadMacroOscillatorData(dataset);
+            await loadBreakdownDerivativesOscillatorData(dataset);
             await loadFundingRateData(dataset);
         });
     });

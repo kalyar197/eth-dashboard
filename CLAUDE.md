@@ -74,6 +74,7 @@ pip install Flask requests Flask-Cors numpy statsmodels
 - DXY: Yahoo Finance (yfinance)
 - DVOL: Deribit API
 - Basis Spread: Binance API
+- **TradingView**: 27 new metrics (on-chain, social, ETFs, macro) via tvDatafeed library
 
 ## Oscillator System
 
@@ -317,6 +318,76 @@ def get_data(days='365'):
 **Result**: All mathematical implementations are academically sound and correctly implemented.
 
 **Next Session**: Phase 2 (Visual Rendering Accuracy) - Verify chart scale integrity and regime background alignment
+
+---
+
+### **NEW: TradingView Data Integration** ✅ **COMPLETED**
+
+**Date**: 2025-11-14
+
+#### Overview
+Successfully integrated 27 new metrics from TradingView covering on-chain, social, ETF, and macro data.
+
+#### Achievements
+1. ✅ **Historical Backfill Complete** (27/27 metrics, 100% success)
+   - 3 years of daily data (1095 points per metric)
+   - Files: `scripts/backfill_all_metrics.py`, `scripts/retry_failed_symbols.py`
+   - Validation: 6-layer system (`scripts/backfill_validation.py`)
+   - Results: `BACKFILL_RESULTS_FINAL.md`
+
+2. ✅ **Daily Update Mechanism Implemented**
+   - Script: `scripts/tradingview_daily_update.py`
+   - Fetches last 7 days, merges with historical data
+   - Auto-deduplication via `incremental_data_manager`
+   - Logging: `historical_data/tradingview_update_log.json`
+   - Documentation: `TRADINGVIEW_DAILY_UPDATE.md`
+
+3. ✅ **TradingView Authentication**
+   - Credentials: `TV_USERNAME` and `TV_PASSWORD` in `.env`
+   - Required for 10 premium metrics (Glassnode, CoinMetrics, etc.)
+   - Documentation: `TRADINGVIEW_LOGIN.md`
+
+#### Metrics Coverage (27 Total)
+
+**On-Chain (15)**:
+- GLASSNODE (8): BTC_SOPR, BTC_MEDIANVOLUME, BTC_MEANTXFEES, BTC_SENDINGADDRESSES, BTC_ACTIVE1Y, BTC_RECEIVINGADDRESSES, BTC_NEWADDRESSES, USDT_TFSPS
+- COINMETRICS (8): BTC_SER, BTC_AVGTX, BTC_TXCOUNT, BTC_SPLYADRBAL1, BTC_ADDRESSESSUPPLY1IN10K, BTC_LARGETXCOUNT, BTC_ACTIVESUPPLY1Y, USDT_AVGTX
+
+**Social (4)**: LUNARCRUSH - BTC_POSTSCREATED, BTC_CONTRIBUTORSCREATED, BTC_SOCIALDOMINANCE, BTC_CONTRIBUTORSACTIVE
+
+**Market (2)**: CRYPTOCAP - TOTAL3, STABLE.C.D
+
+**ETFs (2)**: NASDAQ:IBIT, AMEX:GBTC
+
+**Other (4)**: KRAKEN:USDTUSD.PM, DEFILLAMA:BTCST_TVL, FRED:RRPONTSYD
+
+#### Key Files
+- **Symbol mapping**: `scripts/tradingview_symbols_final.json`
+- **Data files**: `historical_data/*.json` (27 files: btc_sopr, btc_medianvolume, etc.)
+- **Backfill script**: `scripts/backfill_all_metrics.py`
+- **Daily updater**: `scripts/tradingview_daily_update.py`
+- **Retry script**: `scripts/retry_failed_symbols.py`
+
+#### Daily Automation
+```bash
+# Automated daily run (Windows Task Scheduler / cron)
+python scripts/tradingview_daily_update.py
+
+# Manual test
+python scripts/tradingview_daily_update.py --symbols 5 --days 3
+```
+
+#### Next Steps for Integration
+1. ⏳ Create data plugins for dashboard (or load directly from JSON)
+2. ⏳ Add frontend display (new tabs/dropdown for metric selection)
+3. ⏳ Integrate with existing oscillator system
+
+#### Technical Notes
+- Uses `tvDatafeed` library (unofficial TradingView API)
+- Rate limiting: 3s/5s/10s delays to avoid IP bans
+- Incremental updates: Only fetches missing data points
+- Login required for 10 premium metrics
+- Data validation: Timestamps standardized to midnight UTC
 
 ---
 

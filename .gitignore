@@ -219,4 +219,4 @@ historical_data/options_pcr_cvd/*.json
 .serena/
 noise_*.json
 test_*.py
-NUL
+NULhistorical_data/btc_price_1min_complete.backup.json

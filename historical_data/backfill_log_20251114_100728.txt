@@ -1,0 +1,41 @@
+[2025-11-14 10:07:28] [INFO    ] ================================================================================
+[2025-11-14 10:07:28] [INFO    ] TRADINGVIEW BACKFILL SCRIPT - STARTING
+[2025-11-14 10:07:28] [INFO    ] ================================================================================
+[2025-11-14 10:07:28] [INFO    ] Dry-run mode: True
+[2025-11-14 10:07:28] [INFO    ] Resume mode: False
+[2025-11-14 10:07:28] [INFO    ] Log file: C:\Users\majee\Desktop\Dash\historical_data\backfill_log_20251114_100728.txt
+[2025-11-14 10:07:28] [INFO    ] 
+[2025-11-14 10:07:28] [INFO    ] Loaded 27 symbols from config
+[2025-11-14 10:07:28] [INFO    ] Limited to first 3 symbols for testing
+[2025-11-14 10:07:28] [INFO    ] Symbols grouped into 1 exchanges
+[2025-11-14 10:07:28] [INFO    ] 
+[2025-11-14 10:07:28] [INFO    ] Processing exchange 1/1: GLASSNODE (3 symbols)
+[2025-11-14 10:07:28] [INFO    ] 
+--- Symbol 1/3: BTC_SOPR ---
+[2025-11-14 10:07:28] [INFO    ] Fetching GLASSNODE:BTC_SOPR (attempt 1/4)
+[2025-11-14 10:07:30] [SUCCESS ] Fetched 1095 points for GLASSNODE:BTC_SOPR
+[2025-11-14 10:07:30] [INFO    ]   Date range: 2022-11-14 to 2025-11-12
+[2025-11-14 10:07:30] [INFO    ] Validating BTC_SOPR...
+[2025-11-14 10:07:30] [WARNING ] 5 warnings for BTC_SOPR:
+[2025-11-14 10:07:30] [WARNING ]   - 20 sampled timestamps not at midnight UTC
+[2025-11-14 10:07:30] [WARNING ]   - 5 extreme outliers (>5 sigma from mean):
+[2025-11-14 10:07:30] [WARNING ]   -   - 2022-11-18: 0.87 (7.4sigma)
+[2025-11-14 10:07:30] [WARNING ]   -   - 2023-03-30: 0.88 (7.1sigma)
+[2025-11-14 10:07:30] [WARNING ]   -   - 2024-03-23: 1.13 (6.7sigma)
+[2025-11-14 10:07:30] [INFO    ] Standardizing timestamps for BTC_SOPR...
+[2025-11-14 10:07:30] [INFO    ] Standardized 1095 -> 1095 points
+[2025-11-14 10:07:30] [INFO    ] [DRY-RUN] Would save 1095 points for BTC_SOPR
+[2025-11-14 10:07:30] [INFO    ] Rate limit delay: 3s...
+[2025-11-14 10:07:33] [INFO    ] 
+--- Symbol 2/3: BTC_MEDIANVOLUME ---
+[2025-11-14 10:07:33] [INFO    ] Fetching GLASSNODE:BTC_MEDIANVOLUME (attempt 1/4)
+[2025-11-14 10:07:34] [WARNING ] No data returned for GLASSNODE:BTC_MEDIANVOLUME
+[2025-11-14 10:07:44] [INFO    ] 
+--- Symbol 3/3: BTC_MEANTXFEES ---
+[2025-11-14 10:07:44] [INFO    ] Fetching GLASSNODE:BTC_MEANTXFEES (attempt 1/4)
+[2025-11-14 10:07:46] [SUCCESS ] Fetched 1095 points for GLASSNODE:BTC_MEANTXFEES
+[2025-11-14 10:07:46] [INFO    ]   Date range: 2022-11-14 to 2025-11-12
+[2025-11-14 10:07:46] [INFO    ] Validating BTC_MEANTXFEES...
+[2025-11-14 10:07:46] [WARNING ] 11 warnings for BTC_MEANTXFEES:
+[2025-11-14 10:07:46] [WARNING ]   - 20 sampled timestamps not at midnight UTC
+[2025-11-14 10:07:46] [WARNING ]   - 99 suspicious spikes detected (>50% daily change):

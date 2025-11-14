@@ -1,0 +1,21 @@
+[
+  {
+    "timestamp": "2025-11-14T06:46:43.417616+00:00",
+    "updated": 0,
+    "up_to_date": 2,
+    "failed": 1,
+    "details": {
+      "updated": [],
+      "no_new_data": [
+        "GLASSNODE:BTC_SOPR",
+        "GLASSNODE:BTC_MEDIANVOLUME"
+      ],
+      "failed": [
+        {
+          "symbol": "GLASSNODE:BTC_MEANTXFEES",
+          "error": "No data returned"
+        }
+      ]
+    }
+  }
+]

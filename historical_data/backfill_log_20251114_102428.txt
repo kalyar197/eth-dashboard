@@ -1,0 +1,388 @@
+[2025-11-14 10:24:28] [INFO    ] ================================================================================
+[2025-11-14 10:24:28] [INFO    ] TRADINGVIEW BACKFILL SCRIPT - STARTING
+[2025-11-14 10:24:28] [INFO    ] ================================================================================
+[2025-11-14 10:24:28] [INFO    ] Dry-run mode: False
+[2025-11-14 10:24:28] [INFO    ] Resume mode: False
+[2025-11-14 10:24:28] [INFO    ] Log file: C:\Users\majee\Desktop\Dash\historical_data\backfill_log_20251114_102428.txt
+[2025-11-14 10:24:28] [INFO    ] 
+[2025-11-14 10:24:28] [INFO    ] Loaded 27 symbols from config
+[2025-11-14 10:24:28] [INFO    ] Symbols grouped into 9 exchanges
+[2025-11-14 10:24:28] [INFO    ] 
+[2025-11-14 10:24:28] [INFO    ] Processing exchange 1/9: GLASSNODE (7 symbols)
+[2025-11-14 10:24:28] [INFO    ] 
+--- Symbol 1/7: BTC_SOPR ---
+[2025-11-14 10:24:28] [INFO    ] Fetching GLASSNODE:BTC_SOPR (attempt 1/4)
+[2025-11-14 10:24:29] [SUCCESS ] Fetched 1095 points for GLASSNODE:BTC_SOPR
+[2025-11-14 10:24:29] [INFO    ]   Date range: 2022-11-14 to 2025-11-12
+[2025-11-14 10:24:29] [INFO    ] Validating BTC_SOPR...
+[2025-11-14 10:24:29] [WARNING ] 5 warnings for BTC_SOPR:
+[2025-11-14 10:24:29] [WARNING ]   - 20 sampled timestamps not at midnight UTC
+[2025-11-14 10:24:29] [WARNING ]   - 5 extreme outliers (>5 sigma from mean):
+[2025-11-14 10:24:29] [WARNING ]   -   - 2022-11-18: 0.87 (7.4sigma)
+[2025-11-14 10:24:29] [WARNING ]   -   - 2023-03-30: 0.88 (7.1sigma)
+[2025-11-14 10:24:29] [WARNING ]   -   - 2024-03-23: 1.13 (6.7sigma)
+[2025-11-14 10:24:29] [INFO    ] Standardizing timestamps for BTC_SOPR...
+[2025-11-14 10:24:29] [INFO    ] Standardized 1095 -> 1095 points
+[2025-11-14 10:24:29] [SUCCESS ] Saved 1095 points for BTC_SOPR to cache
+[2025-11-14 10:24:29] [INFO    ] Rate limit delay: 3s...
+[2025-11-14 10:24:32] [INFO    ] 
+--- Symbol 2/7: BTC_MEDIANVOLUME ---
+[2025-11-14 10:24:32] [INFO    ] Fetching GLASSNODE:BTC_MEDIANVOLUME (attempt 1/4)
+[2025-11-14 10:24:34] [SUCCESS ] Fetched 1095 points for GLASSNODE:BTC_MEDIANVOLUME
+[2025-11-14 10:24:34] [INFO    ]   Date range: 2022-11-14 to 2025-11-12
+[2025-11-14 10:24:34] [INFO    ] Validating BTC_MEDIANVOLUME...
+[2025-11-14 10:24:34] [WARNING ] 11 warnings for BTC_MEDIANVOLUME:
+[2025-11-14 10:24:34] [WARNING ]   - 20 sampled timestamps not at midnight UTC
+[2025-11-14 10:24:34] [WARNING ]   - 76 large daily changes (>200%):
+[2025-11-14 10:24:34] [WARNING ]   -   - 2023-04-23: 0.00 -> 0.01 (1545.5% change)
+[2025-11-14 10:24:34] [WARNING ]   -   - 2023-05-01: 0.00 -> 0.00 (6662.4% change)
+[2025-11-14 10:24:34] [WARNING ]   -   - 2023-05-07: 0.00 -> 0.00 (1535.3% change)
+[2025-11-14 10:24:34] [INFO    ] Standardizing timestamps for BTC_MEDIANVOLUME...
+[2025-11-14 10:24:34] [INFO    ] Standardized 1095 -> 1095 points
+[2025-11-14 10:24:34] [SUCCESS ] Saved 1095 points for BTC_MEDIANVOLUME to cache
+[2025-11-14 10:24:34] [INFO    ] Rate limit delay: 3s...
+[2025-11-14 10:24:37] [INFO    ] 
+--- Symbol 3/7: BTC_MEANTXFEES ---
+[2025-11-14 10:24:37] [INFO    ] Fetching GLASSNODE:BTC_MEANTXFEES (attempt 1/4)
+[2025-11-14 10:24:39] [SUCCESS ] Fetched 1095 points for GLASSNODE:BTC_MEANTXFEES
+[2025-11-14 10:24:39] [INFO    ]   Date range: 2022-11-14 to 2025-11-12
+[2025-11-14 10:24:39] [INFO    ] Validating BTC_MEANTXFEES...
+[2025-11-14 10:24:39] [WARNING ] 15 warnings for BTC_MEANTXFEES:
+[2025-11-14 10:24:39] [WARNING ]   - 20 sampled timestamps not at midnight UTC
+[2025-11-14 10:24:39] [WARNING ]   - 4 large daily changes (>200%):
+[2025-11-14 10:24:39] [WARNING ]   -   - 2024-04-19: 0.00 -> 0.00 (570.0% change)
+[2025-11-14 10:24:39] [WARNING ]   -   - 2024-06-06: 0.00 -> 0.00 (1003.5% change)
+[2025-11-14 10:24:39] [WARNING ]   -   - 2024-08-21: 0.00 -> 0.00 (922.7% change)
+[2025-11-14 10:24:39] [INFO    ] Standardizing timestamps for BTC_MEANTXFEES...
+[2025-11-14 10:24:39] [INFO    ] Standardized 1095 -> 1095 points
+[2025-11-14 10:24:39] [SUCCESS ] Saved 1095 points for BTC_MEANTXFEES to cache
+[2025-11-14 10:24:39] [INFO    ] Rate limit delay: 3s...
+[2025-11-14 10:24:42] [INFO    ] 
+--- Symbol 4/7: BTC_SENDINGADDRESSES ---
+[2025-11-14 10:24:42] [INFO    ] Fetching GLASSNODE:BTC_SENDINGADDRESSES (attempt 1/4)
+[2025-11-14 10:24:43] [SUCCESS ] Fetched 1095 points for GLASSNODE:BTC_SENDINGADDRESSES
+[2025-11-14 10:24:43] [INFO    ]   Date range: 2022-11-14 to 2025-11-12
+[2025-11-14 10:24:43] [INFO    ] Validating BTC_SENDINGADDRESSES...
+[2025-11-14 10:24:43] [WARNING ] 6 warnings for BTC_SENDINGADDRESSES:
+[2025-11-14 10:24:43] [WARNING ]   - 20 sampled timestamps not at midnight UTC
+[2025-11-14 10:24:43] [WARNING ]   - 4 suspicious spikes detected (>50% daily change):
+[2025-11-14 10:24:43] [WARNING ]   -   - 2024-03-31: 393499.00 -> 605410.00 (53.9% change)
+[2025-11-14 10:24:43] [WARNING ]   -   - 2024-04-23: 295564.00 -> 465393.00 (57.5% change)
+[2025-11-14 10:24:43] [WARNING ]   -   - 2024-06-23: 332981.00 -> 511679.00 (53.7% change)
+[2025-11-14 10:24:43] [INFO    ] Standardizing timestamps for BTC_SENDINGADDRESSES...
+[2025-11-14 10:24:43] [INFO    ] Standardized 1095 -> 1095 points
+[2025-11-14 10:24:43] [SUCCESS ] Saved 1095 points for BTC_SENDINGADDRESSES to cache
+[2025-11-14 10:24:43] [INFO    ] Rate limit delay: 3s...
+[2025-11-14 10:24:46] [INFO    ] 
+--- Symbol 5/7: BTC_ACTIVE1Y ---
+[2025-11-14 10:24:46] [INFO    ] Fetching GLASSNODE:BTC_ACTIVE1Y (attempt 1/4)
+[2025-11-14 10:24:48] [SUCCESS ] Fetched 1095 points for GLASSNODE:BTC_ACTIVE1Y
+[2025-11-14 10:24:48] [INFO    ]   Date range: 2022-11-14 to 2025-11-12
+[2025-11-14 10:24:48] [INFO    ] Validating BTC_ACTIVE1Y...
+[2025-11-14 10:24:48] [WARNING ] 1 warnings for BTC_ACTIVE1Y:
+[2025-11-14 10:24:48] [WARNING ]   - 20 sampled timestamps not at midnight UTC
+[2025-11-14 10:24:48] [INFO    ] Standardizing timestamps for BTC_ACTIVE1Y...
+[2025-11-14 10:24:48] [INFO    ] Standardized 1095 -> 1095 points
+[2025-11-14 10:24:48] [SUCCESS ] Saved 1095 points for BTC_ACTIVE1Y to cache
+[2025-11-14 10:24:48] [INFO    ] Rate limit delay: 3s...
+[2025-11-14 10:24:51] [INFO    ] 
+--- Symbol 6/7: BTC_RECEIVINGADDRESSES ---
+[2025-11-14 10:24:51] [INFO    ] Fetching GLASSNODE:BTC_RECEIVINGADDRESSES (attempt 1/4)
+[2025-11-14 10:24:52] [SUCCESS ] Fetched 1095 points for GLASSNODE:BTC_RECEIVINGADDRESSES
+[2025-11-14 10:24:52] [INFO    ]   Date range: 2022-11-14 to 2025-11-12
+[2025-11-14 10:24:52] [INFO    ] Validating BTC_RECEIVINGADDRESSES...
+[2025-11-14 10:24:52] [WARNING ] 1 warnings for BTC_RECEIVINGADDRESSES:
+[2025-11-14 10:24:52] [WARNING ]   - 20 sampled timestamps not at midnight UTC
+[2025-11-14 10:24:52] [INFO    ] Standardizing timestamps for BTC_RECEIVINGADDRESSES...
+[2025-11-14 10:24:52] [INFO    ] Standardized 1095 -> 1095 points
+[2025-11-14 10:24:52] [SUCCESS ] Saved 1095 points for BTC_RECEIVINGADDRESSES to cache
+[2025-11-14 10:24:52] [INFO    ] Rate limit delay: 3s...
+[2025-11-14 10:24:55] [INFO    ] 
+--- Symbol 7/7: BTC_NEWADDRESSES ---
+[2025-11-14 10:24:55] [INFO    ] Fetching GLASSNODE:BTC_NEWADDRESSES (attempt 1/4)
+[2025-11-14 10:24:57] [SUCCESS ] Fetched 1095 points for GLASSNODE:BTC_NEWADDRESSES
+[2025-11-14 10:24:57] [INFO    ]   Date range: 2022-11-14 to 2025-11-12
+[2025-11-14 10:24:57] [INFO    ] Validating BTC_NEWADDRESSES...
+[2025-11-14 10:24:57] [WARNING ] 3 warnings for BTC_NEWADDRESSES:
+[2025-11-14 10:24:57] [WARNING ]   - 20 sampled timestamps not at midnight UTC
+[2025-11-14 10:24:57] [WARNING ]   - 1 suspicious spikes detected (>50% daily change):
+[2025-11-14 10:24:57] [WARNING ]   -   - 2023-09-08: 452687.00 -> 717331.00 (58.5% change)
+[2025-11-14 10:24:57] [INFO    ] Standardizing timestamps for BTC_NEWADDRESSES...
+[2025-11-14 10:24:57] [INFO    ] Standardized 1095 -> 1095 points
+[2025-11-14 10:24:57] [SUCCESS ] Saved 1095 points for BTC_NEWADDRESSES to cache
+[2025-11-14 10:24:57] [INFO    ] Processing exchange 2/9: COINMETRICS (8 symbols)
+[2025-11-14 10:24:57] [INFO    ] Exchange cooldown: waiting 5 seconds...
+[2025-11-14 10:25:02] [INFO    ] 
+--- Symbol 1/8: BTC_SER ---
+[2025-11-14 10:25:02] [INFO    ] Fetching COINMETRICS:BTC_SER (attempt 1/4)
+[2025-11-14 10:25:03] [SUCCESS ] Fetched 1095 points for COINMETRICS:BTC_SER
+[2025-11-14 10:25:03] [INFO    ]   Date range: 2022-11-15 to 2025-11-13
+[2025-11-14 10:25:03] [INFO    ] Validating BTC_SER...
+[2025-11-14 10:25:03] [WARNING ] 1 warnings for BTC_SER:
+[2025-11-14 10:25:03] [WARNING ]   - 20 sampled timestamps not at midnight UTC
+[2025-11-14 10:25:03] [INFO    ] Standardizing timestamps for BTC_SER...
+[2025-11-14 10:25:03] [INFO    ] Standardized 1095 -> 1095 points
+[2025-11-14 10:25:03] [SUCCESS ] Saved 1095 points for BTC_SER to cache
+[2025-11-14 10:25:03] [INFO    ] Rate limit delay: 3s...
+[2025-11-14 10:25:06] [INFO    ] 
+--- Symbol 2/8: BTC_AVGTX ---
+[2025-11-14 10:25:06] [INFO    ] Fetching COINMETRICS:BTC_AVGTX (attempt 1/4)
+[2025-11-14 10:25:08] [SUCCESS ] Fetched 1095 points for COINMETRICS:BTC_AVGTX
+[2025-11-14 10:25:08] [INFO    ]   Date range: 2022-11-15 to 2025-11-13
+[2025-11-14 10:25:08] [INFO    ] Validating BTC_AVGTX...
+[2025-11-14 10:25:08] [WARNING ] 13 warnings for BTC_AVGTX:
+[2025-11-14 10:25:08] [WARNING ]   - 20 sampled timestamps not at midnight UTC
+[2025-11-14 10:25:08] [WARNING ]   - 11 large daily changes (>200%):
+[2025-11-14 10:25:08] [WARNING ]   -   - 2024-05-27: 0.16 -> 0.54 (237.1% change)
+[2025-11-14 10:25:08] [WARNING ]   -   - 2024-07-14: 0.09 -> 0.28 (201.4% change)
+[2025-11-14 10:25:08] [WARNING ]   -   - 2024-07-28: 0.09 -> 0.31 (228.9% change)
+[2025-11-14 10:25:08] [INFO    ] Standardizing timestamps for BTC_AVGTX...
+[2025-11-14 10:25:08] [INFO    ] Standardized 1095 -> 1095 points
+[2025-11-14 10:25:08] [SUCCESS ] Saved 1095 points for BTC_AVGTX to cache
+[2025-11-14 10:25:08] [INFO    ] Rate limit delay: 3s...
+[2025-11-14 10:25:11] [INFO    ] 
+--- Symbol 3/8: BTC_TXCOUNT ---
+[2025-11-14 10:25:11] [INFO    ] Fetching COINMETRICS:BTC_TXCOUNT (attempt 1/4)
+[2025-11-14 10:25:13] [SUCCESS ] Fetched 1095 points for COINMETRICS:BTC_TXCOUNT
+[2025-11-14 10:25:13] [INFO    ]   Date range: 2022-11-15 to 2025-11-13
+[2025-11-14 10:25:13] [INFO    ] Validating BTC_TXCOUNT...
+[2025-11-14 10:25:13] [WARNING ] 7 warnings for BTC_TXCOUNT:
+[2025-11-14 10:25:13] [WARNING ]   - 20 sampled timestamps not at midnight UTC
+[2025-11-14 10:25:13] [WARNING ]   - 21 suspicious spikes detected (>50% daily change):
+[2025-11-14 10:25:13] [WARNING ]   -   - 2023-07-22: 288229.00 -> 560423.00 (94.4% change)
+[2025-11-14 10:25:13] [WARNING ]   -   - 2023-07-29: 423912.00 -> 645339.00 (52.2% change)
+[2025-11-14 10:25:13] [WARNING ]   -   - 2023-08-04: 318338.00 -> 499440.00 (56.9% change)
+[2025-11-14 10:25:13] [INFO    ] Standardizing timestamps for BTC_TXCOUNT...
+[2025-11-14 10:25:13] [INFO    ] Standardized 1095 -> 1095 points
+[2025-11-14 10:25:13] [SUCCESS ] Saved 1095 points for BTC_TXCOUNT to cache
+[2025-11-14 10:25:13] [INFO    ] Rate limit delay: 3s...
+[2025-11-14 10:25:16] [INFO    ] 
+--- Symbol 4/8: BTC_SPLYADRBAL ---
+[2025-11-14 10:25:16] [INFO    ] Fetching COINMETRICS:BTC_SPLYADRBAL (attempt 1/4)
+[2025-11-14 10:25:21] [WARNING ] No data returned for COINMETRICS:BTC_SPLYADRBAL
+[2025-11-14 10:25:31] [INFO    ] 
+--- Symbol 5/8: BTC_ADDRESSESSUPPLY1IN10K ---
+[2025-11-14 10:25:31] [INFO    ] Fetching COINMETRICS:BTC_ADDRESSESSUPPLY1IN10K (attempt 1/4)
+[2025-11-14 10:25:33] [SUCCESS ] Fetched 1095 points for COINMETRICS:BTC_ADDRESSESSUPPLY1IN10K
+[2025-11-14 10:25:33] [INFO    ]   Date range: 2022-11-15 to 2025-11-13
+[2025-11-14 10:25:33] [INFO    ] Validating BTC_ADDRESSESSUPPLY1IN10K...
+[2025-11-14 10:25:33] [WARNING ] 1 warnings for BTC_ADDRESSESSUPPLY1IN10K:
+[2025-11-14 10:25:33] [WARNING ]   - 20 sampled timestamps not at midnight UTC
+[2025-11-14 10:25:33] [INFO    ] Standardizing timestamps for BTC_ADDRESSESSUPPLY1IN10K...
+[2025-11-14 10:25:33] [INFO    ] Standardized 1095 -> 1095 points
+[2025-11-14 10:25:33] [SUCCESS ] Saved 1095 points for BTC_ADDRESSESSUPPLY1IN10K to cache
+[2025-11-14 10:25:33] [INFO    ] Rate limit delay: 3s...
+[2025-11-14 10:25:36] [INFO    ] 
+--- Symbol 6/8: BTC_LARGETXCOUNT ---
+[2025-11-14 10:25:36] [INFO    ] Fetching COINMETRICS:BTC_LARGETXCOUNT (attempt 1/4)
+[2025-11-14 10:25:38] [SUCCESS ] Fetched 1095 points for COINMETRICS:BTC_LARGETXCOUNT
+[2025-11-14 10:25:38] [INFO    ]   Date range: 2022-11-15 to 2025-11-13
+[2025-11-14 10:25:38] [INFO    ] Validating BTC_LARGETXCOUNT...
+[2025-11-14 10:25:38] [WARNING ] 7 warnings for BTC_LARGETXCOUNT:
+[2025-11-14 10:25:38] [WARNING ]   - 20 sampled timestamps not at midnight UTC
+[2025-11-14 10:25:38] [WARNING ]   - 93 suspicious spikes detected (>50% daily change):
+[2025-11-14 10:25:38] [WARNING ]   -   - 2022-12-04: 4451.00 -> 7006.00 (57.4% change)
+[2025-11-14 10:25:38] [WARNING ]   -   - 2022-12-18: 3960.00 -> 6363.00 (60.7% change)
+[2025-11-14 10:25:38] [WARNING ]   -   - 2023-01-01: 3374.00 -> 5887.00 (74.5% change)
+[2025-11-14 10:25:38] [INFO    ] Standardizing timestamps for BTC_LARGETXCOUNT...
+[2025-11-14 10:25:38] [INFO    ] Standardized 1095 -> 1095 points
+[2025-11-14 10:25:38] [SUCCESS ] Saved 1095 points for BTC_LARGETXCOUNT to cache
+[2025-11-14 10:25:38] [INFO    ] Rate limit delay: 3s...
+[2025-11-14 10:25:41] [INFO    ] 
+--- Symbol 7/8: BTC_ACTIVESUPPLY1Y ---
+[2025-11-14 10:25:41] [INFO    ] Fetching COINMETRICS:BTC_ACTIVESUPPLY1Y (attempt 1/4)
+[2025-11-14 10:25:42] [SUCCESS ] Fetched 1095 points for COINMETRICS:BTC_ACTIVESUPPLY1Y
+[2025-11-14 10:25:42] [INFO    ]   Date range: 2022-11-15 to 2025-11-13
+[2025-11-14 10:25:42] [INFO    ] Validating BTC_ACTIVESUPPLY1Y...
+[2025-11-14 10:25:42] [WARNING ] 1 warnings for BTC_ACTIVESUPPLY1Y:
+[2025-11-14 10:25:42] [WARNING ]   - 20 sampled timestamps not at midnight UTC
+[2025-11-14 10:25:42] [INFO    ] Standardizing timestamps for BTC_ACTIVESUPPLY1Y...
+[2025-11-14 10:25:42] [INFO    ] Standardized 1095 -> 1095 points
+[2025-11-14 10:25:42] [SUCCESS ] Saved 1095 points for BTC_ACTIVESUPPLY1Y to cache
+[2025-11-14 10:25:42] [INFO    ] Rate limit delay: 3s...
+[2025-11-14 10:25:45] [INFO    ] 
+--- Symbol 8/8: USDT_AVGTX ---
+[2025-11-14 10:25:45] [INFO    ] Fetching COINMETRICS:USDT_AVGTX (attempt 1/4)
+[2025-11-14 10:25:47] [SUCCESS ] Fetched 1095 points for COINMETRICS:USDT_AVGTX
+[2025-11-14 10:25:47] [INFO    ]   Date range: 2022-11-15 to 2025-11-13
+[2025-11-14 10:25:47] [INFO    ] Validating USDT_AVGTX...
+[2025-11-14 10:25:47] [WARNING ] 12 warnings for USDT_AVGTX:
+[2025-11-14 10:25:47] [WARNING ]   - 20 sampled timestamps not at midnight UTC
+[2025-11-14 10:25:47] [WARNING ]   - 1 large daily changes (>200%):
+[2025-11-14 10:25:47] [WARNING ]   -   - 2022-12-12: 7153.43 -> 22537.26 (215.1% change)
+[2025-11-14 10:25:47] [WARNING ]   - 139 suspicious spikes detected (>50% daily change):
+[2025-11-14 10:25:47] [WARNING ]   -   - 2022-11-20: 4819.86 -> 7893.58 (63.8% change)
+[2025-11-14 10:25:47] [INFO    ] Standardizing timestamps for USDT_AVGTX...
+[2025-11-14 10:25:47] [INFO    ] Standardized 1095 -> 1095 points
+[2025-11-14 10:25:47] [SUCCESS ] Saved 1095 points for USDT_AVGTX to cache
+[2025-11-14 10:25:47] [INFO    ] Processing exchange 3/9: KRAKEN (1 symbols)
+[2025-11-14 10:25:47] [INFO    ] Exchange cooldown: waiting 5 seconds...
+[2025-11-14 10:25:52] [INFO    ] 
+--- Symbol 1/1: USDT_TFSPS ---
+[2025-11-14 10:25:52] [INFO    ] Fetching KRAKEN:USDT_TFSPS (attempt 1/4)
+[2025-11-14 10:25:58] [WARNING ] No data returned for KRAKEN:USDT_TFSPS
+[2025-11-14 10:26:08] [INFO    ] Processing exchange 4/9: LUNARCRUSH (5 symbols)
+[2025-11-14 10:26:08] [INFO    ] Exchange cooldown: waiting 5 seconds...
+[2025-11-14 10:26:13] [INFO    ] 
+--- Symbol 1/5: USDTUSD.PM ---
+[2025-11-14 10:26:13] [INFO    ] Fetching LUNARCRUSH:USDTUSD.PM (attempt 1/4)
+[2025-11-14 10:26:19] [WARNING ] No data returned for LUNARCRUSH:USDTUSD.PM
+[2025-11-14 10:26:29] [INFO    ] 
+--- Symbol 2/5: BTC_POSTSCREATED ---
+[2025-11-14 10:26:29] [INFO    ] Fetching LUNARCRUSH:BTC_POSTSCREATED (attempt 1/4)
+[2025-11-14 10:26:32] [SUCCESS ] Fetched 1095 points for LUNARCRUSH:BTC_POSTSCREATED
+[2025-11-14 10:26:32] [INFO    ]   Date range: 2022-11-16 to 2025-11-14
+[2025-11-14 10:26:32] [INFO    ] Validating BTC_POSTSCREATED...
+[2025-11-14 10:26:32] [WARNING ] 14 warnings for BTC_POSTSCREATED:
+[2025-11-14 10:26:32] [WARNING ]   - 20 sampled timestamps not at midnight UTC
+[2025-11-14 10:26:32] [WARNING ]   - 13 large daily changes (>200%):
+[2025-11-14 10:26:32] [WARNING ]   -   - 2023-02-13: 30.00 -> 346.00 (1053.3% change)
+[2025-11-14 10:26:32] [WARNING ]   -   - 2023-04-24: 265.00 -> 1510.00 (469.8% change)
+[2025-11-14 10:26:32] [WARNING ]   -   - 2023-05-27: 235.00 -> 880.00 (274.5% change)
+[2025-11-14 10:26:32] [INFO    ] Standardizing timestamps for BTC_POSTSCREATED...
+[2025-11-14 10:26:32] [INFO    ] Standardized 1095 -> 1095 points
+[2025-11-14 10:26:32] [SUCCESS ] Saved 1095 points for BTC_POSTSCREATED to cache
+[2025-11-14 10:26:32] [INFO    ] Rate limit delay: 3s...
+[2025-11-14 10:26:35] [INFO    ] 
+--- Symbol 3/5: BTC_CONTRIBUTORSCREATED ---
+[2025-11-14 10:26:35] [INFO    ] Fetching LUNARCRUSH:BTC_CONTRIBUTORSCREATED (attempt 1/4)
+[2025-11-14 10:26:38] [SUCCESS ] Fetched 1095 points for LUNARCRUSH:BTC_CONTRIBUTORSCREATED
+[2025-11-14 10:26:38] [INFO    ]   Date range: 2022-11-16 to 2025-11-14
+[2025-11-14 10:26:38] [INFO    ] Validating BTC_CONTRIBUTORSCREATED...
+[2025-11-14 10:26:38] [WARNING ] 15 warnings for BTC_CONTRIBUTORSCREATED:
+[2025-11-14 10:26:38] [WARNING ]   - 20 sampled timestamps not at midnight UTC
+[2025-11-14 10:26:38] [WARNING ]   - 12 large daily changes (>200%):
+[2025-11-14 10:26:38] [WARNING ]   -   - 2023-02-13: 28.00 -> 316.00 (1028.6% change)
+[2025-11-14 10:26:38] [WARNING ]   -   - 2023-04-24: 208.00 -> 1098.00 (427.9% change)
+[2025-11-14 10:26:38] [WARNING ]   -   - 2023-05-27: 183.00 -> 777.00 (324.6% change)
+[2025-11-14 10:26:38] [INFO    ] Standardizing timestamps for BTC_CONTRIBUTORSCREATED...
+[2025-11-14 10:26:38] [INFO    ] Standardized 1095 -> 1095 points
+[2025-11-14 10:26:38] [SUCCESS ] Saved 1095 points for BTC_CONTRIBUTORSCREATED to cache
+[2025-11-14 10:26:38] [INFO    ] Rate limit delay: 3s...
+[2025-11-14 10:26:41] [INFO    ] 
+--- Symbol 4/5: BTC_SOCIALDOMINANCE ---
+[2025-11-14 10:26:41] [INFO    ] Fetching LUNARCRUSH:BTC_SOCIALDOMINANCE (attempt 1/4)
+[2025-11-14 10:26:44] [SUCCESS ] Fetched 1095 points for LUNARCRUSH:BTC_SOCIALDOMINANCE
+[2025-11-14 10:26:44] [INFO    ]   Date range: 2022-11-08 to 2025-11-14
+[2025-11-14 10:26:44] [INFO    ] Validating BTC_SOCIALDOMINANCE...
+[2025-11-14 10:26:44] [WARNING ] 11 warnings for BTC_SOCIALDOMINANCE:
+[2025-11-14 10:26:44] [WARNING ]   - 20 sampled timestamps not at midnight UTC
+[2025-11-14 10:26:44] [WARNING ]   - 3 large daily changes (>200%):
+[2025-11-14 10:26:44] [WARNING ]   -   - 2024-05-10: 27.26 -> 88.85 (225.9% change)
+[2025-11-14 10:26:44] [WARNING ]   -   - 2024-09-14: 20.80 -> 67.86 (226.2% change)
+[2025-11-14 10:26:44] [WARNING ]   -   - 2024-10-30: 4.99 -> 18.68 (274.2% change)
+[2025-11-14 10:26:44] [INFO    ] Standardizing timestamps for BTC_SOCIALDOMINANCE...
+[2025-11-14 10:26:44] [INFO    ] Standardized 1095 -> 1103 points
+[2025-11-14 10:26:44] [SUCCESS ] Saved 1103 points for BTC_SOCIALDOMINANCE to cache
+[2025-11-14 10:26:44] [INFO    ] Rate limit delay: 3s...
+[2025-11-14 10:26:47] [INFO    ] 
+--- Symbol 5/5: BTC_CONTRIBUTORSACTIVE ---
+[2025-11-14 10:26:47] [INFO    ] Fetching LUNARCRUSH:BTC_CONTRIBUTORSACTIVE (attempt 1/4)
+[2025-11-14 10:26:49] [SUCCESS ] Fetched 1095 points for LUNARCRUSH:BTC_CONTRIBUTORSACTIVE
+[2025-11-14 10:26:49] [INFO    ]   Date range: 2022-11-16 to 2025-11-14
+[2025-11-14 10:26:49] [INFO    ] Validating BTC_CONTRIBUTORSACTIVE...
+[2025-11-14 10:26:49] [WARNING ] 9 warnings for BTC_CONTRIBUTORSACTIVE:
+[2025-11-14 10:26:49] [WARNING ]   - 20 sampled timestamps not at midnight UTC
+[2025-11-14 10:26:49] [WARNING ]   - 1 large daily changes (>200%):
+[2025-11-14 10:26:49] [WARNING ]   -   - 2023-03-14: 5812.00 -> 54686.00 (840.9% change)
+[2025-11-14 10:26:49] [WARNING ]   - 14 suspicious spikes detected (>50% daily change):
+[2025-11-14 10:26:49] [WARNING ]   -   - 2023-02-03: 3883.00 -> 1809.00 (53.4% change)
+[2025-11-14 10:26:49] [INFO    ] Standardizing timestamps for BTC_CONTRIBUTORSACTIVE...
+[2025-11-14 10:26:49] [INFO    ] Standardized 1095 -> 1095 points
+[2025-11-14 10:26:49] [SUCCESS ] Saved 1095 points for BTC_CONTRIBUTORSACTIVE to cache
+[2025-11-14 10:26:49] [INFO    ] Processing exchange 5/9: DEFILLAMA (1 symbols)
+[2025-11-14 10:26:49] [INFO    ] Exchange cooldown: waiting 5 seconds...
+[2025-11-14 10:26:54] [INFO    ] 
+--- Symbol 1/1: BTCST_TVL ---
+[2025-11-14 10:26:54] [INFO    ] Fetching DEFILLAMA:BTCST_TVL (attempt 1/4)
+[2025-11-14 10:26:56] [SUCCESS ] Fetched 1095 points for DEFILLAMA:BTCST_TVL
+[2025-11-14 10:26:56] [INFO    ]   Date range: 2022-11-15 to 2025-11-13
+[2025-11-14 10:26:56] [INFO    ] Validating BTCST_TVL...
+[2025-11-14 10:26:56] [WARNING ] 7 warnings for BTCST_TVL:
+[2025-11-14 10:26:56] [WARNING ]   - 20 sampled timestamps not at midnight UTC
+[2025-11-14 10:26:56] [WARNING ]   - 1 suspicious spikes detected (>50% daily change):
+[2025-11-14 10:26:56] [WARNING ]   -   - 2023-12-16: 3043202.00 -> 5509785.00 (81.1% change)
+[2025-11-14 10:26:56] [WARNING ]   - 24 extreme outliers (>5 sigma from mean):
+[2025-11-14 10:26:56] [WARNING ]   -   - 2022-11-15: 35144285.00 (6.3sigma)
+[2025-11-14 10:26:56] [INFO    ] Standardizing timestamps for BTCST_TVL...
+[2025-11-14 10:26:56] [INFO    ] Standardized 1095 -> 1095 points
+[2025-11-14 10:26:56] [SUCCESS ] Saved 1095 points for BTCST_TVL to cache
+[2025-11-14 10:26:56] [INFO    ] Processing exchange 6/9: NASDAQ (1 symbols)
+[2025-11-14 10:26:56] [INFO    ] Exchange cooldown: waiting 5 seconds...
+[2025-11-14 10:27:01] [INFO    ] 
+--- Symbol 1/1: IBIT ---
+[2025-11-14 10:27:01] [INFO    ] Fetching NASDAQ:IBIT (attempt 1/4)
+[2025-11-14 10:27:02] [WARNING ] No data returned for NASDAQ:IBIT
+[2025-11-14 10:27:12] [INFO    ] Processing exchange 7/9: AMEX (1 symbols)
+[2025-11-14 10:27:12] [INFO    ] Exchange cooldown: waiting 5 seconds...
+[2025-11-14 10:27:17] [INFO    ] 
+--- Symbol 1/1: GBTC ---
+[2025-11-14 10:27:17] [INFO    ] Fetching AMEX:GBTC (attempt 1/4)
+[2025-11-14 10:27:18] [SUCCESS ] Fetched 1095 points for AMEX:GBTC
+[2025-11-14 10:27:18] [INFO    ]   Date range: 2021-07-08 to 2025-11-13
+[2025-11-14 10:27:18] [INFO    ] Validating GBTC...
+[2025-11-14 10:27:18] [WARNING ] 2 warnings for GBTC:
+[2025-11-14 10:27:18] [WARNING ]   - 20 sampled timestamps not at midnight UTC
+[2025-11-14 10:27:18] [WARNING ]   - No value range defined for GBTC, skipping range validation
+[2025-11-14 10:27:18] [INFO    ] Standardizing timestamps for GBTC...
+[2025-11-14 10:27:18] [INFO    ] Standardized 1095 -> 1590 points
+[2025-11-14 10:27:18] [SUCCESS ] Saved 1590 points for GBTC to cache
+[2025-11-14 10:27:18] [INFO    ] Processing exchange 8/9: CRYPTOCAP (2 symbols)
+[2025-11-14 10:27:18] [INFO    ] Exchange cooldown: waiting 5 seconds...
+[2025-11-14 10:27:23] [INFO    ] 
+--- Symbol 1/2: TOTAL3 ---
+[2025-11-14 10:27:23] [INFO    ] Fetching CRYPTOCAP:TOTAL3 (attempt 1/4)
+[2025-11-14 10:27:25] [SUCCESS ] Fetched 1095 points for CRYPTOCAP:TOTAL3
+[2025-11-14 10:27:25] [INFO    ]   Date range: 2022-11-16 to 2025-11-14
+[2025-11-14 10:27:25] [INFO    ] Validating TOTAL3...
+[2025-11-14 10:27:25] [WARNING ] 1 warnings for TOTAL3:
+[2025-11-14 10:27:25] [WARNING ]   - 20 sampled timestamps not at midnight UTC
+[2025-11-14 10:27:25] [INFO    ] Standardizing timestamps for TOTAL3...
+[2025-11-14 10:27:25] [INFO    ] Standardized 1095 -> 1095 points
+[2025-11-14 10:27:25] [SUCCESS ] Saved 1095 points for TOTAL3 to cache
+[2025-11-14 10:27:25] [INFO    ] Rate limit delay: 3s...
+[2025-11-14 10:27:28] [INFO    ] 
+--- Symbol 2/2: STABLE.C.D ---
+[2025-11-14 10:27:28] [INFO    ] Fetching CRYPTOCAP:STABLE.C.D (attempt 1/4)
+[2025-11-14 10:27:29] [SUCCESS ] Fetched 180 points for CRYPTOCAP:STABLE.C.D
+[2025-11-14 10:27:29] [INFO    ]   Date range: 2025-05-19 to 2025-11-14
+[2025-11-14 10:27:29] [INFO    ] Validating STABLE.C.D...
+[2025-11-14 10:27:29] [WARNING ] 2 warnings for STABLE.C.D:
+[2025-11-14 10:27:29] [WARNING ]   - Less data than typical 3-year history: got 180 points, expected ~1018
+[2025-11-14 10:27:29] [WARNING ]   - 20 sampled timestamps not at midnight UTC
+[2025-11-14 10:27:29] [INFO    ] Standardizing timestamps for STABLE.C.D...
+[2025-11-14 10:27:29] [INFO    ] Standardized 180 -> 180 points
+[2025-11-14 10:27:29] [SUCCESS ] Saved 180 points for STABLE.C.D to cache
+[2025-11-14 10:27:29] [INFO    ] Processing exchange 9/9: FRED (1 symbols)
+[2025-11-14 10:27:29] [INFO    ] Exchange cooldown: waiting 5 seconds...
+[2025-11-14 10:27:34] [INFO    ] 
+--- Symbol 1/1: RRPONTSYD ---
+[2025-11-14 10:27:34] [INFO    ] Fetching FRED:RRPONTSYD (attempt 1/4)
+[2025-11-14 10:27:35] [SUCCESS ] Fetched 1095 points for FRED:RRPONTSYD
+[2025-11-14 10:27:35] [INFO    ]   Date range: 2021-06-25 to 2025-11-13
+[2025-11-14 10:27:35] [INFO    ] Validating RRPONTSYD...
+[2025-11-14 10:27:35] [WARNING ] 10 warnings for RRPONTSYD:
+[2025-11-14 10:27:35] [WARNING ]   - 20 sampled timestamps not at midnight UTC
+[2025-11-14 10:27:35] [WARNING ]   - 2 large daily changes (>200%):
+[2025-11-14 10:27:35] [WARNING ]   -   - 2025-10-02: 8436000000.00 -> 25392000000.00 (201.0% change)
+[2025-11-14 10:27:35] [WARNING ]   -   - 2025-10-24: 2435000000.00 -> 10642000000.00 (337.0% change)
+[2025-11-14 10:27:35] [WARNING ]   - 23 suspicious spikes detected (>50% daily change):
+[2025-11-14 10:27:35] [INFO    ] Standardizing timestamps for RRPONTSYD...
+[2025-11-14 10:27:35] [INFO    ] Standardized 1095 -> 1603 points
+[2025-11-14 10:27:35] [SUCCESS ] Saved 1603 points for RRPONTSYD to cache
+[2025-11-14 10:27:35] [INFO    ] 
+================================================================================
+[2025-11-14 10:27:35] [INFO    ] GENERATING VALIDATION REPORT
+[2025-11-14 10:27:35] [INFO    ] ================================================================================
+[2025-11-14 10:27:35] [INFO    ] 
+Results saved to: C:\Users\majee\Desktop\Dash\historical_data\backfill_results.json
+[2025-11-14 10:27:35] [INFO    ] Report saved to: C:\Users\majee\Desktop\Dash\historical_data\backfill_validation_report.txt
+[2025-11-14 10:27:35] [INFO    ] Log saved to: C:\Users\majee\Desktop\Dash\historical_data\backfill_log_20251114_102428.txt
+[2025-11-14 10:27:35] [INFO    ] 
+================================================================================
+[2025-11-14 10:27:35] [INFO    ] BACKFILL COMPLETE!
+[2025-11-14 10:27:35] [INFO    ] ================================================================================
+[2025-11-14 10:27:35] [INFO    ] Successful: 23/27
+[2025-11-14 10:27:35] [INFO    ] Failed: 4/27
+[2025-11-14 10:27:35] [WARNING ] 
+[WARNING] PARTIAL SUCCESS (23/27)

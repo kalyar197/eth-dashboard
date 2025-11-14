@@ -727,11 +727,20 @@ export function syncOscillatorZoom(asset, transform) {
     // Apply transform without triggering zoom event
     chart.overlay.call(chart.zoom.transform, newTransform);
 
-    // Also sync breakdown chart if it exists
-    const breakdownChart = breakdownInstances[asset];
-    if (breakdownChart && breakdownChart.zoom) {
-        breakdownChart.overlay.call(breakdownChart.zoom.transform, newTransform);
-    }
+    // Sync all breakdown charts with correct keys
+    const breakdownKeys = [
+        `breakdown-${asset}`,              // Momentum
+        `breakdown-price-${asset}`,        // Price
+        `breakdown-macro-${asset}`,        // Macro
+        `breakdown-derivatives-${asset}`   // Derivatives
+    ];
+
+    breakdownKeys.forEach(key => {
+        const breakdownChart = breakdownInstances[key];
+        if (breakdownChart && breakdownChart.zoom) {
+            breakdownChart.overlay.call(breakdownChart.zoom.transform, newTransform);
+        }
+    });
 }
 
 /**
@@ -789,10 +798,9 @@ function setupOscillatorCrosshair(asset) {
             });
 
             // Position and show tooltip
-            const containerRect = chart.svg.node().getBoundingClientRect();
             tooltip
-                .style('left', (containerRect.left + mouseX + chart.margin.left + 10) + 'px')
-                .style('top', (containerRect.top + mouseY + chart.margin.top + 10) + 'px')
+                .style('left', (event.pageX + 15) + 'px')
+                .style('top', (event.pageY - 15) + 'px')
                 .classed('show', true)
                 .html(tooltipHTML);
         })
@@ -1114,10 +1122,9 @@ function setupBreakdownCrosshair(asset) {
             });
 
             // Position and show tooltip
-            const containerRect = chart.svg.node().getBoundingClientRect();
             tooltip
-                .style('left', (containerRect.left + mouseX + chart.margin.left + 10) + 'px')
-                .style('top', (containerRect.top + mouseY + chart.margin.top + 10) + 'px')
+                .style('left', (event.pageX + 15) + 'px')
+                .style('top', (event.pageY - 15) + 'px')
                 .classed('show', true)
                 .html(tooltipHTML);
         })

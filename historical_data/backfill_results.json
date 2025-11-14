@@ -1,0 +1,19 @@
+{
+  "timestamp": "2025-11-14T11:07:06.879772",
+  "dry_run": false,
+  "results": [
+    {
+      "ticker": "BTC_SOPR",
+      "symbol_full": "GLASSNODE:BTC_SOPR",
+      "success": true,
+      "warnings": [
+        "20 sampled timestamps not at midnight UTC",
+        "5 extreme outliers (>5 sigma from mean):",
+        "  - 2022-11-18: 0.87 (7.4sigma)",
+        "  - 2023-03-30: 0.88 (7.1sigma)",
+        "  - 2024-03-23: 1.13 (6.7sigma)"
+      ],
+      "data_points": 1095
+    }
+  ]
+}
