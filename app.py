@@ -1,27 +1,39 @@
 # app.py
+"""
+BTC Trading Dashboard - Flask Application
+Production-ready web application for cryptocurrency market analysis
+"""
 
+# Standard library imports
+import os
+import time
+
+# Third-party imports
 import sentry_sdk
 from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
 from flask_apscheduler import APScheduler
-import os
-import time
-# Data plugins
-from data import eth_price, btc_price, gold_price, spx_price, rsi, macd_histogram, adx, atr, sma, parabolic_sar, funding_rate
-# Startup data update
-from scripts.startup_data_update import check_and_update as startup_data_update
-from data import eth_price_alpaca, spx_price_fmp, gold_price_oscillator
-from data import dxy_price_yfinance, btc_dominance_cmc, usdt_dominance_cmc
-from data import dvol_index_deribit, basis_spread_binance
-from data import markov_regime
-from data.normalizers import zscore
+
+# Application imports - Configuration
 from config import CACHE_DURATION, RATE_LIMIT_DELAY
 
+# Application imports - Data plugins
+from src.data import (
+    btc_price, rsi, macd_histogram, adx, atr, sma, parabolic_sar, funding_rate,
+    eth_price_alpaca, spx_price_fmp, gold_price_oscillator,
+    dxy_price_yfinance, btc_dominance_cmc, usdt_dominance_cmc,
+    dvol_index_deribit, basis_spread_binance, markov_regime
+)
+from src.data.normalizers import zscore
+from src.data.postgres_provider import get_data as postgres_get_data, get_metadata as postgres_get_metadata
+
+# Application imports - Management
+from src.management.startup_check import check_and_update as startup_data_update
+
 # Initialize Sentry SDK for error monitoring
+SENTRY_DSN = os.getenv('SENTRY_DSN', 'https://51a1e702949ccbd441d980a082211e9f@o4510197158510592.ingest.us.sentry.io/4510197228044288')
 sentry_sdk.init(
-    dsn="https://51a1e702949ccbd441d980a082211e9f@o4510197158510592.ingest.us.sentry.io/4510197228044288",
-    # Add data like request headers and IP for users,
-    # see https://docs.sentry.io/platforms/python/data-management/data-collected/ for more info
+    dsn=SENTRY_DSN,
     send_default_pii=True,
 )
 
@@ -84,8 +96,60 @@ OVERLAY_PLUGINS = {
     'psar_btc': lambda days: parabolic_sar.get_data(days, 'btc')
 }
 
-# Merge overlay plugins into DATA_PLUGINS so they're accessible via /api/data
+# Merge all plugin dictionaries into DATA_PLUGINS so they're accessible via /api/data
 DATA_PLUGINS.update(OVERLAY_PLUGINS)
+DATA_PLUGINS.update(PRICE_OSCILLATOR_PLUGINS)
+DATA_PLUGINS.update(MACRO_OSCILLATOR_PLUGINS)
+DATA_PLUGINS.update(OSCILLATOR_PLUGINS)
+
+# Dataset name mapping: plugin name -> database source name
+# This maps the names used in the frontend/API to actual PostgreSQL source names
+DATASET_NAME_MAPPING = {
+    # Price datasets
+    'btc': 'btc_price',
+    'eth': 'eth_price',
+    'sol': 'sol_price',
+
+    # Price oscillators
+    'eth_price_alpaca': 'eth_price_alpaca',  # Already correct in DB
+    'spx_price_fmp': 'spx_price_fmp',  # Already correct in DB
+    'gold_price_oscillator': 'gold_price',  # DB uses gold_price, not gold_price_oscillator
+
+    # Macro oscillators
+    'dxy_price_yfinance': 'dxy_price',  # DB uses dxy_price, not dxy_price_yfinance
+    'btc_dominance_cmc': 'btc_dominance',  # DB uses btc_dominance, not btc_dominance_cmc
+    'usdt_dominance_cmc': 'usdt_dominance',  # DB uses usdt_dominance, not usdt_dominance_cmc
+
+    # Derivatives oscillators
+    'dvol_index_deribit': 'dvol_btc',  # DB uses dvol_btc, not dvol_index_deribit
+    'basis_spread_binance': 'basis_spread_btc',  # DB uses basis_spread_btc, not basis_spread_binance
+
+    # Momentum oscillators (require _btc suffix in DB)
+    'rsi': 'rsi_btc',
+    'adx': 'adx_btc',
+    'atr': 'atr_btc',
+    'macd_histogram': 'macd_histogram_btc',
+
+    # Funding rate
+    'funding_rate_btc': 'funding_rate_btc',  # Already correct
+    'funding_rate_daily_btc': 'funding_rate_daily_btc',  # Already correct
+
+    # Overlays
+    'sma_7_btc': 'sma_7_btc',
+    'sma_21_btc': 'sma_21_btc',
+    'sma_60_btc': 'sma_60_btc',
+    'psar_btc': 'psar_btc',
+
+    # Other
+    'stable_c_d': 'stable_c_d'
+}
+
+# Add PostgreSQL-only datasets (no JSON plugin, will be fetched via hybrid_provider)
+POSTGRES_ONLY_DATASETS = {
+    'funding_rate_daily_btc': None,  # Daily funding rate
+    'stable_c_d': None,               # Stablecoin dominance
+}
+DATA_PLUGINS.update(POSTGRES_ONLY_DATASETS)
 
 # Normalizer function (using only zscore - Regression Divergence)
 NORMALIZERS = {
@@ -226,25 +290,40 @@ def get_data():
         # Apply rate limiting before making API call
         rate_limit_check(dataset_name)
 
-        # Dynamically call the get_data function from the appropriate module or callable
-        data_plugin = DATA_PLUGINS[dataset_name]
-
-        # Check if it's a callable (lambda) or a module with get_data method
-        if callable(data_plugin) and not hasattr(data_plugin, 'get_data'):
-            # It's a lambda function - call it directly
-            data = data_plugin(days)
+        # Convert days parameter to integer
+        if days == 'max':
+            days_int = 3650  # ~10 years
         else:
-            # It's a module - call its get_data method
-            data = data_plugin.get_data(days)
-        
+            days_int = int(days)
+
+        # Map dataset name to database source name using the mapping dictionary
+        source_name = DATASET_NAME_MAPPING.get(dataset_name, dataset_name)
+
+        # Fetch data from PostgreSQL (no JSON fallback)
+        data = postgres_get_data(source_name, days_int)
+
+        # Fetch metadata
+        metadata = postgres_get_metadata(source_name)
+        if not metadata:
+            # Fallback metadata if not found in database
+            metadata = {'label': dataset_name.upper()}
+
+        # Build response with data and metadata
+        result = {
+            'data': data,
+            'metadata': metadata
+        }
+
         # Store in cache
         cache[cache_key] = {
-            'data': data,
+            'data': result,
             'timestamp': time.time()
         }
-        
-        print(f"Fetched fresh data for {dataset_name}")
-        return jsonify(data)
+
+        # Log data source (PostgreSQL-only now)
+        print(f"Fetched {dataset_name} from PostgreSQL ({len(data)} records)")
+
+        return jsonify(result)
         
     except Exception as e:
         # If we have cached data (even if expired), return it on error
@@ -320,13 +399,16 @@ def get_oscillator_data():
             # Step 1: Fetch asset price data (OHLCV) for normalization
             # Request extra days to ensure enough history for rolling window
             if days == 'max':
-                price_days = 'max'
+                price_days = 3650  # ~10 years of data for 'max'
             else:
-                price_days = str(int(days) + noise_level + 10)
+                price_days = int(days) + noise_level + 10
 
-            asset_module = DATA_PLUGINS[asset]
-            asset_result = asset_module.get_data(price_days)
-            asset_ohlcv_data = asset_result['data']
+            # Fetch asset price data (use hybrid provider)
+            asset_plugin = DATA_PLUGINS.get(asset)
+            # Map asset name to database source name (e.g., 'btc' -> 'btc_price')
+            asset_dataset_name = asset  # e.g., 'btc', 'eth'
+            source_name = DATASET_NAME_MAPPING.get(asset_dataset_name, f"{asset}_price")
+            asset_ohlcv_data = postgres_get_data(source_name, price_days)
 
             if not asset_ohlcv_data:
                 raise ValueError(f"No {asset.upper()} price data available")
@@ -356,21 +438,30 @@ def get_oscillator_data():
                     # Request extra days to ensure enough history for rolling window
                     # Add noise_level + 10 extra days as buffer
                     if days == 'max':
-                        extra_days = 'max'
+                        extra_days = 3650  # ~10 years of data
                     else:
                         # For stock market data (weekdays only), request ~1.5x more calendar days
                         # to ensure we have enough weekday data points after accounting for weekends
                         stock_market_oscillators = ['spx_price_fmp', 'gold_price_oscillator']
                         if oscillator_name in stock_market_oscillators:
                             # Need ~1.5x calendar days to get enough weekday data
-                            extra_days = str(int((int(days) + noise_level + 10) * 1.5))
+                            extra_days = int((int(days) + noise_level + 10) * 1.5)
                         else:
-                            extra_days = str(int(days) + noise_level + 10)
+                            extra_days = int(days) + noise_level + 10
 
                     # All momentum oscillators require asset parameter
-                    oscillator_result = oscillator_module.get_data(extra_days, asset)
+                    # Use hybrid provider with oscillator module as fallback
+                    oscillator_dataset_name = f"{oscillator_name}_{asset}" if oscillator_name in ['rsi', 'adx', 'atr', 'macd_histogram'] else oscillator_name
 
-                    raw_oscillator_data = oscillator_result['data']
+                    # Map to database source name using centralized mapping
+                    source_name = DATASET_NAME_MAPPING.get(oscillator_dataset_name, oscillator_dataset_name)
+
+                    # Create wrapper lambda that calls oscillator with asset parameter
+                    oscillator_wrapper = lambda days: oscillator_module.get_data(days, asset)
+
+                    # Ensure extra_days is always an integer
+                    extra_days_int = int(extra_days)
+                    raw_oscillator_data = postgres_get_data(source_name, extra_days_int)
 
                     if not raw_oscillator_data:
                         print(f"[Composite Mode] Warning: No data for {oscillator_name}, skipping...")
@@ -400,9 +491,17 @@ def get_oscillator_data():
                         print(f"[Composite Mode] Will invert {oscillator_name} for composite (high = bearish)")
 
                     # Capture metadata for breakdown chart
-                    metadata = oscillator_result['metadata'].copy()
-                    metadata['normalizer'] = 'Rolling OLS Regression Divergence'
-                    metadata['window'] = noise_level
+                    metadata = postgres_get_metadata(source_name)
+                    if metadata:
+                        metadata['normalizer'] = 'Rolling OLS Regression Divergence'
+                        metadata['window'] = noise_level
+                    else:
+                        # Fallback metadata if not found in database
+                        metadata = {
+                            'label': oscillator_name.upper(),
+                            'normalizer': 'Rolling OLS Regression Divergence',
+                            'window': noise_level
+                        }
                     oscillator_metadata[oscillator_name] = metadata
 
                     print(f"[Composite Mode] Normalized {oscillator_name}: {len(normalized_data)} points")
@@ -450,7 +549,7 @@ def get_oscillator_data():
             print(f"[Composite Mode] Aligned OHLCV data: {len(aligned_ohlcv_data)} points (from {len(asset_ohlcv_data)} total)")
 
             # Calculate volatility from aligned OHLCV data
-            from data import volatility
+            from src.data import volatility
             aligned_volatility_data = volatility.calculate_gk_volatility(aligned_ohlcv_data)
 
             # Fit Markov model to aligned volatility
@@ -536,10 +635,13 @@ def get_oscillator_data():
 
         # Handle individual mode (existing logic)
         else:
-            # Fetch asset price data (needed for normalization)
-            asset_module = DATA_PLUGINS[asset]
-            asset_result = asset_module.get_data(days)
-            asset_ohlcv_data = asset_result['data']
+            # Fetch asset price data (needed for normalization) - use hybrid provider
+            asset_plugin = DATA_PLUGINS.get(asset)
+            # Map asset name to database source name (e.g., 'btc' -> 'btc_price')
+            asset_dataset_name = asset  # e.g., 'btc', 'eth'
+            source_name = DATASET_NAME_MAPPING.get(asset_dataset_name, f"{asset}_price")
+            days_int = int(days) if days != 'max' else 3650
+            asset_ohlcv_data = postgres_get_data(source_name, days_int)
 
             if not asset_ohlcv_data:
                 raise ValueError(f"No {asset.upper()} price data available")
@@ -569,9 +671,15 @@ def get_oscillator_data():
                     rate_limit_check(f"{dataset_name}_{asset}")
 
                     # All momentum oscillators require asset parameter
-                    oscillator_result = oscillator_module.get_data(days, asset)
+                    # Use hybrid provider with oscillator module as fallback
+                    oscillator_dataset_name = f"{dataset_name}_{asset}" if dataset_name in ['rsi', 'adx', 'atr', 'macd_histogram'] else dataset_name
 
-                    raw_data = oscillator_result['data']
+                    # Map to database source name using centralized mapping
+                    source_name = DATASET_NAME_MAPPING.get(oscillator_dataset_name, oscillator_dataset_name)
+
+                    # Create wrapper lambda that calls oscillator with asset parameter
+                    oscillator_wrapper = lambda days: oscillator_module.get_data(days, asset)
+                    raw_data = postgres_get_data(source_name, days_int)
 
                     if not raw_data:
                         print(f"Warning: No data for {dataset_name}, skipping...")
@@ -581,7 +689,10 @@ def get_oscillator_data():
                     normalized_data = normalizer_module.normalize(raw_data, asset_ohlcv_data)
 
                     # Get metadata
-                    metadata = oscillator_result['metadata']
+                    metadata = postgres_get_metadata(source_name)
+                    if not metadata:
+                        # Fallback metadata if not found in database
+                        metadata = {'label': dataset_name.upper()}
 
                     result['datasets'][dataset_name] = {
                         'data': normalized_data,
@@ -644,7 +755,7 @@ def serve_js(filename):
     """
     Serve JavaScript files from the static/js directory
     """
-    return send_from_directory('static/js', filename)
+    return send_from_directory('src/static/js', filename)
 
 @app.route('/favicon.ico')
 def favicon():
